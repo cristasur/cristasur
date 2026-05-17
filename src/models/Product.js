@@ -56,7 +56,7 @@ const ProductSchema = new mongoose.Schema(
     variants: { type: [VariantSchema], default: [] },
 
     featured: { type: Boolean, default: false, index: true },
-    stock: { type: Number, default: 0, min: 0 },
+    stock: { type: Number, default: null, min: 0 }, // null = sin límite / no se sabe
     active: { type: Boolean, default: true, index: true },
     sku: { type: String, trim: true, uppercase: true, sparse: true, unique: true },
 

@@ -38,7 +38,7 @@ export default function AccountNavLink() {
     return (
       <Link
         href="/cuenta/login"
-        className="hidden sm:inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+        className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
       >
         <Icon name="user" className="w-4 h-4" />
         Inicia sesión

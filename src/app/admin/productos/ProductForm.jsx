@@ -25,7 +25,7 @@ export default function ProductForm({ categories, initial }) {
     categories: initial?.categories?.map((c) => c._id || c) || [],
     image: initial?.image || '',
     gallery: Array.isArray(initial?.gallery) ? initial.gallery : [],
-    stock: initial?.stock ?? 0,
+    stock: initial?.stock ?? '',
     featured: initial?.featured || false,
     active: initial?.active ?? true,
     sku: initial?.sku || '',
@@ -336,10 +336,11 @@ export default function ProductForm({ categories, initial }) {
           </span>
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Stock</span>
+          <span className="text-sm font-medium text-slate-700">Stock <span className="text-slate-400 font-normal">(opcional — vacío = disponible sin límite)</span></span>
           <input
             type="number"
             min="0"
+            placeholder="Dejar vacío si no sabes o es ilimitado"
             value={form.stock}
             onChange={(e) => update('stock', e.target.value)}
             className={input}

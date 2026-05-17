@@ -12,7 +12,7 @@ export default function Hero({ categories = [] }) {
       <div className="relative max-w-7xl mx-auto px-4 py-10 md:py-16 grid md:grid-cols-2 gap-8 items-center">
         <div>
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs uppercase tracking-widest mb-6 backdrop-blur">
-            Tienda en línea
+            Mayoreo y Menudeo
           </span>
           <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
             Todo para tu <span className="text-accent-300">hogar</span> y tu <span className="text-accent-300">negocio</span>.

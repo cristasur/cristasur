@@ -1,10 +1,10 @@
 // /cuenta/login — Login de clientes (separado de /admin/login)
 'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function CustomerLoginPage() {
+function LoginForm() {
   const router = useRouter()
   const search = useSearchParams()
   const next = search.get('next') || '/cuenta'
@@ -93,5 +93,13 @@ export default function CustomerLoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function CustomerLoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

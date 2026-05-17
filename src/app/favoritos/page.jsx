@@ -35,6 +35,7 @@ export default function FavoritosPage() {
       favIds.map((id) =>
         fetch(`/api/products/${id}`)
           .then((r) => (r.ok ? r.json() : null))
+          .then((data) => data?.product || null)
           .catch(() => null)
       )
     ).then((results) => {

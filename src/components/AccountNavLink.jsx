@@ -78,6 +78,13 @@ export default function AccountNavLink() {
           >
             Mi cuenta
           </Link>
+          <Link
+            href="/favoritos"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            ♡ Mis favoritos
+          </Link>
           {user.wholesaleAccess && (
             <Link
               href="/mayoreo"

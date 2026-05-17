@@ -85,6 +85,8 @@ export default function ProductGallery({ images = [], alt = 'Producto' }) {
           src={current}
           alt={`${alt} — imagen ${idx + 1}`}
           className="w-full h-full object-cover"
+          loading="eager"
+          decoding="async"
         />
 
         {hasMany && (
@@ -153,6 +155,8 @@ export default function ProductGallery({ images = [], alt = 'Producto' }) {
                     src={url}
                     alt={`Miniatura ${i + 1}`}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </button>
               )

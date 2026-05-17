@@ -95,7 +95,7 @@ export default function Footer() {
             </li>
           </ul>
           <p className="text-xs text-slate-500 mt-4">
-            Si tienes restaurante, fonda o negocio, escríbenos y te cotizamos por volumen.
+            Si tienes restaurante o negocio, escríbenos y te cotizamos por volumen.
           </p>
         </div>
       </div>

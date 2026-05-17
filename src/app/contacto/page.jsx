@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: '¿Atienden a restaurantes y negocios?',
-    a: 'Sí. Trabajamos con fondas, restaurantes, escuelas, eventos y comercios. Para clientes recurrentes manejamos catálogo personalizado y precios especiales por volumen.',
+    a: 'Sí. Trabajamos con restaurantes, escuelas, eventos y comercios. Para clientes recurrentes manejamos catálogo personalizado y precios especiales por volumen.',
   },
   {
     q: '¿Tienen política de devolución?',

@@ -67,7 +67,7 @@ const ProductSchema = new mongoose.Schema(
     status: { type: String, enum: ['draft', 'published'], default: 'published', index: true },
     publishAt: { type: Date, default: null },
 
-    // Etiquetas libres (eco, navidad, para-fonda, etc.). Independientes de
+    // Etiquetas libres (eco, navidad, restaurante, etc.). Independientes de
     // las categorías. Usadas para filtros cruzados y landings estacionales.
     tags: { type: [String], default: [], index: true },
 

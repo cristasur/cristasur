@@ -122,7 +122,7 @@ export default async function HomePage() {
             <div>
               <h3 className="text-2xl md:text-3xl font-black">¿Tienes un negocio?</h3>
               <p className="mt-2 text-accent-100 max-w-xl">
-                Atendemos a restaurantes, fondas, escuelas y comercios con precios especiales por mayoreo.
+                Atendemos a restaurantes, escuelas y comercios con precios especiales por mayoreo.
               </p>
             </div>
             <Link

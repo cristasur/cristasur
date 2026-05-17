@@ -35,7 +35,7 @@ const PRODUCTS = [
 
   // Restaurante
   { name: 'Jarra de 2L para agua fresca',
-    description: 'Jarra de plástico resistente con tapa y vertedor antigoteo. Ideal para fondas y restaurantes.',
+    description: 'Jarra de plástico resistente con tapa y vertedor antigoteo. Ideal para restaurantes y negocios.',
     price: 99, image: 'https://images.unsplash.com/photo-1559599101-f09722fb4948?w=800',
     category: 'Restaurante', stock: 80 },
   { name: 'Charola rectangular antideslizante',

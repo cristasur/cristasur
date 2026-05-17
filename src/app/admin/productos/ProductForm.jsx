@@ -485,7 +485,7 @@ export default function ProductForm({ categories, initial }) {
               value={Array.isArray(form.tags) ? form.tags.join(', ') : (form.tags || '')}
               onChange={(e) => update('tags', e.target.value)}
               className={input}
-              placeholder="navidad, eco, para-fonda"
+              placeholder="navidad, eco, restaurante"
             />
             <span className="text-xs text-slate-500">
               Separados por coma. Aparecen como filtros en /tag/&lt;nombre&gt;.

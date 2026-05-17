@@ -2,16 +2,31 @@
 import Link from 'next/link'
 import LogoutButton from './LogoutButton'
 import Icon from '@/components/Icon'
+import { getCurrentUser } from '@/lib/auth'
 
-export const metadata = { title: 'Admin · CRISTASUR', robots: { index: false, follow: false } }
+export const metadata = {
+  title: 'Admin · CRISTASUR',
+  robots: { index: false, follow: false, nocache: true, noarchive: true, nosnippet: true },
+}
 
 const links = [
-  { href: '/admin',            label: 'Dashboard',  icon: 'chart' },
-  { href: '/admin/productos',  label: 'Productos',  icon: 'box' },
-  { href: '/admin/categorias', label: 'Categorías', icon: 'tag' },
+  { href: '/admin',                     label: 'Dashboard',     icon: 'chart' },
+  { href: '/admin/productos',           label: 'Productos',     icon: 'box' },
+  { href: '/admin/productos/bulk',      label: 'Edición masiva', icon: 'edit' },
+  { href: '/admin/productos/papelera',  label: 'Papelera',      icon: 'trash' },
+  { href: '/admin/productos/import',    label: 'Importar CSV',  icon: 'upload' },
+  { href: '/admin/etiquetas',           label: 'Etiquetas PDF', icon: 'tag' },
+  { href: '/admin/categorias',          label: 'Categorías',    icon: 'tag' },
+  { href: '/admin/cupones',             label: 'Cupones',       icon: 'ticket' },
+  { href: '/admin/resenas',             label: 'Reseñas',       icon: 'star' },
+  { href: '/admin/pedidos',             label: 'Pedidos',       icon: 'cart' },
+  { href: '/admin/usuarios',            label: 'Usuarios',      icon: 'user', adminOnly: true },
 ]
 
-export default function AdminLayout({ children }) {
+export default async function AdminLayout({ children }) {
+  const user = await getCurrentUser()
+  const visibleLinks = links.filter((l) => !l.adminOnly || user?.role === 'admin')
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-[220px_1fr] gap-6">
@@ -22,10 +37,17 @@ export default function AdminLayout({ children }) {
               alt="CRISTASUR Mérida"
               className="h-20 w-auto object-contain mx-auto"
             />
-            <div className="text-xs text-slate-500 mt-2">Panel de administración</div>
+            <div className="text-xs text-slate-500 mt-2 text-center">
+              Panel de administración
+            </div>
+            {user?.email && (
+              <div className="text-[11px] text-slate-400 mt-1 text-center truncate">
+                {user.email} · <span className="uppercase">{user.role || 'admin'}</span>
+              </div>
+            )}
           </div>
           <nav className="flex flex-col gap-1 text-sm">
-            {links.map((l) => (
+            {visibleLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}

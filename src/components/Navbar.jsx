@@ -3,7 +3,9 @@
 // Server component - consulta Mongoose directo.
 // ============================================================
 import Link from 'next/link'
-import SearchBar from './SearchBar'
+import SearchAutocomplete from './SearchAutocomplete'
+import CartButton from './CartButton'
+import AccountNavLink from './AccountNavLink'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 
@@ -38,7 +40,7 @@ export default async function Navbar() {
           </Link>
 
           <div className="flex-1 max-w-xl hidden md:block">
-            <SearchBar />
+            <SearchAutocomplete />
           </div>
 
           <nav className="flex items-center gap-1">
@@ -54,18 +56,15 @@ export default async function Navbar() {
             >
               Contacto
             </Link>
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg"
-            >
-              Admin
-            </Link>
+            <CartButton />
+            <AccountNavLink />
+            {/* Admin no se expone públicamente. Acceso vía /admincr (sólo quienes saben la URL). */}
           </nav>
         </div>
 
         {/* Search bar en mobile */}
         <div className="pb-3 md:hidden">
-          <SearchBar />
+          <SearchAutocomplete />
         </div>
 
         {/* Chips de categoría */}

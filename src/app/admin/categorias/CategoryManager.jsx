@@ -3,7 +3,18 @@
 import { useState } from 'react'
 import Icon from '@/components/Icon'
 
-const emptyForm = { name: '', icon: '', image: '', description: '', order: 0, active: true, featured: false }
+const emptyForm = {
+  name: '',
+  icon: '',
+  image: '',
+  description: '',
+  seoTitle: '',
+  seoDescription: '',
+  seoText: '',
+  order: 0,
+  active: true,
+  featured: false,
+}
 
 export default function CategoryManager({ initialCategories }) {
   const [cats, setCats] = useState(initialCategories)
@@ -86,6 +97,9 @@ export default function CategoryManager({ initialCategories }) {
       icon: cat.icon || '',
       image: cat.image || '',
       description: cat.description || '',
+      seoTitle: cat.seoTitle || '',
+      seoDescription: cat.seoDescription || '',
+      seoText: cat.seoText || '',
       order: cat.order || 0,
       active: cat.active,
       featured: Boolean(cat.featured),
@@ -275,6 +289,54 @@ export default function CategoryManager({ initialCategories }) {
             className={input}
           />
         </label>
+
+        <details className="mb-4 bg-slate-50 rounded-xl p-3">
+          <summary className="cursor-pointer text-sm font-bold text-slate-700">
+            SEO (Google) — opcional
+          </summary>
+          <div className="space-y-3 mt-3">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Título SEO</span>
+              <input
+                type="text"
+                maxLength={80}
+                value={form.seoTitle}
+                onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
+                className={input}
+                placeholder="Vasos plásticos en Mérida · CRISTASUR"
+              />
+              <span className="text-xs text-slate-500">
+                Si lo dejas vacío usamos &quot;{form.name || 'Nombre'} · CRISTASUR&quot;.
+              </span>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Meta descripción SEO</span>
+              <textarea
+                rows={2}
+                maxLength={200}
+                value={form.seoDescription}
+                onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
+                className={input}
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">
+                Texto largo (aparece al final de la página de categoría)
+              </span>
+              <textarea
+                rows={6}
+                maxLength={8000}
+                value={form.seoText}
+                onChange={(e) => setForm({ ...form, seoText: e.target.value })}
+                className={input}
+                placeholder="Cuenta sobre tus productos en esta categoría: variedad, usos, materiales, garantías, recomendaciones por tipo de negocio... Mientras más texto único y útil, más posiciona."
+              />
+              <span className="text-xs text-slate-500">
+                Recomendado: 200-500 palabras, vocabulario natural. Influye fuerte en SEO.
+              </span>
+            </label>
+          </div>
+        </details>
         <label className="inline-flex items-center gap-2 mb-2">
           <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} className="w-4 h-4" />
           <span className="text-sm text-slate-700">Visible en la tienda</span>

@@ -40,6 +40,26 @@ const CategorySchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    // Texto SEO largo (200-2000 palabras). Aparece en /categoria/[slug] como
+    // contenido indexable. Soporta saltos de línea simples (no markdown).
+    seoText: {
+      type: String,
+      maxlength: 8000,
+      default: '',
+      trim: true,
+    },
+    seoTitle: {
+      type: String,
+      maxlength: 80,
+      default: '',
+      trim: true,
+    },
+    seoDescription: {
+      type: String,
+      maxlength: 200,
+      default: '',
+      trim: true,
+    },
     // Icono opcional (emoji o letra) para mostrar cuando no hay imagen
     icon: {
       type: String,

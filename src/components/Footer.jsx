@@ -1,6 +1,7 @@
-// Footer
+// Footer con dos sucursales, links legales y contacto.
 import Link from 'next/link'
 import Icon from './Icon'
+import { LOCATIONS } from '@/lib/locations'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -18,9 +19,9 @@ export default function Footer() {
           </div>
           <p className="text-sm text-slate-400">
             Plásticos, juguetes y artículos para el hogar y negocios desde hace años.
-            Precios accesibles, trato cercano.
+            Precios accesibles, trato cercano. Mérida y Bacalar.
           </p>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <a
               href="https://www.instagram.com/cristasurmx/"
               target="_blank"
@@ -31,6 +32,16 @@ export default function Footer() {
               <Icon name="instagram" className="w-4 h-4" />
               <span>@cristasurmx</span>
             </a>
+            <a
+              href="https://wa.me/529994731919"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm"
+              aria-label="WhatsApp"
+            >
+              <Icon name="whatsapp" className="w-4 h-4" />
+              <span>WhatsApp</span>
+            </a>
           </div>
         </div>
 
@@ -39,28 +50,64 @@ export default function Footer() {
           <ul className="space-y-2 text-sm">
             <li><Link href="/productos" className="hover:text-white">Catálogo</Link></li>
             <li><Link href="/productos?featured=1" className="hover:text-white">Destacados</Link></li>
+            <li><Link href="/productos?onSale=1" className="hover:text-white">En oferta</Link></li>
             <li><Link href="/contacto" className="hover:text-white">Contacto</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4 className="font-semibold text-white mb-3">Información</h4>
-          <ul className="space-y-2 text-sm text-slate-400">
-            <li>Ventas por mayoreo y menudeo</li>
-            <li>Lunes a sábado, 9am a 7pm</li>
-            <li>Envíos a toda la república</li>
+          <h4 className="font-semibold text-white mb-3">Sucursales</h4>
+          <ul className="space-y-3 text-sm text-slate-400">
+            {LOCATIONS.map((loc) => (
+              <li key={loc.id}>
+                <div className="font-semibold text-slate-200">{loc.city}</div>
+                <a
+                  href={loc.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white block leading-snug"
+                >
+                  {loc.address}
+                </a>
+                <div className="text-xs text-slate-500 mt-1">{loc.hours}</div>
+              </li>
+            ))}
           </ul>
         </div>
 
         <div>
-          <h4 className="font-semibold text-white mb-3">Para empresas</h4>
-          <p className="text-sm text-slate-400">
-            Si tienes un restaurante, fonda o negocio, escríbenos y te cotizamos por volumen.
+          <h4 className="font-semibold text-white mb-3">Legal</h4>
+          <ul className="space-y-2 text-sm">
+            <li>
+              <Link href="/aviso-de-privacidad" className="hover:text-white">
+                Aviso de privacidad
+              </Link>
+            </li>
+            <li>
+              <Link href="/terminos" className="hover:text-white">
+                Términos y condiciones
+              </Link>
+            </li>
+            <li>
+              <Link href="/contacto" className="hover:text-white">
+                Preguntas frecuentes
+              </Link>
+            </li>
+          </ul>
+          <p className="text-xs text-slate-500 mt-4">
+            Si tienes restaurante, fonda o negocio, escríbenos y te cotizamos por volumen.
           </p>
         </div>
       </div>
       <div className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        © {year} CRISTASUR · Todos los derechos reservados
+        © {year} CRISTASUR · Todos los derechos reservados ·{' '}
+        <Link href="/aviso-de-privacidad" className="hover:text-slate-300">
+          Privacidad
+        </Link>{' '}
+        ·{' '}
+        <Link href="/terminos" className="hover:text-slate-300">
+          Términos
+        </Link>
       </div>
     </footer>
   )

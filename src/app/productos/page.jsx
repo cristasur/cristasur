@@ -1,18 +1,34 @@
 // ============================================================
-// /productos - Catálogo con filtros y búsqueda
+// /productos - Catálogo con filtros avanzados y búsqueda
 // ============================================================
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 import Product from '@/models/Product'
 import ProductGrid from '@/components/ProductGrid'
-import CategoryFilter from '@/components/CategoryFilter'
+import ProductFilters from '@/components/ProductFilters'
 
 export const dynamic = 'force-dynamic'
 
-async function loadData({ q, category, featured }) {
+async function loadData({ q, category, featured, minPrice, maxPrice, inStock, onSale, sort }) {
   await dbConnect()
-  const filter = { active: true }
+  const now = new Date()
+  const filter = {
+    active: true,
+    deleted: { $ne: true },
+    $and: [
+      { $or: [{ status: { $exists: false } }, { status: 'published' }] },
+      { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
+    ],
+  }
   if (featured === '1') filter.featured = true
+  if (inStock === '1') filter.stock = { $gt: 0 }
+  if (onSale === '1') filter.$expr = { $gt: ['$comparePrice', '$price'] }
+
+  if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
+    filter.price = {}
+    if (Number.isFinite(minPrice)) filter.price.$gte = minPrice
+    if (Number.isFinite(maxPrice)) filter.price.$lte = maxPrice
+  }
 
   if (category) {
     const cat = await Category.findOne({ slug: category }).lean()
@@ -28,10 +44,16 @@ async function loadData({ q, category, featured }) {
     ]
   }
 
+  let sortSpec = { featured: -1, createdAt: -1 }
+  if (sort === 'priceAsc') sortSpec = { price: 1 }
+  else if (sort === 'priceDesc') sortSpec = { price: -1 }
+  else if (sort === 'popular')
+    sortSpec = { salesCount: -1, whatsappClicks: -1, viewsCount: -1 }
+
   const [products, categories, total] = await Promise.all([
     Product.find(filter)
       .populate('categories', 'name slug')
-      .sort({ featured: -1, createdAt: -1 })
+      .sort(sortSpec)
       .limit(60)
       .lean(),
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
@@ -46,16 +68,31 @@ async function loadData({ q, category, featured }) {
 }
 
 export default async function CatalogoPage({ searchParams }) {
-  const q = searchParams?.q?.trim() || ''
-  const category = searchParams?.category?.trim() || ''
+  const q = (searchParams?.q || '').trim()
+  const category = (searchParams?.category || '').trim()
   const featured = searchParams?.featured === '1' ? '1' : ''
+  const inStock = searchParams?.inStock === '1' ? '1' : ''
+  const onSale = searchParams?.onSale === '1' ? '1' : ''
+  const minPrice = Number(searchParams?.minPrice)
+  const maxPrice = Number(searchParams?.maxPrice)
+  const sort = (searchParams?.sort || 'newest').trim()
 
-  const { products, categories, total } = await loadData({ q, category, featured })
+  const { products, categories, total } = await loadData({
+    q,
+    category,
+    featured,
+    minPrice: Number.isFinite(minPrice) ? minPrice : null,
+    maxPrice: Number.isFinite(maxPrice) ? maxPrice : null,
+    inStock,
+    onSale,
+    sort,
+  })
   const currentCat = categories.find((c) => c.slug === category)
 
   let title = 'Catálogo completo'
   if (currentCat) title = currentCat.name
   else if (featured) title = 'Productos destacados'
+  else if (onSale) title = 'En oferta'
   else if (q) title = `Resultados para "${q}"`
 
   return (
@@ -67,10 +104,14 @@ export default async function CatalogoPage({ searchParams }) {
         </p>
       </header>
 
-      <div className="grid lg:grid-cols-[220px_1fr] gap-8">
-        <CategoryFilter categories={categories} currentSlug={category} />
+      <div className="grid lg:grid-cols-[260px_1fr] gap-6">
+        <aside className="lg:sticky lg:top-24 h-fit">
+          <ProductFilters categories={categories} />
+        </aside>
         <div>
           <ProductGrid products={products} />
         </div>
       </div>
     </div>
+  )
+}

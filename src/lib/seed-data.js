@@ -140,4 +140,7 @@ export async function runSeed({ reset = false } = {}) {
 
   return {
     categories: Object.keys(catByName).length,
-    productsCreated: cre
+    productsCreated: created,
+    adminEmail: admin.email,
+  }
+}

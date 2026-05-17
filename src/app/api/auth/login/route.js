@@ -1,17 +1,38 @@
 // ============================================================
 // POST /api/auth/login
-// Verifica credenciales y setea cookie httpOnly con JWT
+// Verifica credenciales y setea cookie httpOnly con JWT.
+// Rate-limited contra fuerza bruta (por IP y por email).
 // ============================================================
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/models/User'
 import { signToken, buildAuthCookie } from '@/lib/auth'
 import { isValidEmail, cleanString } from '@/lib/validation'
+import { rateLimit, rateLimitReset, clientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
+const MAX_PER_IP = 10              // 10 intentos
+const MAX_PER_EMAIL = 5            // 5 intentos
+const WINDOW_MS = 15 * 60 * 1000   // por 15 min
+
 export async function POST(request) {
   try {
+    const ip = clientIp(request)
+    const ipCheck = rateLimit(`login:ip:${ip}`, MAX_PER_IP, WINDOW_MS)
+    if (!ipCheck.ok) {
+      return NextResponse.json(
+        {
+          error:
+            'Demasiados intentos desde esta dirección. Espera unos minutos e inténtalo de nuevo.',
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(ipCheck.retryAfter) },
+        }
+      )
+    }
+
     const body = await request.json().catch(() => ({}))
     const email = cleanString(body.email, { max: 120 }).toLowerCase()
     const password = typeof body.password === 'string' ? body.password : ''
@@ -20,6 +41,20 @@ export async function POST(request) {
       return NextResponse.json(
         { error: 'Credenciales inválidas' },
         { status: 400 }
+      )
+    }
+
+    const emailCheck = rateLimit(`login:email:${email}`, MAX_PER_EMAIL, WINDOW_MS)
+    if (!emailCheck.ok) {
+      return NextResponse.json(
+        {
+          error:
+            'Demasiados intentos para esta cuenta. Espera unos minutos e inténtalo de nuevo.',
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(emailCheck.retryAfter) },
+        }
       )
     }
 
@@ -38,10 +73,25 @@ export async function POST(request) {
     user.lastLoginAt = new Date()
     await user.save()
 
-    const token = await signToken({ sub: user._id.toString(), role: user.role, email: user.email })
+    // Login exitoso → limpiamos la deuda de la IP/email
+    rateLimitReset(`login:ip:${ip}`)
+    rateLimitReset(`login:email:${email}`)
+
+    const token = await signToken({
+      sub: user._id.toString(),
+      role: user.role,
+      email: user.email,
+      wholesaleAccess: Boolean(user.wholesaleAccess),
+    })
     const res = NextResponse.json({
       ok: true,
-      user: { id: user._id, email: user.email, name: user.name, role: user.role },
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        wholesaleAccess: Boolean(user.wholesaleAccess),
+      },
     })
     const cookie = buildAuthCookie(token)
     res.cookies.set(cookie.name, cookie.value, cookie)

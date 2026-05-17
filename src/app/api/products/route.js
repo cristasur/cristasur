@@ -1,12 +1,17 @@
 // ============================================================
-// GET  /api/products    - lista pública con filtros
-//   Query params:
-//     ?category=<id|slug>   filtra por categoría
-//     ?q=<texto>            búsqueda por nombre/descripción
-//     ?featured=1           solo destacados
-//     ?limit=20&skip=0      paginación
-//     ?all=1                incluye inactivos (admin)
-// POST /api/products    - crea (protegido)
+// GET  /api/products   (público, por defecto excluye borrados)
+//   ?category=<id|slug>
+//   ?q=<texto>
+//   ?featured=1
+//   ?minPrice=100&maxPrice=500
+//   ?inStock=1            solo con stock > 0
+//   ?onSale=1             solo con comparePrice > price
+//   ?sort=newest|priceAsc|priceDesc|popular
+//   ?limit=48&skip=0
+//   ?all=1                incluye inactivos (admin)
+//   ?includeDeleted=1     incluye soft-deleted (admin)
+//   ?deletedOnly=1        solo soft-deleted (papelera)
+// POST /api/products   (protegido - admin)
 // ============================================================
 import { NextResponse } from 'next/server'
 import mongoose from 'mongoose'
@@ -14,6 +19,7 @@ import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
 import { validateProductPayload } from '@/lib/validation'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,18 +31,38 @@ export async function GET(request) {
     const categoryParam = (url.searchParams.get('category') || '').trim()
     const featured = url.searchParams.get('featured') === '1'
     const includeInactive = url.searchParams.get('all') === '1'
+    const includeDeleted = url.searchParams.get('includeDeleted') === '1'
+    const deletedOnly = url.searchParams.get('deletedOnly') === '1'
+    const inStock = url.searchParams.get('inStock') === '1'
+    const onSale = url.searchParams.get('onSale') === '1'
+    const minPrice = Number(url.searchParams.get('minPrice')) || null
+    const maxPrice = Number(url.searchParams.get('maxPrice')) || null
+    const sortParam = url.searchParams.get('sort') || 'newest'
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 48, 1), 100)
     const skip = Math.max(Number(url.searchParams.get('skip')) || 0, 0)
 
     const filter = {}
+    if (deletedOnly) filter.deleted = true
+    else if (!includeDeleted) filter.deleted = { $ne: true }
+
     if (!includeInactive) filter.active = true
     if (featured) filter.featured = true
+    if (inStock) filter.stock = { $gt: 0 }
+
+    if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
+      filter.price = {}
+      if (Number.isFinite(minPrice)) filter.price.$gte = minPrice
+      if (Number.isFinite(maxPrice)) filter.price.$lte = maxPrice
+    }
+
+    if (onSale) {
+      filter.$expr = { $gt: ['$comparePrice', '$price'] }
+    }
 
     if (categoryParam) {
       if (mongoose.Types.ObjectId.isValid(categoryParam)) {
         filter.categories = categoryParam
       } else {
-        // es slug → resolvemos a ObjectId
         const cat = await Category.findOne({ slug: categoryParam }).select('_id').lean()
         if (!cat) return NextResponse.json({ products: [], total: 0 })
         filter.categories = cat._id
@@ -44,8 +70,6 @@ export async function GET(request) {
     }
 
     if (q) {
-      // Búsqueda case-insensitive por nombre o descripción.
-      // Escapamos la query para evitar inyección de regex.
       const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       filter.$or = [
         { name: { $regex: safe, $options: 'i' } },
@@ -53,10 +77,15 @@ export async function GET(request) {
       ]
     }
 
+    let sort = { featured: -1, createdAt: -1 }
+    if (sortParam === 'priceAsc') sort = { price: 1 }
+    else if (sortParam === 'priceDesc') sort = { price: -1 }
+    else if (sortParam === 'popular') sort = { salesCount: -1, whatsappClicks: -1, viewsCount: -1 }
+
     const [products, total] = await Promise.all([
       Product.find(filter)
         .populate('categories', 'name slug icon')
-        .sort({ featured: -1, createdAt: -1 })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -74,16 +103,31 @@ export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}))
     const { errors, value } = validateProductPayload(body)
-    if (errors.length) return NextResponse.json({ error: errors.join(', ') }, { status: 400 })
+    if (errors.length)
+      return NextResponse.json({ error: errors.join(', ') }, { status: 400 })
 
     await dbConnect()
-    // Confirmamos que todas las categorías existen
-    const categoriesCount = await Category.countDocuments({ _id: { $in: value.categories } })
+    const categoriesCount = await Category.countDocuments({
+      _id: { $in: value.categories },
+    })
     if (categoriesCount !== value.categories.length) {
       return NextResponse.json({ error: 'Alguna categoría no existe' }, { status: 400 })
     }
 
-    const product = await Product.create(value)
+    const user = await getCurrentUser()
+    const product = await Product.create({
+      ...value,
+      createdBy: user?.sub,
+      updatedBy: user?.sub,
+      editHistory: [
+        {
+          userId: user?.sub,
+          userEmail: user?.email,
+          action: 'create',
+          changes: `Creado con precio ${value.price} y ${value.categories.length} categoría(s)`,
+        },
+      ],
+    })
     await product.populate('categories', 'name slug icon')
     return NextResponse.json({ product }, { status: 201 })
   } catch (err) {
@@ -91,3 +135,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'SKU duplicado' }, { status: 409 })
     }
     console.error('POST /api/products', err)
+    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
+  }
+}

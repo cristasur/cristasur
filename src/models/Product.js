@@ -1,93 +1,102 @@
 // ============================================================
 // src/models/Product.js
-// Modelo de Producto - relacionado con Category vía ObjectId.
-// Incluye campo `featured` para destacar productos en la home
-// y `stock` como base para escalar a e-commerce.
+// Modelo de Producto con soporte para:
+//   - Variantes (ej. tamaño / color) con stock, precio e imagen propios
+//   - Soft delete (papelera): deleted + deletedAt
+//   - Historial de cambios embebido (editHistory)
+//   - Contadores (views, whatsappClicks, salesCount) para métricas
+//   - Galería + imagen principal
 // ============================================================
 import mongoose from 'mongoose'
 
+// Variantes embebidas: cada una puede tener su propio precio, stock e imagen.
+// Si el producto tiene variantes, el precio/stock del producto padre sirven
+// como valores "por defecto" cuando el usuario aún no elige.
+const VariantSchema = new mongoose.Schema(
+  {
+    label: { type: String, required: true, trim: true, maxlength: 60 }, // "Tamaño", "Color"
+    value: { type: String, required: true, trim: true, maxlength: 60 }, // "10L", "Rojo"
+    sku: { type: String, trim: true, uppercase: true, maxlength: 40 },
+    price: { type: Number, min: 0 },       // null → hereda del producto padre
+    comparePrice: { type: Number, min: 0 }, // null → hereda
+    stock: { type: Number, min: 0, default: 0 },
+    image: { type: String, trim: true, default: '' },
+  },
+  { _id: true }
+)
+
+const EditLogSchema = new mongoose.Schema(
+  {
+    at: { type: Date, default: Date.now },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userEmail: { type: String, trim: true },
+    action: { type: String, enum: ['create', 'update', 'delete', 'restore', 'duplicate', 'import', 'import-update', 'bulk-update', 'publish', 'unpublish'], required: true },
+    changes: { type: String }, // resumen humano legible (ej. "price: 150 → 180, stock: 5 → 10")
+  },
+  { _id: false }
+)
+
 const ProductSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, 'El nombre del producto es obligatorio'],
-      trim: true,
-      minlength: [2, 'Nombre muy corto'],
-      maxlength: [120, 'Nombre muy largo'],
-      index: 'text',
-    },
-    description: {
-      type: String,
-      required: [true, 'La descripción es obligatoria'],
-      trim: true,
-      minlength: [5, 'La descripción debe tener al menos 5 caracteres'],
-      maxlength: [2000, 'Descripción demasiado larga'],
-    },
-    price: {
-      type: Number,
-      required: [true, 'El precio es obligatorio'],
-      min: [0, 'El precio no puede ser negativo'],
-    },
-    // Precio anterior, opcional, para mostrar descuentos
-    comparePrice: {
-      type: Number,
-      min: 0,
-      default: null,
-    },
+    name: { type: String, required: true, trim: true, minlength: 2, maxlength: 120, index: 'text' },
+    description: { type: String, required: true, trim: true, minlength: 5, maxlength: 800 },
+    price: { type: Number, required: true, min: 0 },
+    comparePrice: { type: Number, min: 0, default: null },
+    // Precio mayoreo (opcional). Si se define, requiere wholesaleMinQty.
+    // Cuando un cliente añade qty >= wholesaleMinQty al carrito, se aplica
+    // automáticamente el wholesalePrice por unidad.
+    wholesalePrice: { type: Number, min: 0, default: null },
+    wholesaleMinQty: { type: Number, min: 1, default: null },
     categories: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category',
-        required: [true, 'El producto debe tener al menos una categoría'],
-      },
+      { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     ],
-    // URL de la imagen principal. Puede ser /uploads/xxx.jpg o una URL externa.
-    image: {
-      type: String,
-      default: '',
-      trim: true,
-    },
-    // Galería opcional (para escalar)
-    gallery: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    featured: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-    stock: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    active: {
-      type: Boolean,
-      default: true,
-      index: true,
-    },
-    // SKU opcional para control de inventario
-    sku: {
-      type: String,
-      trim: true,
-      uppercase: true,
-      sparse: true,
-      unique: true,
-    },
+    image: { type: String, default: '', trim: true },
+    gallery: { type: [String], default: [] },
+    // Variantes opcionales. Si el array está vacío, el producto no tiene variantes.
+    variants: { type: [VariantSchema], default: [] },
+
+    featured: { type: Boolean, default: false, index: true },
+    stock: { type: Number, default: 0, min: 0 },
+    active: { type: Boolean, default: true, index: true },
+    sku: { type: String, trim: true, uppercase: true, sparse: true, unique: true },
+
+    // Estado del producto:
+    //   draft     → sólo visible en admin
+    //   published → visible públicamente (si active = true)
+    // Si publishAt está en el futuro, se considera draft hasta esa fecha.
+    status: { type: String, enum: ['draft', 'published'], default: 'published', index: true },
+    publishAt: { type: Date, default: null },
+
+    // Etiquetas libres (eco, navidad, para-fonda, etc.). Independientes de
+    // las categorías. Usadas para filtros cruzados y landings estacionales.
+    tags: { type: [String], default: [], index: true },
+
+    // "También compraron": contador por producto co-pedido en el mismo carrito.
+    // Se incrementa al registrar la intención de pedido (Order pending).
+    coOrders: { type: Map, of: Number, default: {} },
+
+    // ---- Soft delete (papelera) ----
+    deleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
+
+    // ---- Métricas ----
+    viewsCount: { type: Number, default: 0 },
+    whatsappClicks: { type: Number, default: 0 },
+    salesCount: { type: Number, default: 0 }, // se incrementa manualmente al marcar pedido completado
+
+    // ---- Auditoría ----
+    editHistory: { type: [EditLogSchema], default: [] },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 )
 
-// Índice de texto combinado para búsqueda (nombre + descripción)
 ProductSchema.index({ name: 'text', description: 'text' })
+ProductSchema.index({ deleted: 1, active: 1, featured: 1 })
 
-// En desarrollo limpiamos el cache para que los cambios de schema
-// se apliquen sin tener que reiniciar el servidor manualmente.
 if (process.env.NODE_ENV !== 'production' && mongoose.models.Product) {
   delete mongoose.models.Product
 }
-export default mongoose.models.Product ||
-  mongoose.model('P
+
+export default mongoose.models.Product || mongoose.model('Product', ProductSchema)

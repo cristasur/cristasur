@@ -90,6 +90,17 @@ const localBusinessJsonLd = LOCATIONS.map((l) => ({
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
+      <head>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-CG871WYQHV" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-CG871WYQHV');`,
+          }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
         <script
           type="application/ld+json"

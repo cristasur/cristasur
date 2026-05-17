@@ -14,6 +14,9 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
+  verification: {
+    google: 'DdA3MOprrb-X0HZ_4Kspj6uYSnffdKE6X5NibDdA4w8',
+  },
   title: 'CRISTASUR — Plásticos y artículos para hogar y negocio',
   description:
     'Plásticos, mesas, sillas, juguetes, artículos para restaurantes y desechables. Precios económicos, calidad garantizada. Mérida y Bacalar.',
@@ -101,9 +104,3 @@ export default function RootLayout({ children }) {
           <main className="flex-1">{children}</main>
           <Footer />
           <CartDrawer />
-          <WhatsAppFab />
-        </CartProvider>
-      </body>
-    </html>
-  )
-}

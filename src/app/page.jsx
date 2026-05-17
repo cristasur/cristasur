@@ -8,6 +8,7 @@ import Product from '@/models/Product'
 import Hero from '@/components/Hero'
 import ProductGrid from '@/components/ProductGrid'
 import Icon from '@/components/Icon'
+import RepeatOrder from '@/components/RepeatOrder'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,11 @@ export default async function HomePage() {
   return (
     <div>
       <Hero categories={heroCategories} />
+
+      {/* Banner: repetir último pedido (solo si el cliente tiene historial local) */}
+      <div className="pt-6">
+        <RepeatOrder />
+      </div>
 
       {/* Categorías */}
       <section className="max-w-7xl mx-auto px-4 py-16">
@@ -143,4 +149,7 @@ export default async function HomePage() {
         </section>
       )}
     </div>
+  )
+}
+
   

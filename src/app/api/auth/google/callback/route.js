@@ -19,14 +19,8 @@ export async function GET(request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cristasur.com'
 
   // El usuario canceló
-  if (error) {
-    return NextResponse.redirect(`${siteUrl}/cuenta/login?error=google_cancelled`)
-  }
-
-  // Verificar state anti-CSRF
-  const cookieState = request.cookies.get('oauth_state')?.value
-  if (!state || state !== cookieState) {
-    return NextResponse.redirect(`${siteUrl}/cuenta/login?error=invalid_state`)
+  if (error || !code) {
+    return NextResponse.redirect(`${siteUrl}/cuenta/login`)
   }
 
   try {

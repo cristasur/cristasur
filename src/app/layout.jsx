@@ -23,7 +23,7 @@ export const metadata = {
   },
   title: 'CRISTASUR — Plásticos y artículos para hogar y negocio',
   description:
-    'Plásticos, mesas, sillas, juguetes, artículos para restaurantes y desechables. Precios económicos, calidad garantizada. Mérida y Bacalar.',
+    'CRISTASUR Mérida — Artículos para hogar, restaurante y negocio. Los mejores precios en mayoreo y menudeo. Sucursales en Yucatán y Bacalar. Envíos nacionales.',
   keywords: [
     'cristasur',
     'plásticos',

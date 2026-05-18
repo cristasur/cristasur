@@ -13,6 +13,7 @@ export default function AccountNavLink() {
   const { user } = useCart()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const closeTimer = useRef(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -55,8 +56,8 @@ export default function AccountNavLink() {
     <div
       className="relative"
       ref={ref}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => { clearTimeout(closeTimer.current); setOpen(true) }}
+      onMouseLeave={() => { closeTimer.current = setTimeout(() => setOpen(false), 150) }}
     >
       <button
         onClick={() => setOpen((v) => !v)}

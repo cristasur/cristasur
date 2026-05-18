@@ -9,6 +9,8 @@ import CartProvider from '@/components/CartProvider'
 import CartDrawer from '@/components/CartDrawer'
 import WhatsAppFab from '@/components/WhatsAppFab'
 import NewsletterPopup from '@/components/NewsletterPopup'
+import CompareProvider from '@/components/CompareProvider'
+import CompareBar from '@/components/CompareBar'
 import { LOCATIONS } from '@/lib/locations'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -116,12 +118,15 @@ gtag('config', 'G-CG871WYQHV');`,
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
         />
         <CartProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <CartDrawer />
-          <WhatsAppFab />
-          <NewsletterPopup />
+          <CompareProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <CartDrawer />
+            <WhatsAppFab />
+            <NewsletterPopup />
+            <CompareBar />
+          </CompareProvider>
         </CartProvider>
       </body>
     </html>

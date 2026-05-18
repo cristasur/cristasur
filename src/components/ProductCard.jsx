@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Icon from './Icon'
 import AddToCartButton from './AddToCartButton'
 import FavoriteButton from './FavoriteButton'
+import CompareButton from './CompareButton'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('es-MX', {
@@ -98,6 +99,7 @@ export default function ProductCard({ product }) {
           className="w-full"
           label={outOfStock ? 'Sin stock' : 'Añadir al carrito'}
         />
+        <CompareButton product={product} />
       </div>
     </article>
   )

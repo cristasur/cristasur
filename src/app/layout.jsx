@@ -23,7 +23,7 @@ export const metadata = {
   },
   title: 'CRISTASUR — Plásticos y artículos para hogar y negocio',
   description:
-    'CRISTASUR Mérida — Artículos para hogar, restaurante y negocio. Los mejores precios en mayoreo y menudeo. Sucursales en Yucatán y Bacalar. Envíos nacionales.',
+    'CRISTASUR — Artículos para hogar, restaurante y negocio. Los mejores precios en mayoreo y menudeo. Sucursales en Yucatán y Bacalar. Envíos nacionales.',
   keywords: [
     'cristasur',
     'plásticos',

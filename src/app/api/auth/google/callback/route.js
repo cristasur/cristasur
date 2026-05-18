@@ -86,9 +86,16 @@ export async function GET(request) {
       wholesaleAccess: user.wholesaleAccess,
     })
 
-    const authCookie = buildAuthCookie(token)
+    const cookieOpts = buildAuthCookie(token)
     const res = NextResponse.redirect(`${siteUrl}/cuenta`)
-    res.headers.set('Set-Cookie', authCookie)
+
+    res.cookies.set(cookieOpts.name, cookieOpts.value, {
+      httpOnly: cookieOpts.httpOnly,
+      secure: cookieOpts.secure,
+      sameSite: cookieOpts.sameSite,
+      path: cookieOpts.path,
+      maxAge: cookieOpts.maxAge,
+    })
 
     // Limpiar la cookie de state
     res.cookies.delete('oauth_state')

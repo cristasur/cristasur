@@ -38,6 +38,8 @@ export default function ProductForm({ categories, initial }) {
   const [uploadingGallery, setUploadingGallery] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [galleryUrlInput, setGalleryUrlInput] = useState('')
+  const [addingGalleryUrl, setAddingGalleryUrl] = useState(false)
 
   function update(k, v) {
     setForm((f) => ({ ...f, [k]: v }))
@@ -110,6 +112,43 @@ export default function ProductForm({ categories, initial }) {
     } finally {
       setUploadingGallery(false)
       e.target.value = ''
+    }
+  }
+
+  // Añade una imagen a la galería desde una URL (descarga a Blob vía /api/upload/url)
+  async function addGalleryByUrl() {
+    const raw = galleryUrlInput.trim()
+    if (!raw) return
+    if (form.gallery.length >= MAX_GALLERY) {
+      setError(`Solo puedes tener hasta ${MAX_GALLERY} imágenes en la galería.`)
+      return
+    }
+    setAddingGalleryUrl(true)
+    setError('')
+    try {
+      let finalUrl = raw
+      // Si es URL externa, intentamos re-hospedar vía /api/upload/url
+      if (raw.startsWith('http://') || raw.startsWith('https://')) {
+        const res = await fetch('/api/upload/url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: raw }),
+        })
+        const data = await res.json()
+        if (res.ok && data.url) {
+          finalUrl = data.url
+        }
+        // Si falla el re-hospedaje, usamos la URL directa igualmente
+      }
+      setForm((f) => ({
+        ...f,
+        gallery: [...f.gallery, finalUrl].slice(0, MAX_GALLERY),
+      }))
+      setGalleryUrlInput('')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAddingGalleryUrl(false)
     }
   }
 
@@ -574,7 +613,7 @@ export default function ProductForm({ categories, initial }) {
           seleccionar varios archivos a la vez.
         </p>
 
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-3 items-center">
           <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-slate-300 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
             <span>+ Añadir imágenes</span>
             <input
@@ -586,6 +625,28 @@ export default function ProductForm({ categories, initial }) {
               disabled={form.gallery.length >= MAX_GALLERY}
             />
           </label>
+
+          {/* Añadir imagen de galería por URL */}
+          <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+            <input
+              type="text"
+              inputMode="url"
+              placeholder="https://... pega un link de imagen"
+              value={galleryUrlInput}
+              onChange={(e) => setGalleryUrlInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addGalleryByUrl())}
+              disabled={form.gallery.length >= MAX_GALLERY || addingGalleryUrl}
+              className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={addGalleryByUrl}
+              disabled={!galleryUrlInput.trim() || form.gallery.length >= MAX_GALLERY || addingGalleryUrl}
+              className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-sm font-semibold disabled:opacity-40"
+            >
+              {addingGalleryUrl ? 'Añadiendo…' : 'Añadir URL'}
+            </button>
+          </div>
         </div>
 
         {form.gallery.length > 0 && (

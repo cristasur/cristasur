@@ -1,6 +1,7 @@
 // ============================================================
 // /productos - Catálogo con filtros avanzados y búsqueda
 // ============================================================
+import { Suspense } from 'react'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 import Product from '@/models/Product'
@@ -95,6 +96,9 @@ export default async function CatalogoPage({ searchParams }) {
   else if (onSale) title = 'En oferta'
   else if (q) title = `Resultados para "${q}"`
 
+  const initialFilters = { q, category, featured, inStock, onSale, sort,
+    minPrice: searchParams?.minPrice || '', maxPrice: searchParams?.maxPrice || '' }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
       <header className="mb-8">
@@ -106,7 +110,9 @@ export default async function CatalogoPage({ searchParams }) {
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">
         <aside className="lg:sticky lg:top-24 h-fit">
-          <ProductFilters categories={categories} />
+          <Suspense fallback={<div className="bg-white rounded-2xl shadow-card border border-slate-100 p-4 h-96 animate-pulse" />}>
+            <ProductFilters categories={categories} initialFilters={initialFilters} />
+          </Suspense>
         </aside>
         <div>
           <ProductGrid products={products} />

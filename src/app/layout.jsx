@@ -8,6 +8,7 @@ import Footer from '@/components/Footer'
 import CartProvider from '@/components/CartProvider'
 import CartDrawer from '@/components/CartDrawer'
 import WhatsAppFab from '@/components/WhatsAppFab'
+import NewsletterPopup from '@/components/NewsletterPopup'
 import { LOCATIONS } from '@/lib/locations'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -120,6 +121,7 @@ gtag('config', 'G-CG871WYQHV');`,
           <Footer />
           <CartDrawer />
           <WhatsAppFab />
+          <NewsletterPopup />
         </CartProvider>
       </body>
     </html>

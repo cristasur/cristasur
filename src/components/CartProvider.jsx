@@ -224,22 +224,21 @@ export default function CartProvider({ children }) {
     async (couponInfo) => {
       if (!items.length) return
       const lines = items.map((x) => {
-        const label = x.variantValue ? ` (${x.variantLabel || 'Variante'}: ${x.variantValue})` : ''
+        const variant = x.variantValue ? ` (${x.variantLabel || 'Variante'}: ${x.variantValue})` : ''
         const eff = effectiveUnitPrice(x)
-        const unit = eff.toFixed(2)
-        const total = (eff * x.qty).toFixed(2)
-        const tag = isWholesaleActive(x) ? ' [Mayoreo]' : ''
-        return `• ${x.name}${label} x${x.qty} — $${unit}${tag} = $${total}`
+        const lineTotal = eff * x.qty
+        const wholesale = isWholesaleActive(x) ? ' ⭐ Mayoreo' : ''
+        return `▸ *${x.name}*${variant}\n  Cant: ${x.qty} × $${eff.toFixed(2)}${wholesale}\n  Subtotal: $${lineTotal.toFixed(2)}`
       })
-      let msg = `Hola CRISTASUR, quisiera hacer este pedido:%0A%0A${lines.join('%0A')}%0A%0A`
-      msg += `Subtotal: $${subtotal.toFixed(2)}`
-      if (savings > 0) msg += `%0AAhorro mayoreo: $${savings.toFixed(2)}`
+      let summary = ''
+      if (savings > 0) summary += `💚 Ahorro mayoreo: -$${savings.toFixed(2)}\n`
       if (couponInfo?.code) {
-        msg += `%0ACupón ${couponInfo.code}: -$${Number(couponInfo.discount || 0).toFixed(2)}`
-        msg += `%0ATotal: $${Number(couponInfo.total || subtotal).toFixed(2)}`
+        summary += `🏷️ Cupón ${couponInfo.code}: -$${Number(couponInfo.discount || 0).toFixed(2)}\n`
       }
-      msg += `%0A%0A¿Me confirman disponibilidad y envío, por favor?`
-      const url = `https://wa.me/${WHATSAPP_PHONE}?text=${msg.replace(/\n/g, '%0A')}`
+      const finalTotal = couponInfo?.total ?? subtotal
+      summary += `💰 *TOTAL: $${finalTotal.toFixed(2)}*\n`
+      const msg = `¡Hola CRISTASUR! 👋 Quisiera hacer el siguiente pedido:\n\n🛒 *DETALLE DEL PEDIDO*\n──────────────────────\n${lines.join('\n')}\n──────────────────────\n${summary}¿Me pueden confirmar disponibilidad y datos de envío? 🙏`
+      const url = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`
 
       // Cookie token persistente (no-auth) para enlazar este pedido al cliente.
       let token = ''

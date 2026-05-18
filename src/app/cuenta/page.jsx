@@ -58,6 +58,13 @@ export default async function CuentaPage({ searchParams }) {
               Precios mayoreo VIP
             </Link>
           )}
+          <Link
+            href="/cuenta/perfil"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold shadow-sm text-sm"
+          >
+            <Icon name="user" className="w-4 h-4" />
+            Editar perfil
+          </Link>
           <LogoutClientButton />
         </div>
       </header>

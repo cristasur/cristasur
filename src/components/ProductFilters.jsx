@@ -1,22 +1,23 @@
 'use client'
 // Filtros avanzados para /productos
-// Sincroniza con el URL (?category, ?q, ?minPrice, ?maxPrice, ?inStock, ?onSale, ?sort)
+// Sincroniza con el URL (?category, ?q, ?minPrice, ?maxPrice, ?inStock, ?onSale, ?featured, ?sort)
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Icon from './Icon'
 
-export default function ProductFilters({ categories = [] }) {
+export default function ProductFilters({ categories = [], initialFilters = {} }) {
   const router = useRouter()
   const sp = useSearchParams()
 
   const [form, setForm] = useState({
-    q: sp.get('q') || '',
-    category: sp.get('category') || '',
-    minPrice: sp.get('minPrice') || '',
-    maxPrice: sp.get('maxPrice') || '',
-    inStock: sp.get('inStock') === '1',
-    onSale: sp.get('onSale') === '1',
-    sort: sp.get('sort') || 'newest',
+    q: sp.get('q') ?? initialFilters.q ?? '',
+    category: sp.get('category') ?? initialFilters.category ?? '',
+    minPrice: sp.get('minPrice') ?? initialFilters.minPrice ?? '',
+    maxPrice: sp.get('maxPrice') ?? initialFilters.maxPrice ?? '',
+    inStock: (sp.get('inStock') ?? (initialFilters.inStock ? '1' : '')) === '1',
+    onSale: (sp.get('onSale') ?? (initialFilters.onSale ? '1' : '')) === '1',
+    featured: (sp.get('featured') ?? (initialFilters.featured ? '1' : '')) === '1',
+    sort: sp.get('sort') ?? initialFilters.sort ?? 'newest',
   })
 
   function set(k, v) {
@@ -32,6 +33,7 @@ export default function ProductFilters({ categories = [] }) {
     if (form.maxPrice) params.set('maxPrice', form.maxPrice)
     if (form.inStock) params.set('inStock', '1')
     if (form.onSale) params.set('onSale', '1')
+    if (form.featured) params.set('featured', '1')
     if (form.sort && form.sort !== 'newest') params.set('sort', form.sort)
     const qs = params.toString()
     router.push('/productos' + (qs ? `?${qs}` : ''))
@@ -45,6 +47,7 @@ export default function ProductFilters({ categories = [] }) {
       maxPrice: '',
       inStock: false,
       onSale: false,
+      featured: false,
       sort: 'newest',
     })
     router.push('/productos')
@@ -141,6 +144,18 @@ export default function ProductFilters({ categories = [] }) {
               OFERTA
             </span>
             En oferta
+          </span>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.featured}
+            onChange={(e) => set('featured', e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="inline-flex items-center gap-1">
+            <span className="text-amber-500">★</span>
+            Destacados
           </span>
         </label>
       </div>

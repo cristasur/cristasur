@@ -30,11 +30,10 @@ function LoginForm() {
       }
       // Si por error iniciara un admin desde aquí, lo enviamos al admin
       if (data?.user?.role === 'admin' || data?.user?.role === 'editor') {
-        router.push('/admin')
+        window.location.href = '/admin'
       } else {
-        router.push(next)
+        window.location.href = next
       }
-      router.refresh()
     } finally {
       setBusy(false)
     }

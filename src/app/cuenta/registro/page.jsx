@@ -31,8 +31,7 @@ function RegisterForm() {
         setErr(data?.error || 'Error al crear cuenta')
         return
       }
-      router.push(next)
-      router.refresh()
+      window.location.href = next
     } finally {
       setBusy(false)
     }

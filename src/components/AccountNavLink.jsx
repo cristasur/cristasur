@@ -52,7 +52,12 @@ export default function AccountNavLink() {
     .join('')
 
   return (
-    <div className="relative" ref={ref}>
+    <div
+      className="relative"
+      ref={ref}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
       <button
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 text-sm"

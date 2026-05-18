@@ -1,16 +1,12 @@
 'use client'
-import { useRouter } from 'next/navigation'
 
 export default function LogoutClientButton() {
-  const router = useRouter()
   async function onClick() {
     await fetch('/api/auth/logout', { method: 'POST' })
-    // Limpia el carrito sincronizado para que al volver no quede pegado
     try {
       localStorage.removeItem('cristasur:cart:v1')
     } catch {}
-    router.push('/')
-    router.refresh()
+    window.location.href = '/'
   }
   return (
     <button

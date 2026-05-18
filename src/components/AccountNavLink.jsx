@@ -29,9 +29,7 @@ export default function AccountNavLink() {
     try {
       localStorage.removeItem('cristasur:cart:v1')
     } catch {}
-    setOpen(false)
-    router.push('/')
-    router.refresh()
+    window.location.href = '/'
   }
 
   if (!user) {

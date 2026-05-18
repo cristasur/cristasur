@@ -4,6 +4,7 @@
 // un token, obtenemos el perfil y creamos/actualizamos el usuario.
 // ============================================================
 import { NextResponse } from 'next/server'
+import crypto from 'crypto'
 import dbConnect from '@/lib/mongodb'
 import User from '@/models/User'
 import { signToken, buildAuthCookie } from '@/lib/auth'
@@ -56,11 +57,12 @@ export async function GET(request) {
 
     if (!user) {
       // Crear nuevo usuario (sin contraseña — solo Google)
+      // passwordHash aleatorio: nunca podrá usarse para login normal
       user = await User.create({
         email: profile.email.toLowerCase(),
         name: profile.name || profile.email.split('@')[0],
         role: 'customer',
-        passwordHash: '', // no tiene contraseña local
+        passwordHash: crypto.randomBytes(32).toString('hex'),
         wholesaleAccess: false,
       })
     } else {

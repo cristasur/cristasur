@@ -10,6 +10,8 @@ import User from '@/models/User'
 import { signToken, buildAuthCookie } from '@/lib/auth'
 import { isValidEmail, cleanString, cleanSoft } from '@/lib/validation'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
+import { sendVerificationEmail } from '@/lib/email'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +64,13 @@ export async function POST(request) {
     })
     user.lastLoginAt = new Date()
     await user.save()
+
+    // Send verification email (non-blocking)
+    try {
+      const verifyToken = crypto.randomBytes(32).toString('hex')
+      await User.findByIdAndUpdate(user._id || user.id, { verifyToken })
+      await sendVerificationEmail(user.email, verifyToken)
+    } catch {}
 
     const token = await signToken({
       sub: user._id.toString(),

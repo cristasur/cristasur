@@ -91,6 +91,11 @@ function LoginForm() {
               autoComplete="current-password"
             />
           </label>
+          <div className="text-right">
+            <Link href="/cuenta/olvide-contrasena" className="text-xs text-brand-700 hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
 
           {err && <p className="text-sm text-rose-600">{err}</p>}
 

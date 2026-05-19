@@ -69,6 +69,15 @@ const UserSchema = new mongoose.Schema(
     cartUpdatedAt: { type: Date, default: null },
 
     lastLoginAt: Date,
+
+    // Recuperación de contraseña
+    resetToken: { type: String, default: null },
+    resetTokenExpiry: { type: Date, default: null },
+    // Verificación de email
+    emailVerified: { type: Boolean, default: false },
+    verifyToken: { type: String, default: null },
+    // Para recordatorio de carrito abandonado
+    cartReminderSentAt: { type: Date, default: null },
   },
   { timestamps: true }
 )

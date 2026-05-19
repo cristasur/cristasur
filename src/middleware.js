@@ -16,6 +16,9 @@ const PUBLIC_API_WRITE_PATHS = new Set([
   '/api/auth/login',
   '/api/auth/logout',
   '/api/auth/register', // crear cuenta de cliente (público)
+  '/api/auth/forgot-password', // solicitar reset de contraseña (público)
+  '/api/auth/reset-password', // restablecer contraseña con token (público)
+  '/api/auth/verify-email', // verificación de correo con token (GET, público)
   '/api/reviews', // crear reseña pública (POST); el GET también es público
   '/api/coupons/apply', // preview de cupón (no mutación de BD)
   // /api/seed requiere una clave aparte (ver route.js) y está bloqueado en prod
@@ -106,7 +109,7 @@ export async function middleware(request) {
   }
 
   // ---- Protección de /cuenta y /mayoreo (clientes logueados) ----
-  if (pathname.startsWith('/cuenta') && !pathname.startsWith('/cuenta/login') && !pathname.startsWith('/cuenta/registro')) {
+  if (pathname.startsWith('/cuenta') && !pathname.startsWith('/cuenta/login') && !pathname.startsWith('/cuenta/registro') && !pathname.startsWith('/cuenta/olvide-contrasena') && !pathname.startsWith('/cuenta/nueva-contrasena') && !pathname.startsWith('/cuenta/verificar-email')) {
     const token = request.cookies.get(AUTH_COOKIE_NAME)?.value
     const payload = await verifyToken(token)
     if (!payload) {

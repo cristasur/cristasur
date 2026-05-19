@@ -3,6 +3,7 @@
 // ============================================================
 import Link from 'next/link'
 import Icon from '@/components/Icon'
+import { LOCATIONS } from '@/lib/locations'
 
 export const metadata = {
   title: 'Quiénes somos | CRISTASUR Mérida',
@@ -33,26 +34,7 @@ const VALORES = [
   },
 ]
 
-const SUCURSALES = [
-  {
-    nombre: 'Matriz — Leandro Valle',
-    direccion: 'Periférico Lic. Manuel Berzunza S/N, Leandro Valle, Mérida, Yucatán',
-    telefono: '999 429 7815',
-    maps: 'https://maps.google.com/?q=CRISTASUR+Merida+Yucatan',
-  },
-  {
-    nombre: 'Sucursal Chuburná',
-    direccion: 'Chuburná, Mérida, Yucatán',
-    telefono: '999 473 1919',
-    maps: 'https://maps.google.com/?q=Cristasur+Chuburnа+Merida',
-  },
-  {
-    nombre: 'Sucursal Carretera Campeche',
-    direccion: 'Carretera Campeche TANIL, Mérida, Yucatán',
-    telefono: '999 473 1919',
-    maps: 'https://maps.google.com/?q=Cristasur+Carretera+Campeche+Merida',
-  },
-]
+// Sucursales tomadas de LOCATIONS para mantener consistencia con el resto del sitio
 
 export default function QuienesSomosPage() {
   return (
@@ -71,7 +53,7 @@ export default function QuienesSomosPage() {
             <span className="text-accent-300">equipando Yucatán</span>
           </h1>
           <p className="mt-6 text-lg text-brand-100 max-w-2xl mx-auto">
-            Somos una empresa yucateca dedicada a ofrecer productos de calidad
+            Somos una empresa peninsular dedicada a ofrecer productos de calidad
             para el hogar y negocios al mejor precio, en menudeo y mayoreo.
           </p>
         </div>
@@ -126,9 +108,9 @@ export default function QuienesSomosPage() {
         <div className="max-w-4xl mx-auto px-4 py-14 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
             { num: '10+', label: 'Años en el mercado' },
-            { num: '3', label: 'Sucursales en Mérida' },
-            { num: '6+', label: 'Piezas para mayoreo' },
-            { num: '100%', label: 'Empresa yucateca' },
+            { num: '3', label: 'Sucursales en la Península' },
+            { num: '500+', label: 'Piezas para mayoreo' },
+            { num: '100%', label: 'Empresa peninsular' },
           ].map((s) => (
             <div key={s.label}>
               <div className="text-4xl font-black text-accent-300 mb-1">{s.num}</div>
@@ -171,22 +153,21 @@ export default function QuienesSomosPage() {
         <div className="text-center mb-10">
           <div className="text-xs uppercase tracking-widest text-brand-600 font-bold mb-2">Encuéntranos</div>
           <h2 className="text-3xl font-black text-slate-900">Nuestras sucursales</h2>
-          <p className="text-slate-500 mt-2">Tres puntos de venta en Mérida para servirte mejor</p>
+          <p className="text-slate-500 mt-2">Tres puntos de venta en la Península para servirte mejor</p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
-          {SUCURSALES.map((s) => (
-            <div key={s.nombre} className="bg-white rounded-2xl border border-slate-100 shadow-card p-6">
-              <div className="w-10 h-10 rounded-xl bg-brand-50 grid place-items-center mb-4">
-                <Icon name="location" className="w-5 h-5 text-brand-600" />
-              </div>
-              <h3 className="font-bold text-slate-900 text-lg mb-1">{s.nombre}</h3>
-              <p className="text-slate-500 text-sm mb-3 leading-relaxed">{s.direccion}</p>
-              <div className="flex items-center gap-2 text-sm text-slate-600 mb-4">
+          {LOCATIONS.map((loc) => (
+            <div key={loc.id} className="bg-white rounded-2xl border border-slate-100 shadow-card p-6">
+              <div className="text-xs uppercase tracking-widest text-brand-600 font-bold mb-3">{loc.city}, {loc.state}</div>
+              <h3 className="font-bold text-slate-900 text-lg mb-1">{loc.name}</h3>
+              <p className="text-slate-500 text-sm mb-3 leading-relaxed">{loc.address}</p>
+              <div className="flex items-center gap-2 text-sm text-slate-600 mb-1">
                 <Icon name="phone" className="w-4 h-4 text-brand-600 shrink-0" />
-                <span>{s.telefono}</span>
+                <span>{loc.phone}</span>
               </div>
+              <div className="text-xs text-slate-400 mb-4">{loc.hours}</div>
               <a
-                href={s.maps}
+                href={loc.mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-semibold"
@@ -201,31 +182,28 @@ export default function QuienesSomosPage() {
 
       {/* CTA */}
       <section className="max-w-4xl mx-auto px-4 pb-20">
-        <div className="bg-gradient-to-br from-accent-500 to-accent-700 rounded-3xl p-10 text-center text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-dots opacity-30" />
-          <div className="relative">
-            <h2 className="text-3xl font-black mb-3">¿Tienes un negocio?</h2>
-            <p className="text-accent-100 mb-6 max-w-lg mx-auto">
-              Contáctanos por WhatsApp, dinos qué necesitas y cuánto, y te cotizamos sin rodeos.
-              Atendemos restaurantes, escuelas, hoteles, comercios y más.
-            </p>
-            <div className="flex flex-wrap gap-3 justify-center">
-              <a
-                href="https://wa.me/529994731919?text=Hola%2C%20me%20interesa%20cotizar%20por%20mayoreo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-accent-700 font-bold hover:bg-accent-50 transition-colors"
-              >
-                Cotizar por WhatsApp
-                <Icon name="arrow" className="w-4 h-4" />
-              </a>
-              <Link
-                href="/productos"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold border border-white/30 transition-colors"
-              >
-                Ver catálogo
-              </Link>
-            </div>
+        <div className="bg-slate-100 border border-slate-200 rounded-3xl p-10 text-center relative overflow-hidden">
+          <h2 className="text-3xl font-black text-slate-900 mb-3">¿Tienes un negocio?</h2>
+          <p className="text-slate-500 mb-6 max-w-lg mx-auto">
+            Contáctanos por WhatsApp, dinos qué necesitas y cuánto, y te cotizamos sin rodeos.
+            Atendemos restaurantes, escuelas, hoteles, comercios y más.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <a
+              href="https://wa.me/529994731919?text=Hola%2C%20me%20interesa%20cotizar%20por%20mayoreo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold transition-colors"
+            >
+              Cotizar por WhatsApp
+              <Icon name="arrow" className="w-4 h-4" />
+            </a>
+            <Link
+              href="/productos"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 transition-colors"
+            >
+              Ver catálogo
+            </Link>
           </div>
         </div>
       </section>

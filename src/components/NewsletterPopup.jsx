@@ -102,7 +102,7 @@ export default function NewsletterPopup() {
               </Link>
               <button
                 onClick={dismiss}
-                className="mt-3 text-xs text-slate-400 hover:text-slate-600"
+                className="w-full mt-2 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-colors"
               >
                 No gracias
               </button>
@@ -132,7 +132,7 @@ export default function NewsletterPopup() {
               )}
               <button
                 onClick={dismiss}
-                className="mt-3 text-xs text-slate-400 hover:text-slate-600"
+                className="w-full mt-2 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-colors"
               >
                 Ahora no
               </button>

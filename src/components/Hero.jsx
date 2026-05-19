@@ -18,8 +18,7 @@ export default function Hero({ categories = [] }) {
             Todo para tu <span className="text-accent-300">hogar</span> y tu <span className="text-accent-300">negocio</span>.
           </h1>
           <p className="mt-6 text-lg text-brand-100 max-w-xl">
-            Plásticos, mesas, sillas, juguetes y desechables. Precios al mayoreo,
-            calidad que dura y envío a toda la república.
+            Equipa tu hogar o negocio con la mejor calidad al mejor precio.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link

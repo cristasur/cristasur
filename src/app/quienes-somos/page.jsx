@@ -1,6 +1,5 @@
 // ============================================================
 // /quienes-somos — Historia y valores de CRISTASUR
-// Empresa 100% Yucateca con más de 9 años de experiencia
 // ============================================================
 import Link from 'next/link'
 import Icon from '@/components/Icon'
@@ -8,35 +7,35 @@ import Icon from '@/components/Icon'
 export const metadata = {
   title: 'Quiénes somos | CRISTASUR Mérida',
   description:
-    'Conoce CRISTASUR, empresa 100% yucateca con más de 9 años de experiencia en venta de plásticos, mesas, sillas y juguetes al mayoreo y menudeo en Mérida, Yucatán.',
+    'Conoce CRISTASUR, empresa 100% yucateca con más de 10 años de experiencia en venta de productos para el hogar y negocios al mayoreo y menudeo en Mérida, Yucatán.',
 }
 
 const VALORES = [
   {
     icon: 'shield',
-    title: 'Calidad garantizada',
-    desc: 'Seleccionamos cuidadosamente cada producto para asegurar que cumpla con los estándares que tu hogar o negocio merece.',
+    title: 'Sin engaños',
+    desc: 'Lo que ves en la foto es lo que llega. Si algo no está disponible te lo decimos antes de que pagues, no después.',
   },
   {
     icon: 'tag',
-    title: 'Precios justos',
-    desc: 'Manejamos precios competitivos tanto en menudeo como en mayoreo, sin intermediarios y directo al cliente.',
+    title: 'Precio real',
+    desc: 'Nada de precios inflados para después "hacer descuento". Nuestro precio es nuestro precio, y el mayoreo siempre conviene.',
   },
   {
     icon: 'truck',
-    title: 'Envío a toda la república',
-    desc: 'Hacemos llegar nuestros productos a cualquier rincón de México, coordinando el envío directamente contigo.',
+    title: 'Llegamos a donde estés',
+    desc: 'Desde Tijuana hasta Cancún. Coordinamos el envío por WhatsApp y te buscamos la opción más barata para tu zona.',
   },
   {
     icon: 'users',
-    title: 'Atención personalizada',
-    desc: 'Somos una empresa familiar yucateca. Cada cliente es importante y lo atendemos con el trato cercano que nos caracteriza.',
+    title: 'Trato de vecino',
+    desc: 'Somos yucatecos, atendemos como yucatecos. Sin robots, sin scripts. Si tienes una duda rara, pregúntanos sin pena.',
   },
 ]
 
 const SUCURSALES = [
   {
-    nombre: 'Matriz',
+    nombre: 'Matriz — Leandro Valle',
     direccion: 'Periférico Lic. Manuel Berzunza S/N, Leandro Valle, Mérida, Yucatán',
     telefono: '999 429 7815',
     maps: 'https://maps.google.com/?q=CRISTASUR+Merida+Yucatan',
@@ -68,12 +67,12 @@ export default function QuienesSomosPage() {
             Empresa 100% Yucateca
           </span>
           <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
-            Más de 9 años <br />
+            Más de 10 años <br />
             <span className="text-accent-300">equipando Yucatán</span>
           </h1>
           <p className="mt-6 text-lg text-brand-100 max-w-2xl mx-auto">
-            Somos una empresa orgullosamente yucateca dedicada a ofrecer plásticos, mesas, sillas
-            y juguetes de calidad al mejor precio, tanto en menudeo como en mayoreo.
+            Somos una empresa yucateca dedicada a ofrecer productos de calidad
+            para el hogar y negocios al mejor precio, en menudeo y mayoreo.
           </p>
         </div>
       </section>
@@ -82,21 +81,22 @@ export default function QuienesSomosPage() {
       <section className="max-w-4xl mx-auto px-4 py-16">
         <div className="bg-white rounded-3xl shadow-card border border-slate-100 p-8 md:p-12">
           <div className="text-xs uppercase tracking-widest text-brand-600 font-bold mb-2">Nuestra historia</div>
-          <h2 className="text-3xl font-black text-slate-900 mb-6">Nacimos en Mérida, crecimos con Yucatán</h2>
-          <div className="prose prose-slate max-w-none text-slate-600 space-y-4 text-base leading-relaxed">
+          <h2 className="text-3xl font-black text-slate-900 mb-6">Nacimos aquí, pensamos en los de aquí</h2>
+          <div className="space-y-5 text-slate-600 text-base leading-relaxed">
             <p>
-              CRISTASUR nació en Mérida, Yucatán, con una misión clara: acercar productos de calidad a los hogares
-              y negocios yucatecos a precios accesibles. Desde nuestros inicios hemos sido una empresa familiar
-              comprometida con nuestra comunidad.
+              CRISTASUR empezó como una apuesta familiar en Mérida, con la idea simple de que los productos
+              que se necesitan en casa o en un negocio no tienen por qué ser caros ni difíciles de conseguir.
+              Sin grandes pretensiones, solo con las ganas de servir bien.
             </p>
             <p>
-              Con más de 9 años de experiencia en el mercado, hemos crecido hasta contar con <strong>3 puntos de
-              venta en Mérida</strong>, atendiendo tanto a familias como a restaurantes, escuelas, hoteles y
-              comercios de toda la península.
+              Con más de <strong>10 años en el mercado</strong>, hemos crecido hasta tener
+              <strong> 3 puntos de venta en Mérida</strong> y una tienda en línea que llega a toda la república.
+              Hemos surtido desde una familia que necesita sillas para su fiesta de xv hasta hoteles que
+              piden cientos de piezas cada mes.
             </p>
             <p>
-              Hoy, gracias a nuestra tienda en línea, podemos llevar nuestros productos a cualquier rincón de
-              México, manteniendo siempre el trato cercano y la calidad que nos distingue.
+              Lo que no ha cambiado en todo este tiempo es cómo tratamos a la gente. Seguimos siendo
+              los mismos de siempre: directos, sin rodeos, y con el precio claro desde el primer mensaje.
             </p>
           </div>
         </div>
@@ -105,8 +105,8 @@ export default function QuienesSomosPage() {
       {/* Valores */}
       <section className="max-w-6xl mx-auto px-4 pb-16">
         <div className="text-center mb-10">
-          <div className="text-xs uppercase tracking-widest text-brand-600 font-bold mb-2">Lo que nos define</div>
-          <h2 className="text-3xl font-black text-slate-900">Nuestros valores</h2>
+          <div className="text-xs uppercase tracking-widest text-brand-600 font-bold mb-2">Cómo trabajamos</div>
+          <h2 className="text-3xl font-black text-slate-900">Lo que nos distingue</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {VALORES.map((v) => (
@@ -125,7 +125,7 @@ export default function QuienesSomosPage() {
       <section className="bg-gradient-to-r from-brand-600 to-brand-800 text-white">
         <div className="max-w-4xl mx-auto px-4 py-14 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { num: '9+', label: 'Años de experiencia' },
+            { num: '10+', label: 'Años en el mercado' },
             { num: '3', label: 'Sucursales en Mérida' },
             { num: '6+', label: 'Piezas para mayoreo' },
             { num: '100%', label: 'Empresa yucateca' },
@@ -138,8 +138,36 @@ export default function QuienesSomosPage() {
         </div>
       </section>
 
+      {/* ¿A quién le vendemos? */}
+      <section className="max-w-4xl mx-auto px-4 py-16">
+        <div className="bg-white rounded-3xl shadow-card border border-slate-100 p-8 md:p-12">
+          <div className="text-xs uppercase tracking-widest text-brand-600 font-bold mb-2">Nuestros clientes</div>
+          <h2 className="text-3xl font-black text-slate-900 mb-4">¿A quién le vendemos?</h2>
+          <p className="text-slate-600 leading-relaxed mb-6">
+            A todos, y lo decimos en serio. Desde la mamá que necesita un par de sillas para el cumpleaños
+            de su hijo hasta el restaurantero que nos compra cada mes. Tenemos precios de menudeo para
+            quien compra poco, y precios de mayoreo para quien compra seguido o en cantidad.
+          </p>
+          <div className="grid sm:grid-cols-3 gap-4 text-sm">
+            {[
+              { label: 'Familias', desc: 'Artículos para el hogar sin gastar de más.' },
+              { label: 'Restaurantes y cocinas', desc: 'Utensilios, recipientes y todo para cocinar en cantidad.' },
+              { label: 'Hoteles y posadas', desc: 'Equipamiento a mayoreo con entrega directa.' },
+              { label: 'Escuelas y guarderías', desc: 'Mesas, sillas y artículos infantiles.' },
+              { label: 'Comercios y revendedores', desc: 'Precios especiales para quien revende.' },
+              { label: 'Eventos y fiestas', desc: 'Renta y venta para cualquier tipo de evento.' },
+            ].map((c) => (
+              <div key={c.label} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                <div className="font-bold text-slate-800 mb-1">{c.label}</div>
+                <div className="text-slate-500 text-xs leading-relaxed">{c.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Sucursales */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
+      <section className="max-w-6xl mx-auto px-4 pb-16">
         <div className="text-center mb-10">
           <div className="text-xs uppercase tracking-widest text-brand-600 font-bold mb-2">Encuéntranos</div>
           <h2 className="text-3xl font-black text-slate-900">Nuestras sucursales</h2>
@@ -178,17 +206,19 @@ export default function QuienesSomosPage() {
           <div className="relative">
             <h2 className="text-3xl font-black mb-3">¿Tienes un negocio?</h2>
             <p className="text-accent-100 mb-6 max-w-lg mx-auto">
-              Atendemos a restaurantes, escuelas, hoteles y comercios con precios especiales por mayoreo.
-              Contáctanos y con gusto te cotizamos.
+              Contáctanos por WhatsApp, dinos qué necesitas y cuánto, y te cotizamos sin rodeos.
+              Atendemos restaurantes, escuelas, hoteles, comercios y más.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
-              <Link
-                href="/contacto"
+              <a
+                href="https://wa.me/529994731919?text=Hola%2C%20me%20interesa%20cotizar%20por%20mayoreo"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-accent-700 font-bold hover:bg-accent-50 transition-colors"
               >
-                Cotizar por mayoreo
+                Cotizar por WhatsApp
                 <Icon name="arrow" className="w-4 h-4" />
-              </Link>
+              </a>
               <Link
                 href="/productos"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold border border-white/30 transition-colors"

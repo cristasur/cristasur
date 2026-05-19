@@ -1,5 +1,5 @@
 'use client'
-// Selector de productos + opciones de papel/grilla, descarga el PDF.
+// Selector de productos + opciones de papel/grilla/póster, descarga el PDF.
 import { useMemo, useState } from 'react'
 import Icon from '@/components/Icon'
 
@@ -11,10 +11,16 @@ export default function LabelsClient({ products, categories }) {
   const [selected, setSelected] = useState(new Set())
   const [filter, setFilter] = useState('')
   const [filterCat, setFilterCat] = useState('')
+
+  // Modo: 'grid' = grilla varias etiquetas | 'poster' = 1 por hoja, grande
+  const [mode, setMode] = useState('grid')
+
+  // Opciones grilla
   const [paper, setPaper] = useState('LETTER')
-  const [cols, setCols] = useState(3)
-  const [rows, setRows] = useState(8)
+  const [cols, setCols] = useState(2)
+  const [rows, setRows] = useState(4)
   const [repeat, setRepeat] = useState(1)
+
   const [busy, setBusy] = useState(false)
 
   const filtered = useMemo(() => {
@@ -42,18 +48,20 @@ export default function LabelsClient({ products, categories }) {
     if (!selected.size) return alert('Selecciona al menos un producto')
     setBusy(true)
     try {
+      const body = {
+        ids: Array.from(selected),
+        mode,
+        repeat: Number(repeat) || 1,
+        layout: {
+          cols: Number(cols) || 2,
+          rows: Number(rows) || 4,
+          paper,
+        },
+      }
       const res = await fetch('/api/products/labels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ids: Array.from(selected),
-          repeat: Number(repeat) || 1,
-          layout: {
-            cols: Number(cols) || 3,
-            rows: Number(rows) || 8,
-            paper,
-          },
-        }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -72,7 +80,7 @@ export default function LabelsClient({ products, categories }) {
     }
   }
 
-  const perPage = (Number(cols) || 1) * (Number(rows) || 1)
+  const perPage = mode === 'poster' ? 1 : (Number(cols) || 1) * (Number(rows) || 1)
   const totalLabels = selected.size * (Number(repeat) || 1)
   const pages = Math.ceil(totalLabels / perPage) || 0
 
@@ -82,9 +90,8 @@ export default function LabelsClient({ products, categories }) {
         <div>
           <h1 className="text-2xl font-black text-slate-900">Etiquetas PDF con QR</h1>
           <p className="text-slate-500 text-sm">
-            Genera un PDF imprimible con QR. Pega las etiquetas en tu local: tus
-            clientes escanean, ven la ficha del producto con fotos y reseñas, y
-            te piden por WhatsApp.
+            Genera un PDF imprimible con QR. Tus clientes escanean, ven la ficha
+            con fotos y compran por WhatsApp.
           </p>
         </div>
         <div className="text-sm text-slate-500 text-right">
@@ -93,64 +100,122 @@ export default function LabelsClient({ products, categories }) {
         </div>
       </header>
 
-      <section className="bg-white rounded-2xl shadow-card border border-slate-100 p-5">
-        <h2 className="font-bold text-slate-900 mb-3">Formato</h2>
-        <div className="grid sm:grid-cols-4 gap-3">
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Papel</span>
-            <select
-              value={paper}
-              onChange={(e) => setPaper(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            >
-              <option value="LETTER">Carta (Letter)</option>
-              <option value="A4">A4</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Columnas</span>
-            <input
-              type="number"
-              min="1"
-              max="5"
-              value={cols}
-              onChange={(e) => setCols(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Filas</span>
-            <input
-              type="number"
-              min="1"
-              max="12"
-              value={rows}
-              onChange={(e) => setRows(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Copias por producto</span>
-            <input
-              type="number"
-              min="1"
-              max="50"
-              value={repeat}
-              onChange={(e) => setRepeat(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
-            />
-          </label>
+      <section className="bg-white rounded-2xl shadow-card border border-slate-100 p-5 space-y-4">
+        <h2 className="font-bold text-slate-900">Formato</h2>
+
+        {/* Selector de modo */}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setMode('grid')}
+            className={`flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-colors text-left ${
+              mode === 'grid'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            <div className="text-lg mb-0.5">📋</div>
+            <div className="font-bold">Grilla</div>
+            <div className="text-xs font-normal text-slate-500 mt-0.5">Varias etiquetas por hoja</div>
+          </button>
+          <button
+            onClick={() => setMode('poster')}
+            className={`flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-colors text-left ${
+              mode === 'poster'
+                ? 'border-brand-600 bg-brand-50 text-brand-700'
+                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            <div className="text-lg mb-0.5">🖼️</div>
+            <div className="font-bold">Póster</div>
+            <div className="text-xs font-normal text-slate-500 mt-0.5">1 producto por hoja, QR grande</div>
+          </button>
         </div>
+
+        {/* Opciones de grilla (solo en modo grid) */}
+        {mode === 'grid' && (
+          <div className="grid sm:grid-cols-4 gap-3 pt-1">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Papel</span>
+              <select
+                value={paper}
+                onChange={(e) => setPaper(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              >
+                <option value="LETTER">Carta (Letter)</option>
+                <option value="A4">A4</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Columnas</span>
+              <input
+                type="number" min="1" max="5" value={cols}
+                onChange={(e) => setCols(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Filas</span>
+              <input
+                type="number" min="1" max="12" value={rows}
+                onChange={(e) => setRows(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Copias por producto</span>
+              <input
+                type="number" min="1" max="50" value={repeat}
+                onChange={(e) => setRepeat(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </label>
+          </div>
+        )}
+
+        {/* Opciones de póster */}
+        {mode === 'poster' && (
+          <div className="grid sm:grid-cols-2 gap-3 pt-1">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Papel</span>
+              <select
+                value={paper}
+                onChange={(e) => setPaper(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              >
+                <option value="LETTER">Carta (Letter)</option>
+                <option value="A4">A4</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Copias por producto</span>
+              <input
+                type="number" min="1" max="10" value={repeat}
+                onChange={(e) => setRepeat(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </label>
+          </div>
+        )}
+
+        {mode === 'poster' && (
+          <p className="text-xs text-slate-400 bg-slate-50 rounded-lg px-3 py-2">
+            💡 Cada producto ocupa una hoja completa con QR grande. Ideal para imprimir y colocar junto al producto en tu tienda.
+          </p>
+        )}
+
         <button
           onClick={downloadPdf}
           disabled={busy || !selected.size}
-          className="mt-4 inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold disabled:opacity-50 transition-colors"
         >
           <Icon name="download" className="w-4 h-4" />
-          {busy ? 'Generando…' : `Descargar PDF (${pages} hoja${pages === 1 ? '' : 's'})`}
+          {busy
+            ? 'Generando…'
+            : `Descargar PDF${pages > 0 ? ` (${pages} hoja${pages === 1 ? '' : 's'})` : ''}`}
         </button>
       </section>
 
+      {/* Tabla de selección */}
       <section className="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
         <div className="p-4 flex flex-col sm:flex-row gap-3 border-b border-slate-100">
           <input

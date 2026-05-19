@@ -1,109 +1,142 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useCart } from './CartProvider'
 
-const LS_KEY = 'cristasur:newsletter:dismissed'
+const LS_GUEST    = 'cristasur:popup:guest:dismissed'
+const LS_VERIFY   = 'cristasur:popup:verify:dismissed'
 
 export default function NewsletterPopup() {
+  const { user } = useCart()
   const [visible, setVisible] = useState(false)
-  const [email, setEmail] = useState('')
-  const [done, setDone] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
+  const [mode, setMode]       = useState(null) // 'guest' | 'verify'
+  const [sent, setSent]       = useState(false)
+  const [busy, setBusy]       = useState(false)
+  const [ready, setReady]     = useState(false) // evita flash antes de hidratar
 
+  // Espera a que CartProvider hidrate el usuario antes de decidir
   useEffect(() => {
-    try {
-      if (localStorage.getItem(LS_KEY)) return
-    } catch {}
-    const t = setTimeout(() => setVisible(true), 8000)
+    const t = setTimeout(() => setReady(true), 500)
     return () => clearTimeout(t)
   }, [])
 
+  useEffect(() => {
+    if (!ready) return
+
+    let newMode = null
+    try {
+      if (!user) {
+        // Visitante sin sesión
+        if (!localStorage.getItem(LS_GUEST)) newMode = 'guest'
+      } else if (!user.emailVerified) {
+        // Sesión activa pero sin verificar
+        if (!localStorage.getItem(LS_VERIFY)) newMode = 'verify'
+      }
+    } catch {}
+
+    if (!newMode) return
+    const t = setTimeout(() => {
+      setMode(newMode)
+      setVisible(true)
+    }, 8000)
+    return () => clearTimeout(t)
+  }, [ready, user])
+
   function dismiss() {
-    try { localStorage.setItem(LS_KEY, '1') } catch {}
+    try {
+      if (mode === 'guest')  localStorage.setItem(LS_GUEST, '1')
+      if (mode === 'verify') localStorage.setItem(LS_VERIFY, '1')
+    } catch {}
     setVisible(false)
   }
 
-  async function submit(e) {
-    e.preventDefault()
+  async function resendVerification() {
     setBusy(true)
-    setErr('')
     try {
-      const res = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (data.error) {
-        setErr(data.error)
-        return
-      }
-      setDone(true)
-      try { localStorage.setItem(LS_KEY, '1') } catch {}
-      setTimeout(() => setVisible(false), 3000)
-    } catch {
-      setErr('Algo salió mal. Intenta de nuevo.')
-    } finally {
-      setBusy(false)
-    }
+      await fetch('/api/auth/resend-verification', { method: 'POST' })
+      setSent(true)
+      try { localStorage.setItem(LS_VERIFY, '1') } catch {}
+    } catch {}
+    finally { setBusy(false) }
   }
 
-  if (!visible) return null
+  if (!visible || !mode) return null
 
   return (
     <>
-      {/* Overlay */}
       <div
         className="fixed inset-0 bg-black/50 z-50 transition-opacity duration-300"
         onClick={dismiss}
       />
-      {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
         <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center pointer-events-auto animate-fade-in">
           <button
             onClick={dismiss}
-            className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+            className="absolute top-3 right-3 w-8 h-8 grid place-items-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700"
             aria-label="Cerrar"
           >
             ✕
           </button>
-          <div className="text-5xl mb-3">🎁</div>
-          <h2 className="text-2xl font-black text-slate-900">
-            ¡Obtén 5% de descuento!
-          </h2>
-          <p className="text-slate-600 mt-2 text-sm">
-            Suscríbete y recibe ofertas exclusivas al correo
-          </p>
-          {done ? (
-            <div className="mt-6 p-4 bg-emerald-50 rounded-xl text-emerald-700 font-semibold">
-              ¡Listo! Revisa tu correo 🎉
-            </div>
-          ) : (
-            <form onSubmit={submit} className="mt-6 space-y-3">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@correo.com"
-                required
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-brand-500 text-center"
-              />
-              {err && <p className="text-sm text-rose-600">{err}</p>}
-              <button
-                type="submit"
-                disabled={busy}
-                className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold disabled:opacity-60 transition-colors"
-              >
-                {busy ? 'Enviando…' : 'Quiero mi descuento'}
-              </button>
-              <button
-                type="button"
+
+          {/* ── Modo: visitante sin cuenta ── */}
+          {mode === 'guest' && (
+            <>
+              <div className="text-5xl mb-3">🎁</div>
+              <h2 className="text-2xl font-black text-slate-900">¡Ofertas exclusivas para ti!</h2>
+              <p className="text-slate-600 mt-2 text-sm">
+                Crea tu cuenta y sé el primero en enterarte de descuentos, nuevos productos y promociones especiales.
+              </p>
+              <Link
+                href="/cuenta/registro"
                 onClick={dismiss}
-                className="text-xs text-slate-400 hover:text-slate-600"
+                className="mt-6 block w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold transition-colors"
+              >
+                Crear cuenta gratis
+              </Link>
+              <Link
+                href="/cuenta/login"
+                onClick={dismiss}
+                className="mt-2 block text-sm text-brand-700 hover:underline"
+              >
+                Ya tengo cuenta — Iniciar sesión
+              </Link>
+              <button
+                onClick={dismiss}
+                className="mt-3 text-xs text-slate-400 hover:text-slate-600"
               >
                 No gracias
               </button>
-            </form>
+            </>
+          )}
+
+          {/* ── Modo: sesión activa pero sin verificar ── */}
+          {mode === 'verify' && (
+            <>
+              <div className="text-5xl mb-3">✉️</div>
+              <h2 className="text-2xl font-black text-slate-900">Confirma tu correo</h2>
+              <p className="text-slate-600 mt-2 text-sm">
+                Verifica tu cuenta para recibir ofertas exclusivas antes que nadie y no perderte ninguna promoción.
+              </p>
+              {sent ? (
+                <div className="mt-6 p-4 bg-emerald-50 rounded-xl text-emerald-700 font-semibold text-sm">
+                  ¡Correo enviado! Revisa tu bandeja de entrada 📬
+                </div>
+              ) : (
+                <button
+                  onClick={resendVerification}
+                  disabled={busy}
+                  className="mt-6 w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold disabled:opacity-60 transition-colors"
+                >
+                  {busy ? 'Enviando…' : 'Reenviar correo de verificación'}
+                </button>
+              )}
+              <button
+                onClick={dismiss}
+                className="mt-3 text-xs text-slate-400 hover:text-slate-600"
+              >
+                Ahora no
+              </button>
+            </>
           )}
         </div>
       </div>

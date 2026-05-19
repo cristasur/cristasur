@@ -36,6 +36,11 @@ export async function POST(request) {
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
     }
+    const BLOCKED_DOMAINS = ['mailinator.com','guerrillamail.com','temp-mail.org','throwam.com','yopmail.com','sharklasers.com','trashmail.com','example.com','test.com','fake.com','dispostable.com','maildrop.cc','spamgourmet.com']
+    const emailDomain = email.split('@')[1] || ''
+    if (BLOCKED_DOMAINS.includes(emailDomain)) {
+      return NextResponse.json({ error: 'Por favor usa un correo real para registrarte.' }, { status: 400 })
+    }
     if (password.length < 8) {
       return NextResponse.json(
         { error: 'La contraseña debe tener al menos 8 caracteres' },

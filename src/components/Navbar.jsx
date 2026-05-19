@@ -52,10 +52,16 @@ export default async function Navbar() {
               Catálogo
             </Link>
             <Link
-              href="/blog"
+              href="/quienes-somos"
               className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
             >
-              Blog
+              Conócenos
+            </Link>
+            <Link
+              href="/envios"
+              className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+            >
+              Envíos
             </Link>
             <Link
               href="/contacto"

@@ -52,6 +52,17 @@ export default function Footer() {
             <li><Link href="/productos?featured=1" className="hover:text-white">Destacados</Link></li>
             <li><Link href="/productos?onSale=1" className="hover:text-white">En oferta</Link></li>
             <li><Link href="/contacto" className="hover:text-white">Contacto</Link></li>
+            <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="font-semibold text-white mb-3">Empresa</h4>
+          <ul className="space-y-2 text-sm">
+            <li><Link href="/quienes-somos" className="hover:text-white">Quiénes somos</Link></li>
+            <li><Link href="/envios" className="hover:text-white">Envíos</Link></li>
+            <li><Link href="/envios#devoluciones" className="hover:text-white">Política de devoluciones</Link></li>
+            <li><Link href="/mayoreo" className="hover:text-white">Precios mayoreo</Link></li>
           </ul>
         </div>
 

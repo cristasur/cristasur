@@ -143,7 +143,7 @@ export default function EnviosPage() {
       </section>
 
       {/* Devoluciones */}
-      <section className="max-w-4xl mx-auto px-4 py-16">
+      <section id="devoluciones" className="max-w-4xl mx-auto px-4 py-16">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-amber-50 grid place-items-center shrink-0">

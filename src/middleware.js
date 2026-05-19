@@ -19,7 +19,8 @@ const PUBLIC_API_WRITE_PATHS = new Set([
   '/api/auth/forgot-password', // solicitar reset de contraseña (público)
   '/api/auth/reset-password', // restablecer contraseña con token (público)
   '/api/auth/verify-email',       // verificación de correo con token (GET, público)
-  '/api/auth/resend-verification', // reenviar email de verificación (requiere sesión pero no bloquear)
+  '/api/auth/resend-verification',  // reenviar email de verificación
+  '/api/auth/subscribe-offers',     // suscribirse a ofertas (requiere sesión)
   '/api/reviews', // crear reseña pública (POST); el GET también es público
   '/api/coupons/apply', // preview de cupón (no mutación de BD)
   // /api/seed requiere una clave aparte (ver route.js) y está bloqueado en prod

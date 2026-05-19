@@ -78,6 +78,8 @@ const UserSchema = new mongoose.Schema(
     verifyToken: { type: String, default: null },
     // Para recordatorio de carrito abandonado
     cartReminderSentAt: { type: Date, default: null },
+    // Suscripción a ofertas y descuentos
+    newsletterSubscribed: { type: Boolean, default: false },
   },
   { timestamps: true }
 )

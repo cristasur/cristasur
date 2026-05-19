@@ -17,7 +17,7 @@ export async function GET() {
   try {
     await dbConnect()
     const u = await User.findById(session.sub)
-      .select('email name role phone wholesaleAccess address emailVerified')
+      .select('email name role phone wholesaleAccess address emailVerified newsletterSubscribed createdAt')
       .lean()
     if (!u) return NextResponse.json({ user: null }, { status: 200 })
     return NextResponse.json({
@@ -30,6 +30,8 @@ export async function GET() {
         wholesaleAccess: Boolean(u.wholesaleAccess),
         address: u.address || {},
         emailVerified: Boolean(u.emailVerified),
+        newsletterSubscribed: Boolean(u.newsletterSubscribed),
+        createdAt: u.createdAt,
       },
     })
   } catch (err) {

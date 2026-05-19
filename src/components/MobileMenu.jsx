@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -11,8 +12,12 @@ const LINKS = [
 ]
 
 export default function MobileMenu({ categories = [] }) {
-  const [open, setOpen] = useState(false)
-  const pathname = usePathname()
+  const [open, setOpen]       = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const pathname              = usePathname()
+
+  // Esperamos al mount para usar createPortal (SSR safe)
+  useEffect(() => { setMounted(true) }, [])
 
   // Cierra al navegar
   useEffect(() => { setOpen(false) }, [pathname])
@@ -23,69 +28,81 @@ export default function MobileMenu({ categories = [] }) {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  return (
+  const overlay = (
     <>
-      {/* Botón hamburguesa */}
-      <button
-        onClick={() => setOpen(true)}
-        className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700"
-        aria-label="Abrir menú"
-      >
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 5.5h16M3 11h16M3 16.5h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      </button>
-
-      {/* Backdrop difuminado — encima de todo incluyendo navbar */}
-      {open && (
-        <div
-          className="fixed inset-0 z-[9998] backdrop-blur-sm bg-black/30"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Drawer 80% ancho, altura completa, encima de todo */}
+      {/* Backdrop difuminado — directo en body, encima de todo */}
       <div
-        className={`fixed top-0 left-0 bottom-0 z-[9999] w-[80vw] bg-white shadow-2xl overflow-y-auto transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        onClick={() => setOpen(false)}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9998,
+          background: 'rgba(0,0,0,0.45)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          transition: 'opacity 0.3s',
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? 'auto' : 'none',
+        }}
+      />
+
+      {/* Drawer — directo en body */}
+      <div
+        style={{
+          position: 'fixed', top: 0, left: 0, bottom: 0,
+          width: '80vw', maxWidth: '320px',
+          zIndex: 9999,
+          background: '#fff',
+          overflowY: 'auto',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.15)',
+          transform: open ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease-in-out',
+        }}
       >
         {/* Cabecera */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 sticky top-0 bg-white">
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px',
+          borderBottom: '1px solid #f1f5f9',
+          position: 'sticky', top: 0, background: '#fff', zIndex: 1,
+        }}>
           <Link href="/" onClick={() => setOpen(false)}>
-            <img src="/logo.png" alt="CRISTASUR" className="h-12 w-auto object-contain" />
+            <img src="/logo.png" alt="CRISTASUR" style={{ height: 48, width: 'auto', objectFit: 'contain' }} />
           </Link>
           <button
             onClick={() => setOpen(false)}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-500"
+            style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: '#f1f5f9', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, color: '#64748b',
+            }}
             aria-label="Cerrar menú"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+            ✕
           </button>
         </div>
 
         {/* Contenido */}
-        <div className="p-4 pb-8">
+        <div style={{ padding: '16px', paddingBottom: 32 }}>
 
-          {/* Links principales */}
-          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mb-2">
-            Navegación
+          {/* Navegación */}
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#94a3b8', marginBottom: 8, padding: '0 4px' }}>
+            NAVEGACIÓN
           </p>
-          <div className="space-y-0.5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 24 }}>
             {LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${
-                  pathname === l.href
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-slate-700 hover:bg-slate-50'
-                }`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px', borderRadius: 10, textDecoration: 'none',
+                  background: pathname === l.href ? '#eff6ff' : 'transparent',
+                  color: pathname === l.href ? '#1d4ed8' : '#334155',
+                  fontSize: 14, fontWeight: 600,
+                }}
               >
-                <span className="text-base">{l.icon}</span>
+                <span style={{ fontSize: 18 }}>{l.icon}</span>
                 {l.label}
               </Link>
             ))}
@@ -94,14 +111,14 @@ export default function MobileMenu({ categories = [] }) {
           {/* Categorías */}
           {categories.length > 0 && (
             <>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-6 mb-2">
-                Categorías
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#94a3b8', marginBottom: 8, padding: '0 4px' }}>
+                CATEGORÍAS
               </p>
-              <div className="space-y-0.5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 24 }}>
                 <Link
                   href="/productos"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', borderRadius: 10, textDecoration: 'none', color: '#334155', fontSize: 14, fontWeight: 500 }}
                 >
                   Todos los productos
                 </Link>
@@ -110,7 +127,7 @@ export default function MobileMenu({ categories = [] }) {
                     key={c._id}
                     href={`/categoria/${c.slug}`}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', borderRadius: 10, textDecoration: 'none', color: '#334155', fontSize: 14, fontWeight: 500 }}
                   >
                     {c.name}
                   </Link>
@@ -120,18 +137,38 @@ export default function MobileMenu({ categories = [] }) {
           )}
 
           {/* Mi cuenta */}
-          <div className="mt-6">
-            <Link
-              href="/cuenta"
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition-colors"
-            >
-              Mi cuenta
-            </Link>
-          </div>
-
+          <Link
+            href="/cuenta"
+            onClick={() => setOpen(false)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '100%', padding: '12px', borderRadius: 10,
+              background: '#1d4ed8', color: '#fff',
+              fontWeight: 700, fontSize: 14, textDecoration: 'none',
+            }}
+          >
+            Mi cuenta
+          </Link>
         </div>
       </div>
+    </>
+  )
+
+  return (
+    <>
+      {/* Botón hamburguesa — dentro del navbar */}
+      <button
+        onClick={() => setOpen(true)}
+        className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700"
+        aria-label="Abrir menú"
+      >
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M3 5.5h16M3 11h16M3 16.5h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      </button>
+
+      {/* Portal: drawer y backdrop se renderizan directo en document.body */}
+      {mounted && createPortal(overlay, document.body)}
     </>
   )
 }

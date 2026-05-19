@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM = 'CRISTASUR <onboarding@resend.dev>'
+const FROM = 'CRISTASUR <noreply@cristasur.com>'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://cristasur.com'
 
 export async function sendPasswordResetEmail(to, token) {

@@ -36,17 +36,17 @@ export default function MobileMenu({ categories = [] }) {
         </svg>
       </button>
 
-      {/* Backdrop difuminado */}
+      {/* Backdrop difuminado — encima de todo incluyendo navbar */}
       {open && (
         <div
-          className="fixed inset-0 z-[60] backdrop-blur-sm bg-black/30"
+          className="fixed inset-0 z-[9998] backdrop-blur-sm bg-black/30"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* Drawer 80% ancho, altura completa */}
+      {/* Drawer 80% ancho, altura completa, encima de todo */}
       <div
-        className={`fixed inset-y-0 left-0 z-[70] w-[80vw] bg-white shadow-2xl overflow-y-auto transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 bottom-0 z-[9999] w-[80vw] bg-white shadow-2xl overflow-y-auto transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

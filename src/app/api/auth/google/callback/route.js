@@ -64,13 +64,14 @@ export async function GET(request) {
         role: 'customer',
         passwordHash: crypto.randomBytes(32).toString('hex'),
         wholesaleAccess: false,
+        emailVerified: true, // Google ya verificó el correo
       })
     } else {
-      // Actualizar nombre si no tenía
-      if (!user.name && profile.name) {
-        user.name = profile.name
-        await user.save()
-      }
+      // Actualizar nombre si no tenía, y marcar como verificado si aún no lo está
+      let dirty = false
+      if (!user.name && profile.name) { user.name = profile.name; dirty = true }
+      if (!user.emailVerified) { user.emailVerified = true; dirty = true }
+      if (dirty) await user.save()
     }
 
     // 4. Emitir JWT igual que el login normal

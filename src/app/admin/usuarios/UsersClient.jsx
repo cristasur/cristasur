@@ -19,6 +19,9 @@ export default function UsersClient({ initialUsers, meId }) {
   const [form, setForm] = useState({ email: '', password: '', name: '', role: 'editor' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [filterVerified, setFilterVerified] = useState('all') // 'all' | 'verified' | 'unverified'
+  const [filterRole, setFilterRole] = useState('all')
+  const [search, setSearch] = useState('')
   const router = useRouter()
 
   async function createUser(e) {
@@ -122,8 +125,49 @@ export default function UsersClient({ initialUsers, meId }) {
     setUsers((xs) => xs.filter((u) => u._id !== id))
   }
 
+  const filteredUsers = users.filter((u) => {
+    if (filterVerified === 'verified' && !u.emailVerified) return false
+    if (filterVerified === 'unverified' && u.emailVerified) return false
+    if (filterRole !== 'all' && u.role !== filterRole) return false
+    if (search && !u.email.includes(search.toLowerCase()) && !(u.name || '').toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
   return (
     <div className="space-y-6">
+      {/* Filtros */}
+      <section className="bg-white rounded-2xl shadow-card border border-slate-100 p-4">
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            type="text"
+            placeholder="Buscar por email o nombre…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-brand-500 flex-1 min-w-[180px]"
+          />
+          <select
+            value={filterVerified}
+            onChange={(e) => setFilterVerified(e.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:outline-none"
+          >
+            <option value="all">Todos los correos</option>
+            <option value="verified">✓ Verificados</option>
+            <option value="unverified">✗ Sin verificar</option>
+          </select>
+          <select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:outline-none"
+          >
+            <option value="all">Todos los roles</option>
+            <option value="customer">Clientes</option>
+            <option value="editor">Editores</option>
+            <option value="admin">Admins</option>
+          </select>
+          <span className="text-xs text-slate-500">{filteredUsers.length} usuario{filteredUsers.length !== 1 ? 's' : ''}</span>
+        </div>
+      </section>
+
       <section className="bg-white rounded-2xl shadow-card border border-slate-100 p-5">
         <h2 className="font-bold text-slate-900 mb-3">Crear usuario</h2>
         {error && (
@@ -184,13 +228,14 @@ export default function UsersClient({ initialUsers, meId }) {
                 <th className="p-3">Email</th>
                 <th className="p-3">Nombre</th>
                 <th className="p-3">Rol</th>
+                <th className="p-3">Verificado</th>
                 <th className="p-3">Mayoreo VIP</th>
                 <th className="p-3">Último acceso</th>
                 <th className="p-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.map((u) => {
+              {filteredUsers.map((u) => {
                 const isMe = String(u._id) === String(meId)
                 return (
                   <tr key={u._id} className="hover:bg-slate-50">
@@ -203,6 +248,12 @@ export default function UsersClient({ initialUsers, meId }) {
                       )}
                     </td>
                     <td className="p-3 text-slate-700">{u.name || '—'}</td>
+                    <td className="p-3">
+                      {u.emailVerified
+                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700">✓ Verificado</span>
+                        : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500">✗ Sin verificar</span>
+                      }
+                    </td>
                     <td className="p-3">
                       <select
                         value={u.role}

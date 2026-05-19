@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 async function loadUsers() {
   await dbConnect()
   const users = await User.find({})
-    .select('_id email name role wholesaleAccess lastLoginAt createdAt')
+    .select('_id email name role wholesaleAccess emailVerified lastLoginAt createdAt')
     .sort({ createdAt: -1 })
     .lean()
   return JSON.parse(JSON.stringify(users))

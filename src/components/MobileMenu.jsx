@@ -36,17 +36,9 @@ export default function MobileMenu({ categories = [] }) {
         </svg>
       </button>
 
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/40"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Drawer — overflow-y-auto en el propio div, sin flex-1 */}
+      {/* Menú pantalla completa en móvil */}
       <div
-        className={`fixed inset-y-0 left-0 z-[70] w-72 max-w-[85vw] bg-white shadow-2xl overflow-y-auto transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-0 z-[70] bg-white overflow-y-auto transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

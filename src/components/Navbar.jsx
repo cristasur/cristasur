@@ -6,6 +6,7 @@ import Link from 'next/link'
 import SearchAutocomplete from './SearchAutocomplete'
 import CartButton from './CartButton'
 import AccountNavLink from './AccountNavLink'
+import MobileMenu from './MobileMenu'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 
@@ -46,7 +47,7 @@ export default async function Navbar() {
           <nav className="flex items-center gap-1">
             <Link
               href="/productos"
-              className="hidden sm:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+              className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
             >
               Catálogo
             </Link>
@@ -64,7 +65,8 @@ export default async function Navbar() {
             </Link>
             <CartButton />
             <AccountNavLink />
-            {/* Admin no se expone públicamente. Acceso vía /admincr (sólo quienes saben la URL). */}
+            {/* Hamburguesa — solo en móvil */}
+            <MobileMenu categories={categories} />
           </nav>
         </div>
 

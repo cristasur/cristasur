@@ -59,7 +59,7 @@ export async function PUT(request, { params }) {
   }
 }
 
-export async function DELETE(_request, { params }) {
+export async function DELETE(request, { params }) {
   try {
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {
@@ -70,11 +70,19 @@ export async function DELETE(_request, { params }) {
     }
 
     await dbConnect()
-    // Soft delete: desactivar publicación
-    const post = await Post.findByIdAndUpdate(params.id, { published: false }, { new: true }).lean()
-    if (!post) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+    const permanent = new URL(request.url).searchParams.get('permanent') === '1'
 
-    return NextResponse.json({ ok: true, post: JSON.parse(JSON.stringify(post)) })
+    if (permanent) {
+      // Hard delete: eliminar definitivamente
+      const post = await Post.findByIdAndDelete(params.id).lean()
+      if (!post) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      return NextResponse.json({ ok: true, deleted: true })
+    } else {
+      // Soft delete: desactivar publicación
+      const post = await Post.findByIdAndUpdate(params.id, { published: false }, { new: true }).lean()
+      if (!post) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      return NextResponse.json({ ok: true, post: JSON.parse(JSON.stringify(post)) })
+    }
   } catch (err) {
     console.error('DELETE /api/posts/[id]', err)
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })

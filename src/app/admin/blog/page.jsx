@@ -39,6 +39,17 @@ export default function AdminBlogPage() {
     loadPosts()
   }
 
+  async function handleDelete(id, title) {
+    if (!confirm(`¿Eliminar "${title}" permanentemente? Esta acción no se puede deshacer.`)) return
+    const res = await fetch(`/api/posts/${id}?permanent=1`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(data.error || 'Error al eliminar')
+      return
+    }
+    loadPosts()
+  }
+
   useEffect(() => { loadPosts() }, [])
 
   return (
@@ -114,7 +125,7 @@ export default function AdminBlogPage() {
                         {post.published && (
                           <button
                             onClick={() => handleUnpublish(post._id)}
-                            className="px-3 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                            className="px-3 py-1 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700"
                           >
                             Despublicar
                           </button>
@@ -128,6 +139,12 @@ export default function AdminBlogPage() {
                             Ver
                           </Link>
                         )}
+                        <button
+                          onClick={() => handleDelete(post._id, post.title)}
+                          className="px-3 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                        >
+                          Eliminar
+                        </button>
                       </div>
                     </td>
                   </tr>

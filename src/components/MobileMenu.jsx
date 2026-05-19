@@ -5,10 +5,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const LINKS = [
-  { href: '/productos', label: 'Catálogo'  },
-  { href: '/blog',      label: 'Blog'      },
-  { href: '/contacto',  label: 'Contacto'  },
-  { href: '/favoritos', label: 'Favoritos' },
+  { href: '/productos',      label: 'Catálogo'        },
+  { href: '/quienes-somos', label: 'Quiénes somos'   },
+  { href: '/envios',         label: 'Envíos'          },
+  { href: '/blog',           label: 'Blog'            },
+  { href: '/contacto',       label: 'Contacto'        },
+  { href: '/favoritos',      label: 'Favoritos'       },
 ]
 
 export default function MobileMenu({ categories = [] }) {

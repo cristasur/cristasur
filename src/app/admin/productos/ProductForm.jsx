@@ -25,6 +25,7 @@ export default function ProductForm({ categories, initial }) {
     categories: initial?.categories?.map((c) => c._id || c) || [],
     image: initial?.image || '',
     gallery: Array.isArray(initial?.gallery) ? initial.gallery : [],
+    videoUrl: initial?.videoUrl || '',
     stock: initial?.stock ?? '',
     featured: initial?.featured || false,
     active: initial?.active ?? true,
@@ -593,6 +594,35 @@ export default function ProductForm({ categories, initial }) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Video del producto */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          Video del producto{' '}
+          <span className="text-slate-400 font-normal">(opcional)</span>
+        </label>
+        <p className="text-xs text-slate-500 mb-2">
+          Pega un link de YouTube, TikTok o un enlace directo a un archivo .mp4.
+          El video aparecerá como primer elemento en la galería.
+        </p>
+        <input
+          type="url"
+          inputMode="url"
+          placeholder="https://www.youtube.com/watch?v=... o https://www.tiktok.com/@..."
+          value={form.videoUrl}
+          onChange={(e) => update('videoUrl', e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500"
+        />
+        {form.videoUrl && (
+          <button
+            type="button"
+            onClick={() => update('videoUrl', '')}
+            className="mt-1 text-xs text-red-500 hover:text-red-700"
+          >
+            Quitar video
+          </button>
+        )}
       </div>
 
       {/* Galería de imágenes adicionales */}

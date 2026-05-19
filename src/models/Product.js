@@ -52,6 +52,9 @@ const ProductSchema = new mongoose.Schema(
     ],
     image: { type: String, default: '', trim: true },
     gallery: { type: [String], default: [] },
+    // URL de video (YouTube, TikTok o enlace directo .mp4). Se muestra como
+    // primer elemento de la galería si está definido.
+    videoUrl: { type: String, default: '', trim: true },
     // Variantes opcionales. Si el array está vacío, el producto no tiene variantes.
     variants: { type: [VariantSchema], default: [] },
 

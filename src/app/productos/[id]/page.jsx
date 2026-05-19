@@ -191,6 +191,7 @@ export default async function ProductDetail({ params }) {
         <ProductGallery
           images={[product.image, ...(product.gallery || [])].filter(Boolean)}
           alt={product.name}
+          videoUrl={product.videoUrl || ''}
         />
 
         <div className="flex flex-col min-w-0">

@@ -1,23 +1,20 @@
 'use client'
-// ============================================================
-// MobileMenu.jsx — Hamburguesa + drawer lateral para móvil
-// ============================================================
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const LINKS = [
-  { href: '/productos',  label: 'Catálogo',  icon: '🛍️' },
-  { href: '/blog',       label: 'Blog',       icon: '📝' },
-  { href: '/contacto',   label: 'Contacto',   icon: '📞' },
-  { href: '/favoritos',  label: 'Favoritos',  icon: '❤️' },
+  { href: '/productos', label: 'Catálogo',  icon: '🛍️' },
+  { href: '/blog',      label: 'Blog',       icon: '📝' },
+  { href: '/contacto',  label: 'Contacto',   icon: '📞' },
+  { href: '/favoritos', label: 'Favoritos',  icon: '❤️' },
 ]
 
 export default function MobileMenu({ categories = [] }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
-  // Cierra el menú al navegar
+  // Cierra al navegar
   useEffect(() => { setOpen(false) }, [pathname])
 
   // Bloquea scroll del body cuando está abierto
@@ -31,48 +28,52 @@ export default function MobileMenu({ categories = [] }) {
       {/* Botón hamburguesa */}
       <button
         onClick={() => setOpen(true)}
-        className="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-lg hover:bg-slate-100 gap-1.5"
+        className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700"
         aria-label="Abrir menú"
       >
-        <span className="block w-5 h-0.5 bg-slate-700 rounded" />
-        <span className="block w-5 h-0.5 bg-slate-700 rounded" />
-        <span className="block w-5 h-0.5 bg-slate-700 rounded" />
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 5.5h16M3 11h16M3 16.5h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
       </button>
 
       {/* Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/40 z-50 md:hidden"
+          className="fixed inset-0 z-[60] bg-black/40"
           onClick={() => setOpen(false)}
         />
       )}
 
-      {/* Drawer */}
+      {/* Drawer — overflow-y-auto en el propio div, sin flex-1 */}
       <div
-        className={`fixed top-0 left-0 h-full w-72 max-w-[85vw] bg-white z-50 shadow-2xl flex flex-col transition-transform duration-300 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-[70] w-72 max-w-[85vw] bg-white shadow-2xl overflow-y-auto transition-transform duration-300 ease-in-out ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Header del drawer */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        {/* Cabecera */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 sticky top-0 bg-white">
           <Link href="/" onClick={() => setOpen(false)}>
             <img src="/logo.png" alt="CRISTASUR" className="h-12 w-auto object-contain" />
           </Link>
           <button
             onClick={() => setOpen(false)}
-            className="w-9 h-9 grid place-items-center rounded-full hover:bg-slate-100 text-slate-500 text-xl"
+            className="p-2 rounded-full hover:bg-slate-100 text-slate-500"
             aria-label="Cerrar menú"
           >
-            ✕
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           </button>
         </div>
 
-        {/* Links principales */}
-        <nav className="flex-1 overflow-y-auto py-4">
-          <div className="px-3 mb-2">
-            <p className="px-3 text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-              Navegación
-            </p>
+        {/* Contenido */}
+        <div className="p-4 pb-8">
+
+          {/* Links principales */}
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mb-2">
+            Navegación
+          </p>
+          <div className="space-y-0.5">
             {LINKS.map((l) => (
               <Link
                 key={l.href}
@@ -84,7 +85,7 @@ export default function MobileMenu({ categories = [] }) {
                     : 'text-slate-700 hover:bg-slate-50'
                 }`}
               >
-                <span className="text-lg leading-none">{l.icon}</span>
+                <span className="text-base">{l.icon}</span>
                 {l.label}
               </Link>
             ))}
@@ -92,40 +93,43 @@ export default function MobileMenu({ categories = [] }) {
 
           {/* Categorías */}
           {categories.length > 0 && (
-            <div className="px-3 mt-4">
-              <p className="px-3 text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+            <>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-6 mb-2">
                 Categorías
               </p>
-              <Link
-                href="/productos"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Todos los productos
-              </Link>
-              {categories.map((c) => (
+              <div className="space-y-0.5">
                 <Link
-                  key={c._id}
-                  href={`/categoria/${c.slug}`}
+                  href="/productos"
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  {c.name}
+                  Todos los productos
                 </Link>
-              ))}
-            </div>
+                {categories.map((c) => (
+                  <Link
+                    key={c._id}
+                    href={`/categoria/${c.slug}`}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            </>
           )}
-        </nav>
 
-        {/* Footer del drawer */}
-        <div className="px-5 py-4 border-t border-slate-100">
-          <Link
-            href="/cuenta"
-            onClick={() => setOpen(false)}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition-colors"
-          >
-            Mi cuenta
-          </Link>
+          {/* Mi cuenta */}
+          <div className="mt-6">
+            <Link
+              href="/cuenta"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition-colors"
+            >
+              Mi cuenta
+            </Link>
+          </div>
+
         </div>
       </div>
     </>

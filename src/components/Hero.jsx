@@ -33,8 +33,8 @@ export default function Hero({ categories = [], banners = [] }) {
     <section
       className="relative overflow-hidden"
       style={{ minHeight: '420px' }}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true)  }}
+      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false) }}
     >
       {/* ── Slides track ─────────────────────────────────── */}
       <div
@@ -133,8 +133,10 @@ export default function Hero({ categories = [], banners = [] }) {
               className="w-full h-full object-cover"
               style={{ minHeight: '420px', maxHeight: '600px' }}
             />
-            {/* Overlay oscuro */}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/70 to-transparent" />
+            {/* Overlay solo si hay texto encima */}
+            {slide.title && (
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-transparent" />
+            )}
             {/* Texto opcional */}
             {slide.title && (
               <div className="absolute inset-0 flex items-center">

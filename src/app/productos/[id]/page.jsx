@@ -239,6 +239,28 @@ export default async function ProductDetail({ params }) {
             </div>
           )}
 
+          {/* Dimensiones y peso */}
+          {(product.weight || product.length || product.width || product.height) && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {product.weight && (
+                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
+                  <span className="text-slate-400">⚖️</span>
+                  <span className="text-slate-500">Peso:</span>
+                  <span className="font-semibold text-slate-800">{product.weight} kg</span>
+                </div>
+              )}
+              {product.length && product.width && product.height && (
+                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
+                  <span className="text-slate-400">📐</span>
+                  <span className="text-slate-500">Medidas:</span>
+                  <span className="font-semibold text-slate-800">
+                    {product.length} × {product.width} × {product.height} cm
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Variantes + cantidad + añadir al carrito + WhatsApp + compartir */}
           <ProductDetailClient product={product} productUrl={productUrl} />
 

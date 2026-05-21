@@ -21,6 +21,7 @@ import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
 import Brand from '@/models/Brand'
+import Material from '@/models/Material'
 import { validateProductPayload } from '@/lib/validation'
 import { getCurrentUser } from '@/lib/auth'
 
@@ -43,8 +44,9 @@ export async function GET(request) {
     const sortParam = url.searchParams.get('sort') || 'newest'
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 48, 1), 100)
     const skip = Math.max(Number(url.searchParams.get('skip')) || 0, 0)
-    const brandParam = (url.searchParams.get('brand') || '').trim()
-    const colorParam = (url.searchParams.get('color') || '').trim()
+    const brandParam    = (url.searchParams.get('brand')    || '').trim()
+    const colorParam    = (url.searchParams.get('color')    || '').trim()
+    const materialParam = (url.searchParams.get('material') || '').trim()
 
     const filter = {}
     if (deletedOnly) filter.deleted = true
@@ -81,6 +83,13 @@ export async function GET(request) {
       filter.brand = brandDoc._id
     }
 
+    // Filtro por material (slug)
+    if (materialParam) {
+      const matDoc = await Material.findOne({ slug: materialParam, active: true }).select('_id').lean()
+      if (!matDoc) return NextResponse.json({ products: [], total: 0 })
+      filter.materials = matDoc._id
+    }
+
     // Filtro por color (regex insensible a mayúsculas)
     if (colorParam) {
       const safeColor = colorParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -112,6 +121,7 @@ export async function GET(request) {
       Product.find(filter)
         .populate('categories', 'name slug icon')
         .populate('brand', 'name slug')
+        .populate('materials', 'name slug')
         .sort(sort)
         .skip(skip)
         .limit(limit)

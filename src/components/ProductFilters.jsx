@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Icon from './Icon'
 
-export default function ProductFilters({ categories = [], brands = [], initialFilters = {} }) {
+export default function ProductFilters({ categories = [], brands = [], materials = [], initialFilters = {} }) {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -18,8 +18,9 @@ export default function ProductFilters({ categories = [], brands = [], initialFi
     onSale: (sp.get('onSale') ?? (initialFilters.onSale ? '1' : '')) === '1',
     featured: (sp.get('featured') ?? (initialFilters.featured ? '1' : '')) === '1',
     sort: sp.get('sort') ?? initialFilters.sort ?? 'newest',
-    brand: sp.get('brand') ?? initialFilters.brand ?? '',
-    color: sp.get('color') ?? initialFilters.color ?? '',
+    brand:    sp.get('brand')    ?? initialFilters.brand    ?? '',
+    color:    sp.get('color')    ?? initialFilters.color    ?? '',
+    material: sp.get('material') ?? initialFilters.material ?? '',
   })
 
   function set(k, v) {
@@ -37,8 +38,9 @@ export default function ProductFilters({ categories = [], brands = [], initialFi
     if (form.onSale) params.set('onSale', '1')
     if (form.featured) params.set('featured', '1')
     if (form.sort && form.sort !== 'newest') params.set('sort', form.sort)
-    if (form.brand) params.set('brand', form.brand)
-    if (form.color) params.set('color', form.color)
+    if (form.brand)    params.set('brand',    form.brand)
+    if (form.color)    params.set('color',    form.color)
+    if (form.material) params.set('material', form.material)
     const qs = params.toString()
     router.push('/productos' + (qs ? `?${qs}` : ''))
   }
@@ -55,6 +57,7 @@ export default function ProductFilters({ categories = [], brands = [], initialFi
       sort: 'newest',
       brand: '',
       color: '',
+      material: '',
     })
     router.push('/productos')
   }
@@ -118,6 +121,23 @@ export default function ProductFilters({ categories = [], brands = [], initialFi
               <option key={b._id} value={b.slug}>
                 {b.name}
               </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Filtro por material */}
+      {materials.length > 0 && (
+        <div>
+          <label className="text-xs font-semibold text-slate-600 block mb-1">Material</label>
+          <select
+            value={form.material}
+            onChange={(e) => set('material', e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-brand-500"
+          >
+            <option value="">Todos los materiales</option>
+            {materials.map((m) => (
+              <option key={m._id} value={m.slug}>{m.name}</option>
             ))}
           </select>
         </div>

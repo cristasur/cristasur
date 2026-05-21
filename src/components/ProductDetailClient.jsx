@@ -34,7 +34,9 @@ export default function ProductDetailClient({ product, productUrl }) {
   }, [variants])
 
   const [selected, setSelected] = useState(initialVariant)
-  const [qty, setQty] = useState(1)
+  const step = (Number.isFinite(Number(product.qtyStep)) && Number(product.qtyStep) > 1)
+    ? Number(product.qtyStep) : 1
+  const [qty, setQty] = useState(step)
 
   // Precio base (variante > producto)
   const basePrice = useMemo(() => {
@@ -105,13 +107,15 @@ export default function ProductDetailClient({ product, productUrl }) {
     }).catch(() => {})
   }
 
-  const dec = () => setQty((q) => Math.max(1, q - 1))
+  const dec = () => setQty((q) => Math.max(step, q - step))
   const inc = () =>
-    setQty((q) => (effectiveStock > 0 ? Math.min(effectiveStock, q + 1) : q + 1))
+    setQty((q) => (effectiveStock > 0 ? Math.min(effectiveStock, q + step) : q + step))
   const onInput = (e) => {
     const v = parseInt(e.target.value, 10)
-    if (!Number.isFinite(v) || v < 1) return setQty(1)
-    setQty(effectiveStock > 0 ? Math.min(effectiveStock, v) : v)
+    if (!Number.isFinite(v) || v < step) return setQty(step)
+    // Redondear al múltiplo más cercano
+    const rounded = Math.round(v / step) * step
+    setQty(effectiveStock > 0 ? Math.min(effectiveStock, rounded) : rounded)
   }
 
   return (
@@ -173,13 +177,18 @@ export default function ProductDetailClient({ product, productUrl }) {
             <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
               Cantidad
             </div>
+            {step > 1 && (
+              <div className="mt-1 text-xs text-brand-700 font-semibold">
+                Se vende en paquetes de {step} piezas
+              </div>
+            )}
             <div className="mt-2 inline-flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden">
               <button
                 type="button"
                 onClick={dec}
                 aria-label="Disminuir cantidad"
                 className="w-10 h-10 grid place-items-center text-lg text-slate-700 hover:bg-slate-100 disabled:opacity-40"
-                disabled={qty <= 1}
+                disabled={qty <= step}
               >
                 −
               </button>

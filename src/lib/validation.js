@@ -86,8 +86,22 @@ export function validateProductPayload(body) {
   const brand =
     body?.brand && validator.isMongoId(String(body.brand)) ? String(body.brand) : null
 
+  // Materiales (array de ObjectId) — opcional, puede ser varios
+  const materials = Array.isArray(body?.materials)
+    ? body.materials.map(String).filter((m) => validator.isMongoId(m))
+    : []
+
   // Color libre (ej: "Rojo", "Azul marino") — opcional
   const color = cleanSoft(body?.color, { max: 60 })
+
+  // Múltiplo de venta (de N en N). null o 1 = de uno en uno.
+  const qtyStepRaw = body?.qtyStep
+  const qtyStep =
+    qtyStepRaw === undefined || qtyStepRaw === null || qtyStepRaw === ''
+      ? null
+      : Math.max(1, Math.floor(Number(qtyStepRaw)))
+  if (qtyStep !== null && !Number.isFinite(qtyStep))
+    errors.push('El múltiplo de venta debe ser un número entero positivo')
 
   // ---- Dimensiones y logística ----
   // Todos opcionales (null = no definido). Unidades: kg y cm.
@@ -185,7 +199,9 @@ export function validateProductPayload(body) {
       publishAt,
       tags,
       brand,
+      materials,
       color,
+      qtyStep,
       weight,
       length,
       width,

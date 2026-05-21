@@ -70,6 +70,12 @@ const ProductSchema = new mongoose.Schema(
     status: { type: String, enum: ['draft', 'published'], default: 'published', index: true },
     publishAt: { type: Date, default: null },
 
+    // Cantidad mínima de compra y múltiplo de venta.
+    // Ej: qtyStep=3 → el cliente solo puede pedir 3, 6, 9, 12...
+    // Ej: qtyStep=6 → el cliente solo puede pedir 6, 12, 18...
+    // null o 1 = de uno en uno (comportamiento normal).
+    qtyStep: { type: Number, min: 1, default: null },
+
     // ---- Dimensiones y logística (para envia.com y carriers) ----
     // Todas las medidas son del paquete listo para enviar (producto + embalaje).
     // Unidades fijas: peso en kg, dimensiones en cm.
@@ -81,6 +87,9 @@ const ProductSchema = new mongoose.Schema(
 
     // Marca opcional (ref a la colección Brand)
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
+
+    // Materiales (puede tener varios: plástico, vidrio, acero…)
+    materials: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Material' }],
 
     // Color principal del producto (texto libre, ej: "Rojo", "Azul marino")
     color: { type: String, trim: true, default: '' },

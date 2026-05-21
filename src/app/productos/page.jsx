@@ -6,12 +6,13 @@ import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 import Product from '@/models/Product'
 import Brand from '@/models/Brand'
+import Material from '@/models/Material'
 import ProductGrid from '@/components/ProductGrid'
 import ProductFilters from '@/components/ProductFilters'
 
 export const dynamic = 'force-dynamic'
 
-async function loadData({ q, category, featured, minPrice, maxPrice, inStock, onSale, sort, brand, color }) {
+async function loadData({ q, category, featured, minPrice, maxPrice, inStock, onSale, sort, brand, color, material }) {
   await dbConnect()
   const now = new Date()
   const filter = {
@@ -46,6 +47,14 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
     else filter.brand = null // slug no existe → sin resultados
   }
 
+  // Filtro por material (slug)
+  let materialDoc = null
+  if (material) {
+    materialDoc = await Material.findOne({ slug: material, active: true }).lean()
+    if (materialDoc) filter.materials = materialDoc._id
+    else filter.materials = null
+  }
+
   // Filtro por color
   if (color) {
     const safeColor = color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -72,15 +81,17 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
   else if (sort === 'popular')
     sortSpec = { salesCount: -1, whatsappClicks: -1, viewsCount: -1 }
 
-  const [products, categories, brands, total] = await Promise.all([
+  const [products, categories, brands, materialsList, total] = await Promise.all([
     Product.find(filter)
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
+      .populate('materials', 'name slug')
       .sort(sortSpec)
       .limit(60)
       .lean(),
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
+    Material.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Product.countDocuments(filter),
   ])
 
@@ -88,7 +99,9 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
     products: JSON.parse(JSON.stringify(products)),
     categories: JSON.parse(JSON.stringify(categories)),
     brands: JSON.parse(JSON.stringify(brands)),
+    materials: JSON.parse(JSON.stringify(materialsList)),
     brandDoc: brandDoc ? JSON.parse(JSON.stringify(brandDoc)) : null,
+    materialDoc: materialDoc ? JSON.parse(JSON.stringify(materialDoc)) : null,
     total,
   }
 }
@@ -102,10 +115,11 @@ export default async function CatalogoPage({ searchParams }) {
   const minPrice = Number(searchParams?.minPrice)
   const maxPrice = Number(searchParams?.maxPrice)
   const sort = (searchParams?.sort || 'newest').trim()
-  const brand = (searchParams?.brand || '').trim()
-  const color = (searchParams?.color || '').trim()
+  const brand    = (searchParams?.brand    || '').trim()
+  const color    = (searchParams?.color    || '').trim()
+  const material = (searchParams?.material || '').trim()
 
-  const { products, categories, brands, brandDoc, total } = await loadData({
+  const { products, categories, brands, materials, brandDoc, materialDoc, total } = await loadData({
     q,
     category,
     featured,
@@ -116,19 +130,21 @@ export default async function CatalogoPage({ searchParams }) {
     sort,
     brand,
     color,
+    material,
   })
   const currentCat = categories.find((c) => c.slug === category)
 
   let title = 'Catálogo completo'
   if (currentCat) title = currentCat.name
   else if (brandDoc) title = `Marca: ${brandDoc.name}`
+  else if (materialDoc) title = `Material: ${materialDoc.name}`
   else if (color) title = `Color: ${color}`
   else if (featured) title = 'Productos destacados'
   else if (onSale) title = 'En oferta'
   else if (q) title = `Resultados para "${q}"`
 
   const initialFilters = {
-    q, category, featured, inStock, onSale, sort, brand, color,
+    q, category, featured, inStock, onSale, sort, brand, color, material,
     minPrice: searchParams?.minPrice || '',
     maxPrice: searchParams?.maxPrice || '',
   }
@@ -148,6 +164,7 @@ export default async function CatalogoPage({ searchParams }) {
             <ProductFilters
               categories={categories}
               brands={brands}
+              materials={materials}
               initialFilters={initialFilters}
             />
           </Suspense>

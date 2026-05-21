@@ -6,6 +6,7 @@ import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 import Brand from '@/models/Brand'
+import Material from '@/models/Material'
 import Product from '@/models/Product'
 import ProductForm from '../ProductForm'
 
@@ -14,10 +15,11 @@ export const dynamic = 'force-dynamic'
 export default async function EditProductPage({ params }) {
   if (!mongoose.Types.ObjectId.isValid(params.id)) notFound()
   await dbConnect()
-  const [product, categories, brands] = await Promise.all([
+  const [product, categories, brands, materialsList] = await Promise.all([
     Product.findById(params.id).lean(),
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
+    Material.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
   ])
   if (!product) notFound()
 
@@ -30,6 +32,7 @@ export default async function EditProductPage({ params }) {
       <ProductForm
         categories={serialize(categories)}
         brands={serialize(brands)}
+        materials={serialize(materialsList)}
         initial={serialize(product)}
       />
     </div>

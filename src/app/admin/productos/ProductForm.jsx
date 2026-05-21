@@ -16,7 +16,7 @@ const COMMON_COLORS = [
   'Naranja', 'Rosa', 'Morado', 'Café', 'Beige', 'Dorado', 'Plateado', 'Transparente',
 ]
 
-export default function ProductForm({ categories, brands = [], initial }) {
+export default function ProductForm({ categories, brands = [], materials = [], initial }) {
   const router = useRouter()
   const isEdit = Boolean(initial?._id)
 
@@ -32,6 +32,7 @@ export default function ProductForm({ categories, brands = [], initial }) {
     gallery: Array.isArray(initial?.gallery) ? initial.gallery : [],
     videoUrl: initial?.videoUrl || '',
     stock: initial?.stock ?? '',
+    qtyStep: initial?.qtyStep ?? '',
     featured: initial?.featured || false,
     active: initial?.active ?? true,
     sku: initial?.sku || '',
@@ -40,6 +41,9 @@ export default function ProductForm({ categories, brands = [], initial }) {
     publishAt: initial?.publishAt || '',
     tags: Array.isArray(initial?.tags) ? initial.tags : [],
     brand: initial?.brand?._id || initial?.brand || '',
+    materials: Array.isArray(initial?.materials)
+      ? initial.materials.map((m) => m._id || m)
+      : [],
     color: initial?.color || '',
     weight: initial?.weight ?? '',
     length: initial?.length ?? '',
@@ -387,15 +391,32 @@ export default function ProductForm({ categories, brands = [], initial }) {
           </span>
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Stock <span className="text-slate-400 font-normal">(opcional — vacío = disponible sin límite)</span></span>
+          <span className="text-sm font-medium text-slate-700">Stock <span className="text-slate-400 font-normal">(opcional — vacío = ilimitado)</span></span>
           <input
             type="number"
             min="0"
-            placeholder="Dejar vacío si no sabes o es ilimitado"
+            placeholder="Vacío = sin límite"
             value={form.stock}
             onChange={(e) => update('stock', e.target.value)}
             className={input}
           />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Vender de <span className="text-brand-600 font-semibold">N en N</span> <span className="text-slate-400 font-normal">(opcional)</span></span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Ej: 3, 6, 12 — vacío = de 1 en 1"
+            value={form.qtyStep}
+            onChange={(e) => update('qtyStep', e.target.value)}
+            className={input}
+          />
+          <span className="text-xs text-slate-500">
+            {form.qtyStep && Number(form.qtyStep) > 1
+              ? `El cliente podrá pedir: ${[1,2,3].map(n => n * Number(form.qtyStep)).join(', ')}…`
+              : 'Dejar vacío para vender de 1 en 1.'}
+          </span>
         </label>
       </div>
 
@@ -529,6 +550,44 @@ export default function ProductForm({ categories, brands = [], initial }) {
           <span className="text-xs text-slate-500">Escribe o selecciona un color de la lista.</span>
         </label>
       </div>
+
+      {/* Materiales (multi-selección) */}
+      {materials.length > 0 && (
+        <div>
+          <span className="text-sm font-medium text-slate-700 block mb-2">
+            Materiales <span className="text-slate-400 font-normal">(opcional, puedes seleccionar varios)</span>
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {materials.map((m) => {
+              const selected = form.materials.includes(m._id)
+              return (
+                <button
+                  key={m._id}
+                  type="button"
+                  onClick={() =>
+                    update(
+                      'materials',
+                      selected
+                        ? form.materials.filter((id) => id !== m._id)
+                        : [...form.materials, m._id]
+                    )
+                  }
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                    selected
+                      ? 'bg-brand-600 text-white border-brand-600'
+                      : 'bg-white text-slate-700 border-slate-300 hover:border-brand-400'
+                  }`}
+                >
+                  {selected ? '✓ ' : ''}{m.name}
+                </button>
+              )
+            })}
+          </div>
+          {form.materials.length === 0 && (
+            <span className="text-xs text-slate-400 mt-1 block">Ningún material seleccionado.</span>
+          )}
+        </div>
+      )}
 
       {/* Tags + estado + publishAt */}
       <fieldset className="border border-slate-200 rounded-xl p-4 space-y-4">

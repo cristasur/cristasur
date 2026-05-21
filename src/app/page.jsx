@@ -5,6 +5,7 @@ import Link from 'next/link'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 import Product from '@/models/Product'
+import Banner from '@/models/Banner'
 import Hero from '@/components/Hero'
 import ProductGrid from '@/components/ProductGrid'
 import Icon from '@/components/Icon'
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic'
 
 async function loadHome() {
   await dbConnect()
-  const [categories, featured, newest] = await Promise.all([
+  const [categories, featured, newest, banners] = await Promise.all([
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Product.find({ active: true, featured: true })
       .populate('categories', 'name slug')
@@ -26,17 +27,19 @@ async function loadHome() {
       .sort({ createdAt: -1 })
       .limit(8)
       .lean(),
+    Banner.find({ active: true }).sort({ order: 1, createdAt: 1 }).lean(),
   ])
   const serialize = (arr) => JSON.parse(JSON.stringify(arr))
   return {
     categories: serialize(categories),
-    featured: serialize(featured),
-    newest: serialize(newest),
+    featured:   serialize(featured),
+    newest:     serialize(newest),
+    banners:    serialize(banners),
   }
 }
 
 export default async function HomePage() {
-  const { categories, featured, newest } = await loadHome()
+  const { categories, featured, newest, banners } = await loadHome()
   // Selección manual de las 4 que aparecen en el mosaico del hero.
   // Si no hay ninguna marcada, caemos en las primeras 4 por orden.
   const heroCategories =
@@ -46,7 +49,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <Hero categories={heroCategories} />
+      <Hero categories={heroCategories} banners={banners} />
 
       {/* Banner: repetir último pedido (solo si el cliente tiene historial local) */}
       <div className="pt-6">

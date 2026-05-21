@@ -7,19 +7,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Icon from './Icon'
 
-// ─── Banners extra (agrega aquí más slides de imagen) ────────
-// Ejemplo:
-// { src: '/banners/verano.jpg', href: '/productos?tag=verano',
-//   title: 'Temporada de verano', cta: 'Ver ofertas' }
-const BANNER_SLIDES = [
-  // { src: '/banners/ejemplo.jpg', href: '/productos', title: 'Nueva colección', cta: 'Ver ahora' },
-]
-// ─────────────────────────────────────────────────────────────
-
 const AUTOPLAY_MS = 5000
 
-export default function Hero({ categories = [] }) {
-  const totalSlides = 1 + BANNER_SLIDES.length
+export default function Hero({ categories = [], banners = [] }) {
+  const totalSlides = 1 + banners.length
   const [current, setCurrent]   = useState(0)
   const [paused,  setPaused]    = useState(false)
   const timerRef                = useRef(null)
@@ -133,11 +124,11 @@ export default function Hero({ categories = [] }) {
           </div>
         </div>
 
-        {/* ── Slides 1+: banners de imagen ─────────────── */}
-        {BANNER_SLIDES.map((slide, i) => (
+        {/* ── Slides 1+: banners de imagen (desde DB) ─── */}
+        {banners.map((slide, i) => (
           <div key={i} className="relative min-w-full">
             <img
-              src={slide.src}
+              src={slide.image}
               alt={slide.title || 'Banner CRISTASUR'}
               className="w-full h-full object-cover"
               style={{ minHeight: '420px', maxHeight: '600px' }}

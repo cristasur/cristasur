@@ -100,7 +100,8 @@ export async function POST(request) {
     }
 
     const randomName = crypto.randomBytes(16).toString('hex')
-    const fileName = `productos/${Date.now()}-${randomName}${ext}`
+    const folder = (formData.get('folder') || 'productos').replace(/[^a-z0-9-_]/gi, '')
+    const fileName = `${folder}/${Date.now()}-${randomName}${ext}`
 
     // Subir a Vercel Blob (persistente entre deploys)
     const blob = await put(fileName, processed, {

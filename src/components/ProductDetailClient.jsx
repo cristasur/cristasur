@@ -255,7 +255,12 @@ export default function ProductDetailClient({ product, productUrl }) {
         </p>
       </div>
 
-      <ShareButtons title={product.name} text={`Mira este producto en CRISTASUR`} />
+      <ShareButtons
+        title={product.name}
+        text={`Mira este producto en CRISTASUR`}
+        productImage={product.image || null}
+        price={formatPrice(currentPrice)}
+      />
     </div>
   )
 }

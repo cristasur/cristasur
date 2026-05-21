@@ -11,6 +11,7 @@ export const metadata = {
 
 const links = [
   { href: '/admin',                     label: 'Dashboard',     icon: 'chart' },
+  { href: '/admin/analytics',           label: 'Analytics',     icon: 'chart' },
   { href: '/admin/productos',           label: 'Productos',     icon: 'box' },
   { href: '/admin/productos/bulk',      label: 'Edición masiva', icon: 'edit' },
   { href: '/admin/productos/papelera',  label: 'Papelera',      icon: 'trash' },

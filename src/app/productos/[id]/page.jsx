@@ -231,6 +231,12 @@ export default async function ProductDetail({ params }) {
             </div>
           )}
 
+          {product.sku && (
+            <div className="mt-2 text-[11px] text-slate-400 tracking-wide">
+              SKU: {product.sku}
+            </div>
+          )}
+
           {product.description && (
             <div className="mt-5 max-h-40 md:max-h-48 overflow-y-auto pr-1">
               <p className="text-slate-700 leading-relaxed whitespace-pre-line text-[15px]">
@@ -263,10 +269,6 @@ export default async function ProductDetail({ params }) {
 
           {/* Variantes + cantidad + añadir al carrito + WhatsApp + compartir */}
           <ProductDetailClient product={product} productUrl={productUrl} />
-
-          {product.sku && (
-            <div className="mt-3 text-xs text-slate-400">SKU: {product.sku}</div>
-          )}
         </div>
       </div>
 

@@ -3,14 +3,17 @@
 // Inyecta también JSON-LD Organization + LocalBusiness para SEO local.
 // ============================================================
 import './globals.css'
+import { Suspense } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartProvider from '@/components/CartProvider'
 import CartDrawer from '@/components/CartDrawer'
 import WhatsAppFab from '@/components/WhatsAppFab'
+import StickyCartMobile from '@/components/StickyCartMobile'
 import NewsletterPopup from '@/components/NewsletterPopup'
 import CompareProvider from '@/components/CompareProvider'
 import CompareBar from '@/components/CompareBar'
+import PageViewTracker from '@/components/PageViewTracker'
 import { LOCATIONS } from '@/lib/locations'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -145,6 +148,10 @@ gtag('config', 'G-CG871WYQHV');`,
             <Footer />
             <CartDrawer />
             <WhatsAppFab />
+            <StickyCartMobile />
+            <Suspense fallback={null}>
+              <PageViewTracker />
+            </Suspense>
             <NewsletterPopup />
             <CompareBar />
           </CompareProvider>

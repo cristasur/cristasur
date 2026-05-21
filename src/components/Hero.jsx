@@ -87,12 +87,12 @@ export default function Hero({ categories = [], banners = [] }) {
             </div>
 
             {/* Grid de categorías */}
-            <div className="grid grid-cols-2 gap-3">
-              {categories.slice(0, 4).map((c, i) => (
+            <div className="grid grid-cols-2 gap-4">
+              {categories.slice(0, 4).map((c) => (
                 <Link
                   key={c._id}
                   href={`/categoria/${c.slug}`}
-                  className={`group relative overflow-hidden aspect-[5/4] rounded-2xl bg-white/10 border border-white/20 backdrop-blur flex flex-col justify-end hover:bg-white/15 transition ${i === 1 ? 'md:translate-y-6' : ''} ${i === 2 ? 'md:-translate-y-6' : ''}`}
+                  className="group relative overflow-hidden aspect-[5/4] rounded-2xl bg-white/10 border border-white/20 backdrop-blur flex flex-col justify-end hover:bg-white/15 transition"
                 >
                   {c.image ? (
                     <>

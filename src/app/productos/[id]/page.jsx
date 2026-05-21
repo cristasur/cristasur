@@ -144,10 +144,11 @@ export default async function ProductDetail({ params }) {
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const productUrl = `${siteUrl()}/productos/${product._id}`
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0
-  // Stock agregado: si hay variantes, suma sus stocks; si no, usa el del producto.
+  // null = ilimitado (sin número), 0 = sin stock, >0 = muestra cantidad
+  const stockUnlimited = !hasVariants && product.stock === null
   const totalStock = hasVariants
     ? product.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
-    : product.stock || 0
+    : product.stock ?? 0
 
   // JSON-LD Schema.org Product para Google rich snippets
   const productJsonLd = {
@@ -165,7 +166,7 @@ export default async function ProductDetail({ params }) {
       priceCurrency: 'MXN',
       price: product.price,
       availability:
-        totalStock > 0
+        stockUnlimited || totalStock > 0
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
@@ -226,14 +227,14 @@ export default async function ProductDetail({ params }) {
             )}
           </div>
 
-          {totalStock > 0 ? (
+          {stockUnlimited || totalStock > 0 ? (
             <div className="mt-3 inline-flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full w-fit">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Disponible ({totalStock} piezas)
+              Disponible{!stockUnlimited && ` (${totalStock} piezas)`}
             </div>
           ) : (
             <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full w-fit">
-              Bajo pedido
+              Sin stock
             </div>
           )}
 

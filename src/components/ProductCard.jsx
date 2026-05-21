@@ -21,6 +21,7 @@ export default function ProductCard({ product }) {
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : 0
   const href = `/productos/${product._id}`
+  // null = ilimitado (disponible). Solo stock === 0 es sin stock.
   const outOfStock = product.stock === 0
 
   return (

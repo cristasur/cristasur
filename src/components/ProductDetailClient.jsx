@@ -61,10 +61,12 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   const currentPrice = wholesaleActive ? wholesalePrice : basePrice
 
   // Stock efectivo: si hay variantes, usamos la seleccionada; si no, el del producto.
+  // null = ilimitado → nunca sin stock. 0 = sin stock. >0 = con cantidad.
+  const stockUnlimited = !variants.length && product.stock === null
   const effectiveStock = variants.length
     ? selected?.stock ?? 0
     : product.stock ?? 0
-  const outOfStock = effectiveStock <= 0
+  const outOfStock = !stockUnlimited && effectiveStock === 0
 
   // Tracking: view count + lista "vistos recientemente"
   useEffect(() => {

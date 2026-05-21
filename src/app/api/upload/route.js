@@ -77,38 +77,40 @@ export async function POST(request) {
       )
     }
 
-    let processed = bytes
-    let ext = '.webp'
-    try {
-      const sharp = (await import('sharp')).default
-      if (realType === 'image/gif') {
-        processed = bytes
-        ext = '.gif'
-      } else {
-        processed = await sharp(bytes)
+    // Carpeta y calidad se determinan antes de procesar
+    const folder  = (formData.get('folder') || 'productos').replace(/[^a-z0-9-_]/gi, '')
+    const quality = folder === 'banners' ? WEBP_QUALITY_BANNER : WEBP_QUALITY_DEFAULT
+
+    let processed   = bytes
+    let ext         = realType === 'image/gif' ? '.gif' : '.jpg'
+    let contentType = realType
+
+    // Intentar comprimir con sharp; si falla, subir original sin procesar
+    if (realType !== 'image/gif') {
+      try {
+        const sharp = (await import('sharp')).default
+        processed   = await sharp(bytes)
           .rotate()
           .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
           .webp({ quality })
           .toBuffer()
-        ext = '.webp'
+        ext         = '.webp'
+        contentType = 'image/webp'
+      } catch (sharpErr) {
+        // Sharp no disponible — subir original tal cual (sin pérdida de calidad)
+        console.warn('[upload] sharp no disponible, subiendo original:', sharpErr?.message)
+        ext         = realType === 'image/png' ? '.png' : realType === 'image/webp' ? '.webp' : '.jpg'
+        contentType = realType
       }
-    } catch (sharpErr) {
-      console.error('[upload] sharp falló:', sharpErr?.message)
-      return NextResponse.json(
-        { error: 'No se pudo procesar la imagen. Intenta con otro archivo.' },
-        { status: 500 }
-      )
     }
 
     const randomName = crypto.randomBytes(16).toString('hex')
-    const folder  = (formData.get('folder') || 'productos').replace(/[^a-z0-9-_]/gi, '')
-    const quality = folder === 'banners' ? WEBP_QUALITY_BANNER : WEBP_QUALITY_DEFAULT
-    const fileName = `${folder}/${Date.now()}-${randomName}${ext}`
+    const fileName   = `${folder}/${Date.now()}-${randomName}${ext}`
 
-    // Subir a Vercel Blob (persistente entre deploys)
+    // Subir a Vercel Blob
     const blob = await put(fileName, processed, {
       access: 'public',
-      contentType: ext === '.gif' ? 'image/gif' : 'image/webp',
+      contentType,
     })
 
     return NextResponse.json({

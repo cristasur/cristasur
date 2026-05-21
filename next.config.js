@@ -22,9 +22,12 @@ const cspDirectives = {
   'font-src': ["'self'", 'data:'],
   'style-src': ["'self'", "'unsafe-inline'"],
   'script-src': isProd
-    ? ["'self'", "'unsafe-inline'"]
-    : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-  'connect-src': ["'self'", 'https:', 'wss:'],
+    ? ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com']
+    : ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
+  'script-src-elem': isProd
+    ? ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com']
+    : ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
+  'connect-src': ["'self'", 'https:', 'wss:', 'https://www.google-analytics.com', 'https://analytics.google.com', 'https://stats.g.doubleclick.net'],
   'media-src': ["'self'", 'data:', 'blob:'],
   'worker-src': ["'self'", 'blob:'],
   'manifest-src': ["'self'"],

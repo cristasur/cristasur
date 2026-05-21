@@ -24,6 +24,7 @@ async function loadByTag(tag) {
     ],
   })
     .populate('categories', 'name slug')
+    .populate('brand', 'name slug')
     .sort({ featured: -1, viewsCount: -1, createdAt: -1 })
     .limit(60)
     .lean()

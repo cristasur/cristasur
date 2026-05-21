@@ -41,6 +41,7 @@ async function loadData() {
       ],
     })
       .populate('categories', 'name slug')
+      .populate('brand', 'name slug')
       .sort({ featured: -1, salesCount: -1, viewsCount: -1, createdAt: -1 })
       .limit(500)
       .lean(),

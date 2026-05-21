@@ -50,11 +50,13 @@ async function loadProduct(id) {
     ],
   })
     .populate('categories', 'name slug')
+    .populate('brand', 'name slug')
     .lean()
   if (!product) return null
 
   // "También compraron" — primero buscamos por coOrders (carritos reales).
   // Si aún no hay datos suficientes, fallback a más vistos de la misma categoría.
+  // Populate brand en producto principal
   let alsoBought = []
   const coIds = product.coOrders
     ? Object.entries(product.coOrders)
@@ -71,6 +73,7 @@ async function loadProduct(id) {
       deleted: { $ne: true },
     })
       .populate('categories', 'name slug')
+      .populate('brand', 'name slug')
       .lean()
     // Reordena en el mismo orden que coIds
     const order = new Map(coIds.map((x, i) => [String(x), i]))
@@ -88,6 +91,7 @@ async function loadProduct(id) {
     deleted: { $ne: true },
   })
     .populate('categories', 'name slug')
+    .populate('brand', 'name slug')
     .sort({ viewsCount: -1, salesCount: -1, createdAt: -1 })
     .limit(4)
     .lean()

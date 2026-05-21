@@ -14,7 +14,8 @@ export const runtime = 'nodejs'
 
 const MAX_SIZE = 8 * 1024 * 1024
 const MAX_DIMENSION = 1600
-const WEBP_QUALITY = 80
+const WEBP_QUALITY_DEFAULT = 82
+const WEBP_QUALITY_BANNER  = 93   // banners: máxima nitidez
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 
 const UPLOAD_MAX = 60
@@ -87,7 +88,7 @@ export async function POST(request) {
         processed = await sharp(bytes)
           .rotate()
           .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: WEBP_QUALITY })
+          .webp({ quality })
           .toBuffer()
         ext = '.webp'
       }
@@ -100,7 +101,8 @@ export async function POST(request) {
     }
 
     const randomName = crypto.randomBytes(16).toString('hex')
-    const folder = (formData.get('folder') || 'productos').replace(/[^a-z0-9-_]/gi, '')
+    const folder  = (formData.get('folder') || 'productos').replace(/[^a-z0-9-_]/gi, '')
+    const quality = folder === 'banners' ? WEBP_QUALITY_BANNER : WEBP_QUALITY_DEFAULT
     const fileName = `${folder}/${Date.now()}-${randomName}${ext}`
 
     // Subir a Vercel Blob (persistente entre deploys)

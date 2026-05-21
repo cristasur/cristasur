@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Icon from './Icon'
 
-const AUTOPLAY_MS = 5000
+const AUTOPLAY_MS = 8000
 
 export default function Hero({ categories = [], banners = [] }) {
   const totalSlides = 1 + banners.length

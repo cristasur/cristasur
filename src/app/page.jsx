@@ -68,33 +68,36 @@ export default async function HomePage() {
             <Icon name="arrow" className="w-4 h-4" />
           </Link>
         </div>
-        <div className="stagger grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="stagger grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
           {categories.map((c) => (
             <Link
               key={c._id}
               href={`/categoria/${c.slug}`}
-              className="card-hover group bg-white rounded-2xl overflow-hidden shadow-card border border-slate-100 hover:border-brand-200 flex flex-col"
+              className="card-hover group relative aspect-square rounded-2xl overflow-hidden shadow-card bg-brand-50"
             >
-              <div className="aspect-square bg-brand-50 overflow-hidden relative">
-                {c.image ? (
-                  <img
-                    src={c.image}
-                    alt={c.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : c.icon ? (
-                  <div className="w-full h-full grid place-items-center text-4xl text-brand-700">
-                    {c.icon}
-                  </div>
-                ) : (
-                  <div className="w-full h-full grid place-items-center text-3xl font-black text-brand-700">
-                    {c.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+              {/* Imagen de fondo */}
+              {c.image ? (
+                <img
+                  src={c.image}
+                  alt={c.name}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-6xl">
+                  {c.icon || c.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              {/* Gradiente + nombre */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-3">
+                <div className="font-bold text-white text-sm md:text-base leading-tight drop-shadow line-clamp-2">
+                  {c.name}
+                </div>
               </div>
-              <div className="px-3 py-3 text-center">
-                <div className="font-semibold text-slate-900 text-sm line-clamp-1">{c.name}</div>
-              </div>
+
+              {/* Hover: overlay azul sutil */}
+              <div className="absolute inset-0 bg-brand-600/0 group-hover:bg-brand-600/15 transition-colors duration-300 rounded-2xl" />
             </Link>
           ))}
         </div>

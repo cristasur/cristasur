@@ -4,6 +4,7 @@
 // ============================================================
 import './globals.css'
 import { Suspense } from 'react'
+import Script from 'next/script'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartProvider from '@/components/CartProvider'
@@ -100,39 +101,27 @@ const localBusinessJsonLd = LOCATIONS.map((l) => ({
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
-      <head>
-        {/* Google Tag Manager */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-5F3C7WN2');`,
-          }}
+      <head />
+      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+        {/* Google Analytics 4 */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-CG871WYQHV"
+          strategy="afterInteractive"
         />
-        {/* End Google Tag Manager */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-CG871WYQHV" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.dataLayer = window.dataLayer || [];
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-CG871WYQHV');`,
-          }}
-        />
-      </head>
-      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-        {/* Google Tag Manager (noscript) */}
+gtag('config', 'G-CG871WYQHV', { page_path: window.location.pathname });`}
+        </Script>
+        {/* Google Tag Manager (noscript fallback) */}
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-5F3C7WN2"
-            height="0"
-            width="0"
+            height="0" width="0"
             style={{ display: 'none', visibility: 'hidden' }}
           />
         </noscript>
-        {/* End Google Tag Manager (noscript) */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}

@@ -22,6 +22,7 @@ export async function GET(_request, { params }) {
     }
     const product = await Product.findById(params.id)
       .populate('categories', 'name slug icon')
+      .populate('brand', 'name slug')
       .lean()
     if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     return NextResponse.json({ product })

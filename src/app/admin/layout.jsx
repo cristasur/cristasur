@@ -19,6 +19,7 @@ const links = [
   { href: '/admin/categorias',          label: 'Categorías',    icon: 'tag' },
   { href: '/admin/cupones',             label: 'Cupones',       icon: 'ticket' },
   { href: '/admin/banners',             label: 'Banners',       icon: 'sparkle' },
+  { href: '/admin/marcas',              label: 'Marcas',        icon: 'tag' },
   { href: '/admin/blog',                label: 'Blog',          icon: 'edit' },
   { href: '/admin/resenas',             label: 'Reseñas',       icon: 'star' },
   { href: '/admin/pedidos',             label: 'Pedidos',       icon: 'cart' },

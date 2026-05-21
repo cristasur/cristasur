@@ -1,11 +1,11 @@
 'use client'
 // Filtros avanzados para /productos
-// Sincroniza con el URL (?category, ?q, ?minPrice, ?maxPrice, ?inStock, ?onSale, ?featured, ?sort)
+// Sincroniza con el URL (?category, ?q, ?minPrice, ?maxPrice, ?inStock, ?onSale, ?featured, ?sort, ?brand, ?color)
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Icon from './Icon'
 
-export default function ProductFilters({ categories = [], initialFilters = {} }) {
+export default function ProductFilters({ categories = [], brands = [], initialFilters = {} }) {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -18,6 +18,8 @@ export default function ProductFilters({ categories = [], initialFilters = {} })
     onSale: (sp.get('onSale') ?? (initialFilters.onSale ? '1' : '')) === '1',
     featured: (sp.get('featured') ?? (initialFilters.featured ? '1' : '')) === '1',
     sort: sp.get('sort') ?? initialFilters.sort ?? 'newest',
+    brand: sp.get('brand') ?? initialFilters.brand ?? '',
+    color: sp.get('color') ?? initialFilters.color ?? '',
   })
 
   function set(k, v) {
@@ -35,6 +37,8 @@ export default function ProductFilters({ categories = [], initialFilters = {} })
     if (form.onSale) params.set('onSale', '1')
     if (form.featured) params.set('featured', '1')
     if (form.sort && form.sort !== 'newest') params.set('sort', form.sort)
+    if (form.brand) params.set('brand', form.brand)
+    if (form.color) params.set('color', form.color)
     const qs = params.toString()
     router.push('/productos' + (qs ? `?${qs}` : ''))
   }
@@ -49,6 +53,8 @@ export default function ProductFilters({ categories = [], initialFilters = {} })
       onSale: false,
       featured: false,
       sort: 'newest',
+      brand: '',
+      color: '',
     })
     router.push('/productos')
   }
@@ -77,7 +83,7 @@ export default function ProductFilters({ categories = [], initialFilters = {} })
         <input
           value={form.q}
           onChange={(e) => set('q', e.target.value)}
-          placeholder="Palabra clave…"
+          placeholder="Palabra clave, marca…"
           className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
         />
       </div>
@@ -96,6 +102,36 @@ export default function ProductFilters({ categories = [], initialFilters = {} })
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Filtro por marca (solo si hay marcas) */}
+      {brands.length > 0 && (
+        <div>
+          <label className="text-xs font-semibold text-slate-600 block mb-1">Marca</label>
+          <select
+            value={form.brand}
+            onChange={(e) => set('brand', e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-brand-500"
+          >
+            <option value="">Todas las marcas</option>
+            {brands.map((b) => (
+              <option key={b._id} value={b.slug}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Filtro por color */}
+      <div>
+        <label className="text-xs font-semibold text-slate-600 block mb-1">Color</label>
+        <input
+          value={form.color}
+          onChange={(e) => set('color', e.target.value)}
+          placeholder="Ej: Rojo, Azul…"
+          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500"
+        />
       </div>
 
       <div>

@@ -11,6 +11,8 @@
 //   ?all=1                incluye inactivos (admin)
 //   ?includeDeleted=1     incluye soft-deleted (admin)
 //   ?deletedOnly=1        solo soft-deleted (papelera)
+//   ?brand=<slug>         filtrar por marca
+//   ?color=<texto>        filtrar por color (regex insensible)
 // POST /api/products   (protegido - admin)
 // ============================================================
 import { NextResponse } from 'next/server'
@@ -18,6 +20,7 @@ import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
+import Brand from '@/models/Brand'
 import { validateProductPayload } from '@/lib/validation'
 import { getCurrentUser } from '@/lib/auth'
 
@@ -40,6 +43,8 @@ export async function GET(request) {
     const sortParam = url.searchParams.get('sort') || 'newest'
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 48, 1), 100)
     const skip = Math.max(Number(url.searchParams.get('skip')) || 0, 0)
+    const brandParam = (url.searchParams.get('brand') || '').trim()
+    const colorParam = (url.searchParams.get('color') || '').trim()
 
     const filter = {}
     if (deletedOnly) filter.deleted = true
@@ -69,12 +74,33 @@ export async function GET(request) {
       }
     }
 
+    // Filtro por marca (slug)
+    if (brandParam) {
+      const brandDoc = await Brand.findOne({ slug: brandParam, active: true }).select('_id').lean()
+      if (!brandDoc) return NextResponse.json({ products: [], total: 0 })
+      filter.brand = brandDoc._id
+    }
+
+    // Filtro por color (regex insensible a mayúsculas)
+    if (colorParam) {
+      const safeColor = colorParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      filter.color = { $regex: safeColor, $options: 'i' }
+    }
+
     if (q) {
       const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      filter.$or = [
+      // Buscar marcas que coincidan con el texto para incluir sus productos
+      const matchingBrands = await Brand.find({ name: { $regex: safe, $options: 'i' }, active: true }).select('_id').lean()
+      const brandIds = matchingBrands.map((b) => b._id)
+
+      const orClauses = [
         { name: { $regex: safe, $options: 'i' } },
         { description: { $regex: safe, $options: 'i' } },
+        { color: { $regex: safe, $options: 'i' } },
       ]
+      if (brandIds.length) orClauses.push({ brand: { $in: brandIds } })
+
+      filter.$or = orClauses
     }
 
     let sort = { featured: -1, createdAt: -1 }
@@ -85,6 +111,7 @@ export async function GET(request) {
     const [products, total] = await Promise.all([
       Product.find(filter)
         .populate('categories', 'name slug icon')
+        .populate('brand', 'name slug')
         .sort(sort)
         .skip(skip)
         .limit(limit)

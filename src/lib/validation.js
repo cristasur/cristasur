@@ -82,6 +82,13 @@ export function validateProductPayload(body) {
   const stock = body?.stock === undefined ? 0 : Number(body.stock)
   const sku = body?.sku ? cleanString(body.sku, { max: 40 }) : undefined
 
+  // Marca (ObjectId string) — opcional
+  const brand =
+    body?.brand && validator.isMongoId(String(body.brand)) ? String(body.brand) : null
+
+  // Color libre (ej: "Rojo", "Azul marino") — opcional
+  const color = cleanSoft(body?.color, { max: 60 })
+
   // Estado y publicación programada
   const status = body?.status === 'draft' ? 'draft' : 'published'
   const publishAt =
@@ -155,6 +162,8 @@ export function validateProductPayload(body) {
       status,
       publishAt,
       tags,
+      brand,
+      color,
     },
   }
 }

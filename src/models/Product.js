@@ -70,6 +70,12 @@ const ProductSchema = new mongoose.Schema(
     status: { type: String, enum: ['draft', 'published'], default: 'published', index: true },
     publishAt: { type: Date, default: null },
 
+    // Marca opcional (ref a la colección Brand)
+    brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
+
+    // Color principal del producto (texto libre, ej: "Rojo", "Azul marino")
+    color: { type: String, trim: true, default: '' },
+
     // Etiquetas libres (eco, navidad, restaurante, etc.). Independientes de
     // las categorías. Usadas para filtros cruzados y landings estacionales.
     tags: { type: [String], default: [], index: true },
@@ -95,7 +101,7 @@ const ProductSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-ProductSchema.index({ name: 'text', description: 'text' })
+ProductSchema.index({ name: 'text', description: 'text', color: 'text' })
 ProductSchema.index({ deleted: 1, active: 1, featured: 1 })
 
 if (process.env.NODE_ENV !== 'production' && mongoose.models.Product) {

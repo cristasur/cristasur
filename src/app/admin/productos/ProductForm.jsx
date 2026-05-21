@@ -11,7 +11,12 @@ import { useRouter } from 'next/navigation'
 
 const MAX_GALLERY = 10
 
-export default function ProductForm({ categories, initial }) {
+const COMMON_COLORS = [
+  'Blanco', 'Negro', 'Gris', 'Rojo', 'Azul', 'Verde', 'Amarillo',
+  'Naranja', 'Rosa', 'Morado', 'Café', 'Beige', 'Dorado', 'Plateado', 'Transparente',
+]
+
+export default function ProductForm({ categories, brands = [], initial }) {
   const router = useRouter()
   const isEdit = Boolean(initial?._id)
 
@@ -34,6 +39,8 @@ export default function ProductForm({ categories, initial }) {
     status: initial?.status || 'published',
     publishAt: initial?.publishAt || '',
     tags: Array.isArray(initial?.tags) ? initial.tags : [],
+    brand: initial?.brand?._id || initial?.brand || '',
+    color: initial?.color || '',
   })
   const [uploading, setUploading] = useState(false)
   const [uploadingGallery, setUploadingGallery] = useState(false)
@@ -486,6 +493,37 @@ export default function ProductForm({ categories, initial }) {
             <span className="text-sm text-slate-700">Publicado</span>
           </label>
         </div>
+      </div>
+
+      {/* Marca y color */}
+      <div className="grid md:grid-cols-2 gap-5">
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Marca (opcional)</span>
+          <select
+            value={form.brand}
+            onChange={(e) => update('brand', e.target.value)}
+            className={input}
+          >
+            <option value="">— Sin marca —</option>
+            {brands.map((b) => (
+              <option key={b._id} value={b._id}>{b.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Color (opcional)</span>
+          <input
+            list="color-suggestions"
+            value={form.color}
+            onChange={(e) => update('color', e.target.value)}
+            placeholder="Ej: Rojo, Azul marino, Transparente"
+            className={input}
+          />
+          <datalist id="color-suggestions">
+            {COMMON_COLORS.map((c) => <option key={c} value={c} />)}
+          </datalist>
+          <span className="text-xs text-slate-500">Escribe o selecciona un color de la lista.</span>
+        </label>
       </div>
 
       {/* Tags + estado + publishAt */}

@@ -3,17 +3,18 @@
 // ============================================================
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
+import Brand from '@/models/Brand'
 import ProductForm from '../ProductForm'
 
 export const dynamic = 'force-dynamic'
 
 export default async function NewProductPage() {
   await dbConnect()
-  const categories = JSON.parse(
-    JSON.stringify(
-      await Category.find({ active: true }).sort({ order: 1, name: 1 }).lean()
-    )
-  )
+  const serialize = (arr) => JSON.parse(JSON.stringify(arr))
+  const [categories, brands] = await Promise.all([
+    Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
+    Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
+  ])
 
   if (categories.length === 0) {
     return (
@@ -34,7 +35,7 @@ export default async function NewProductPage() {
     <div>
       <h1 className="text-2xl font-black text-slate-900 mb-1">Nuevo producto</h1>
       <p className="text-slate-500 mb-6">Llena los datos y guarda.</p>
-      <ProductForm categories={categories} />
+      <ProductForm categories={serialize(categories)} brands={serialize(brands)} />
     </div>
   )
 }

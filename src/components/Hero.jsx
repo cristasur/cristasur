@@ -12,7 +12,6 @@ const AUTOPLAY_MS = 8000
 export default function Hero({ categories = [], banners = [] }) {
   const totalSlides = 1 + banners.length
   const [current, setCurrent]   = useState(0)
-  const [paused,  setPaused]    = useState(false)
   const timerRef                = useRef(null)
 
   const go = useCallback((idx) => {
@@ -22,19 +21,17 @@ export default function Hero({ categories = [], banners = [] }) {
   const next = useCallback(() => go(current + 1), [current, go])
   const prev = useCallback(() => go(current - 1), [current, go])
 
-  // Autoplay
+  // Autoplay — siempre activo en pc y móvil
   useEffect(() => {
-    if (paused || totalSlides < 2) return
+    if (totalSlides < 2) return
     timerRef.current = setTimeout(next, AUTOPLAY_MS)
     return () => clearTimeout(timerRef.current)
-  }, [current, paused, next, totalSlides])
+  }, [current, next, totalSlides])
 
   return (
     <section
       className="relative overflow-hidden"
       style={{ minHeight: '420px' }}
-      onPointerEnter={(e) => { if (e.pointerType === 'mouse') setPaused(true)  }}
-      onPointerLeave={(e) => { if (e.pointerType === 'mouse') setPaused(false) }}
     >
       {/* ── Slides track ─────────────────────────────────── */}
       <div

@@ -9,7 +9,7 @@ import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
-import { validateProductPayload, diffSummary } from '@/lib/validation'
+import { validateProductPayload, diffSummary, diffFields } from '@/lib/validation'
 import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -53,12 +53,15 @@ export async function PUT(request, { params }) {
     const before = await Product.findById(params.id).lean()
     if (!before) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-    const summary = diffSummary(before, value, [
+    const DIFF_FIELDS = [
       'name', 'description', 'price', 'comparePrice', 'wholesalePrice',
       'wholesaleMinQty', 'stock', 'featured', 'active', 'sku', 'image',
-      'gallery', 'variants', 'categories',
-      'brand', 'color', 'weight', 'length', 'width', 'height',
-    ]) || 'sin cambios relevantes'
+      'gallery', 'variants', 'categories', 'brand', 'color',
+      'weight', 'length', 'width', 'height', 'status', 'publishAt',
+      'qtyStep', 'materials', 'tags',
+    ]
+    const summary = diffSummary(before, value, DIFF_FIELDS) || 'sin cambios relevantes'
+    const diff = diffFields(before, value, DIFF_FIELDS)
 
     const product = await Product.findByIdAndUpdate(
       params.id,
@@ -72,8 +75,10 @@ export async function PUT(request, { params }) {
               userEmail: user?.email,
               action: 'update',
               changes: summary,
+              diff,
+              source: 'manual',
             }],
-            $slice: -50, // conservamos las últimas 50 entradas
+            $slice: -100,
           },
         },
       },

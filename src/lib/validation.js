@@ -311,7 +311,7 @@ export function validateCouponPayload(body) {
   }
 }
 
-// Resume los cambios de un producto en texto corto, para el historial.
+// Resume los cambios en texto (fallback para entradas antiguas).
 export function diffSummary(before, after, fields) {
   const parts = []
   for (const f of fields) {
@@ -320,10 +320,37 @@ export function diffSummary(before, after, fields) {
     const sa = typeof a === 'object' ? JSON.stringify(a) : String(a ?? '')
     const sb = typeof b === 'object' ? JSON.stringify(b) : String(b ?? '')
     if (sa !== sb) {
-      const fmtA = sa.length > 30 ? sa.slice(0, 27) + '…' : sa
-      const fmtB = sb.length > 30 ? sb.slice(0, 27) + '…' : sb
+      const fmtA = sa.length > 60 ? sa.slice(0, 57) + '…' : sa
+      const fmtB = sb.length > 60 ? sb.slice(0, 57) + '…' : sb
       parts.push(`${f}: ${fmtA || '∅'} → ${fmtB || '∅'}`)
     }
   }
-  return parts.join(', ')
+  return parts.join(' | ')
+}
+
+// Diff estructurado [{field, from, to}] con valores completos sin truncar.
+// Se guarda en editHistory.diff para mostrar detalle total en el historial.
+export function diffFields(before, after, fields) {
+  const LABELS = {
+    name: 'Nombre', description: 'Descripción', price: 'Precio',
+    comparePrice: 'Precio tachado', wholesalePrice: 'Precio mayoreo',
+    wholesaleMinQty: 'Mínimo mayoreo', stock: 'Stock', featured: 'Destacado',
+    active: 'Activo', sku: 'SKU', image: 'Imagen', gallery: 'Galería',
+    variants: 'Variantes', categories: 'Categorías', brand: 'Marca',
+    color: 'Color', weight: 'Peso (kg)', length: 'Largo (cm)',
+    width: 'Ancho (cm)', height: 'Alto (cm)', status: 'Estado',
+    publishAt: 'Publicar el', qtyStep: 'Paso de cantidad',
+    materials: 'Materiales', tags: 'Etiquetas',
+  }
+  const result = []
+  for (const f of fields) {
+    const a = before?.[f]
+    const b = after?.[f]
+    const sa = typeof a === 'object' ? JSON.stringify(a) : String(a ?? '')
+    const sb = typeof b === 'object' ? JSON.stringify(b) : String(b ?? '')
+    if (sa !== sb) {
+      result.push({ field: LABELS[f] || f, from: sa || '∅', to: sb || '∅' })
+    }
+  }
+  return result
 }

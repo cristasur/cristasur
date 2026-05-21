@@ -18,7 +18,7 @@ export default function SearchAutocomplete({ className = '' }) {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState({ products: [], categories: [] })
+  const [results, setResults] = useState({ products: [], categories: [], brands: [] })
   const boxRef = useRef(null)
   const router = useRouter()
 
@@ -32,7 +32,7 @@ export default function SearchAutocomplete({ className = '' }) {
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search/suggest?q=${encodeURIComponent(q)}`)
-        const data = await res.json().catch(() => ({ products: [], categories: [] }))
+        const data = await res.json().catch(() => ({ products: [], categories: [], brands: [] }))
         if (!cancelled) setResults(data)
       } finally {
         if (!cancelled) setLoading(false)
@@ -60,7 +60,8 @@ export default function SearchAutocomplete({ className = '' }) {
     setOpen(false)
   }
 
-  const hasResults = results.products.length + results.categories.length > 0
+  const hasResults =
+    results.products.length + results.categories.length + (results.brands?.length || 0) > 0
 
   return (
     <div ref={boxRef} className={'relative ' + className}>
@@ -91,6 +92,47 @@ export default function SearchAutocomplete({ className = '' }) {
           {!loading && !hasResults && (
             <div className="p-4 text-sm text-slate-500">Sin resultados.</div>
           )}
+          {/* Sección de marcas (con sus productos) */}
+          {results.brands?.map((b) => (
+            <div key={b._id} className="p-2 border-b border-slate-100">
+              <Link
+                href={`/productos?brand=${b.slug}`}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-brand-50 group"
+              >
+                <span className="text-[10px] uppercase tracking-wider font-bold text-brand-600 bg-brand-50 group-hover:bg-brand-100 px-2 py-0.5 rounded-full">
+                  Marca
+                </span>
+                <span className="text-sm font-bold text-slate-900">{b.name}</span>
+                <span className="text-xs text-slate-400 ml-auto">Ver todos →</span>
+              </Link>
+              {b.products?.length > 0 && (
+                <div className="mt-1 space-y-0.5">
+                  {b.products.map((p) => (
+                    <Link
+                      key={p._id}
+                      href={`/productos/${p._id}`}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-slate-50"
+                    >
+                      <div className="w-9 h-9 rounded-md bg-slate-100 overflow-hidden shrink-0 grid place-items-center text-slate-300">
+                        {p.image ? (
+                          <img src={p.image} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Icon name="box" className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-800 line-clamp-1">{p.name}</div>
+                        <div className="text-xs text-brand-700 font-bold">{formatMXN(p.price)}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
           {results.categories.length > 0 && (
             <div className="p-2">
               <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400 px-2 py-1">

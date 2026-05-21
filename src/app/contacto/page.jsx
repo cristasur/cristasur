@@ -62,6 +62,22 @@ export default function ContactoPage() {
             WhatsApp +52 999 473 1919
           </a>
           <a
+            href="mailto:cristasur@live.com.mx"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-semibold"
+          >
+            <Icon name="mail" className="w-5 h-5" />
+            cristasur@live.com.mx
+          </a>
+          <a
+            href="https://www.facebook.com/CristasurMX/?locale=es_LA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#1877F2] hover:bg-[#1565d8] text-white font-semibold"
+          >
+            <Icon name="facebook" className="w-5 h-5" />
+            Facebook
+          </a>
+          <a
             href="https://www.instagram.com/cristasurmx/"
             target="_blank"
             rel="noopener noreferrer"

@@ -33,6 +33,24 @@ export default function Footer() {
               <span>@cristasurmx</span>
             </a>
             <a
+              href="https://www.facebook.com/CristasurMX/?locale=es_LA"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1877F2]/20 hover:bg-[#1877F2]/30 text-sm"
+              aria-label="Facebook"
+            >
+              <Icon name="facebook" className="w-4 h-4" />
+              <span>Facebook</span>
+            </a>
+            <a
+              href="mailto:cristasur@live.com.mx"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm"
+              aria-label="Correo"
+            >
+              <Icon name="mail" className="w-4 h-4" />
+              <span>Correo</span>
+            </a>
+            <a
               href="https://wa.me/529994731919"
               target="_blank"
               rel="noopener noreferrer"

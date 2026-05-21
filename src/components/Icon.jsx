@@ -169,6 +169,15 @@ const icons = {
     </>
   ),
   filter: <path d="M22 3H2l8 9.5V19l4 2v-8.5z" />,
+  facebook: (
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+  ),
+  mail: (
+    <>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m2 7 10 7 10-7" />
+    </>
+  ),
 }
 
 export default function Icon({ name, className = 'w-5 h-5', strokeWidth = 2 }) {

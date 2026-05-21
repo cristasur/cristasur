@@ -8,10 +8,9 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const ADMIN_EMAILS = [
-  'Amirhernandezfarah06@gmail.com',
-  'Cristasur03@gmail.com',
-]
+// Con onboarding@resend.dev solo se puede enviar al correo de la cuenta Resend.
+// Una vez que verifiques tu dominio en resend.com/domains, cambia esto a ambos correos.
+const ADMIN_EMAILS = ['Cristasur03@gmail.com']
 
 export async function POST(req) {
   try {

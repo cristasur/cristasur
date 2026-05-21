@@ -70,6 +70,15 @@ const ProductSchema = new mongoose.Schema(
     status: { type: String, enum: ['draft', 'published'], default: 'published', index: true },
     publishAt: { type: Date, default: null },
 
+    // ---- Dimensiones y logística (para envia.com y carriers) ----
+    // Todas las medidas son del paquete listo para enviar (producto + embalaje).
+    // Unidades fijas: peso en kg, dimensiones en cm.
+    // Si algún campo queda null, el carrier usará valores por defecto al cotizar.
+    weight: { type: Number, min: 0, default: null },   // kg  — peso bruto con embalaje
+    length: { type: Number, min: 0, default: null },   // cm  — largo (dimensión mayor)
+    width:  { type: Number, min: 0, default: null },   // cm  — ancho
+    height: { type: Number, min: 0, default: null },   // cm  — alto
+
     // Marca opcional (ref a la colección Brand)
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
 

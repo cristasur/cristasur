@@ -57,6 +57,7 @@ export async function PUT(request, { params }) {
       'name', 'description', 'price', 'comparePrice', 'wholesalePrice',
       'wholesaleMinQty', 'stock', 'featured', 'active', 'sku', 'image',
       'gallery', 'variants', 'categories',
+      'brand', 'color', 'weight', 'length', 'width', 'height',
     ]) || 'sin cambios relevantes'
 
     const product = await Product.findByIdAndUpdate(

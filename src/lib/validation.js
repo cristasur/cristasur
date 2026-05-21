@@ -89,6 +89,28 @@ export function validateProductPayload(body) {
   // Color libre (ej: "Rojo", "Azul marino") — opcional
   const color = cleanSoft(body?.color, { max: 60 })
 
+  // ---- Dimensiones y logística ----
+  // Todos opcionales (null = no definido). Unidades: kg y cm.
+  function parseDim(val) {
+    if (val === undefined || val === null || val === '') return null
+    const n = parseFloat(val)
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 1000) / 1000 : null
+  }
+  const weight = parseDim(body?.weight) // kg
+  const length = parseDim(body?.length) // cm
+  const width  = parseDim(body?.width)  // cm
+  const height = parseDim(body?.height) // cm
+
+  // Validaciones de dimensiones (solo si se rellenan)
+  if (weight !== null && weight > 999)
+    errors.push('El peso no puede superar 999 kg')
+  if (length !== null && length > 999)
+    errors.push('El largo no puede superar 999 cm')
+  if (width !== null && width > 999)
+    errors.push('El ancho no puede superar 999 cm')
+  if (height !== null && height > 999)
+    errors.push('El alto no puede superar 999 cm')
+
   // Estado y publicación programada
   const status = body?.status === 'draft' ? 'draft' : 'published'
   const publishAt =
@@ -164,6 +186,10 @@ export function validateProductPayload(body) {
       tags,
       brand,
       color,
+      weight,
+      length,
+      width,
+      height,
     },
   }
 }

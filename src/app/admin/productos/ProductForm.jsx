@@ -41,6 +41,10 @@ export default function ProductForm({ categories, brands = [], initial }) {
     tags: Array.isArray(initial?.tags) ? initial.tags : [],
     brand: initial?.brand?._id || initial?.brand || '',
     color: initial?.color || '',
+    weight: initial?.weight ?? '',
+    length: initial?.length ?? '',
+    width:  initial?.width  ?? '',
+    height: initial?.height ?? '',
   })
   const [uploading, setUploading] = useState(false)
   const [uploadingGallery, setUploadingGallery] = useState(false)
@@ -570,6 +574,102 @@ export default function ProductForm({ categories, brands = [], initial }) {
             </span>
           </label>
         </div>
+      </fieldset>
+
+      {/* Dimensiones y logística (para envíos) */}
+      <fieldset className="border border-blue-200 bg-blue-50/30 rounded-xl p-4">
+        <legend className="px-2 text-sm font-bold text-blue-800">
+          📦 Dimensiones y peso del paquete
+        </legend>
+        <p className="text-xs text-blue-700/80 mb-4">
+          Mide el producto ya embalado (con caja o bolsa). Peso en <strong>kg</strong>, dimensiones en <strong>cm</strong>.
+          Estos datos se usarán para cotizar envíos automáticamente con envia.com.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Peso (kg)</span>
+            <input
+              type="number"
+              min="0"
+              step="0.001"
+              placeholder="Ej: 1.500"
+              value={form.weight}
+              onChange={(e) => update('weight', e.target.value)}
+              className={input}
+            />
+            <span className="text-[11px] text-slate-400">Con embalaje</span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Largo (cm)</span>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              placeholder="Ej: 30.0"
+              value={form.length}
+              onChange={(e) => update('length', e.target.value)}
+              className={input}
+            />
+            <span className="text-[11px] text-slate-400">Dimensión mayor</span>
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Ancho (cm)</span>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              placeholder="Ej: 20.0"
+              value={form.width}
+              onChange={(e) => update('width', e.target.value)}
+              className={input}
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Alto (cm)</span>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              placeholder="Ej: 15.0"
+              value={form.height}
+              onChange={(e) => update('height', e.target.value)}
+              className={input}
+            />
+          </label>
+        </div>
+
+        {/* Indicadores en vivo */}
+        {(form.weight || (form.length && form.width && form.height)) && (
+          <div className="mt-4 flex flex-wrap gap-4 text-xs">
+            {form.weight && (
+              <div className="bg-white border border-blue-200 rounded-lg px-3 py-2">
+                <span className="text-slate-500">Peso real:</span>{' '}
+                <strong className="text-slate-800">{parseFloat(form.weight).toFixed(3)} kg</strong>
+              </div>
+            )}
+            {form.length && form.width && form.height && (() => {
+              const volKg = (parseFloat(form.length) * parseFloat(form.width) * parseFloat(form.height)) / 5000
+              const real = parseFloat(form.weight) || 0
+              const cobrable = Math.max(real, volKg)
+              return (
+                <>
+                  <div className="bg-white border border-blue-200 rounded-lg px-3 py-2">
+                    <span className="text-slate-500">Peso volumétrico:</span>{' '}
+                    <strong className="text-slate-800">{volKg.toFixed(3)} kg</strong>
+                    <span className="text-slate-400 ml-1">(largo×ancho×alto ÷ 5 000)</span>
+                  </div>
+                  {form.weight && (
+                    <div className={`border rounded-lg px-3 py-2 ${cobrable > real ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-green-50 border-green-300 text-green-800'}`}>
+                      <span>Peso cobrable por carrier:</span>{' '}
+                      <strong>{cobrable.toFixed(3)} kg</strong>
+                      {cobrable > real && <span className="ml-1 font-normal">(se cobra el volumétrico)</span>}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
+          </div>
+        )}
       </fieldset>
 
       {/* Imagen principal */}

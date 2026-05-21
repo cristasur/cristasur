@@ -102,10 +102,25 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   )}`
 
   function onWhatsAppClick() {
-    // Trackea el click (no bloquea el salto a wa.me)
+    // Trackea el click en el producto (contador)
     fetch(`/api/products/${product._id}?action=whatsapp`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+    }).catch(() => {})
+
+    // Notifica a los admins por correo (fire & forget)
+    fetch('/api/notify/whatsapp-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productName: product.name,
+        productId: product._id,
+        sku: product.sku || null,
+        price: formatPrice(currentPrice),
+        qty,
+        variant: selected ? `${selected.label}: ${selected.value}` : null,
+        productUrl,
+      }),
     }).catch(() => {})
   }
 

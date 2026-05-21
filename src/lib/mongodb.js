@@ -6,6 +6,14 @@
 // ============================================================
 import mongoose from 'mongoose'
 
+// Garantiza que todos los modelos estén registrados en Mongoose antes
+// de cualquier populate(), independientemente del orden de importación.
+// Crítico en entornos serverless donde cada función arranca de cero.
+import '@/models/Brand'
+import '@/models/Material'
+import '@/models/Category'
+import '@/models/Product'
+
 const MONGODB_URI = process.env.MONGODB_URI
 
 if (!MONGODB_URI) {

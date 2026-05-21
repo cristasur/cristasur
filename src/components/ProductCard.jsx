@@ -58,22 +58,21 @@ export default function ProductCard({ product }) {
           )}
         </div>
         <div className="p-4">
-          {/* Categoría + Marca */}
-          <div className="flex items-center justify-between gap-1 mb-1 min-h-[1.25rem]">
-            {product.categories?.[0]?.name && (
-              <div className="text-[11px] uppercase tracking-wider text-brand-600 font-semibold truncate">
-                {product.categories[0].name}
-              </div>
-            )}
-            {product.brand?.name && (
-              <div className="text-[11px] text-slate-400 font-medium truncate shrink-0">
-                {product.brand.name}
-              </div>
-            )}
-          </div>
+          {/* Categoría */}
+          {product.categories?.[0]?.name && (
+            <div className="text-[11px] uppercase tracking-wider text-brand-600 font-semibold mb-1">
+              {product.categories[0].name}
+            </div>
+          )}
           <h3 className="font-semibold text-slate-900 line-clamp-2 text-[15px] leading-snug min-h-[2.6em]">
             {product.name}
           </h3>
+          {/* Marca */}
+          {product.brand?.name && (
+            <div className="mt-1 text-[13px] text-slate-500 font-medium truncate">
+              {product.brand.name}
+            </div>
+          )}
           {/* Estrellas */}
           {product.avgRating > 0 && (
             <div className="flex items-center gap-1 mt-1">

@@ -111,6 +111,10 @@ const ProductSchema = new mongoose.Schema(
     whatsappClicks: { type: Number, default: 0 },
     salesCount: { type: Number, default: 0 }, // se incrementa manualmente al marcar pedido completado
 
+    // ---- Reseñas (caché desnormalizado para no agregar en cada request) ----
+    avgRating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0, min: 0 },
+
     // ---- Auditoría ----
     editHistory: { type: [EditLogSchema], default: [] },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

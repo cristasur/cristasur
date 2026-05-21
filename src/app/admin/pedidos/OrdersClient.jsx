@@ -18,15 +18,29 @@ const STATUS_COLORS = {
   cancelled: 'bg-rose-100 text-rose-700',
 }
 
-export default function OrdersClient({ initialOrders, initialStatus }) {
+export default function OrdersClient({ initialOrders, initialStatus, isAdmin = false }) {
   const router = useRouter()
   const [orders, setOrders] = useState(initialOrders)
   const [status, setStatus] = useState(initialStatus)
+  const [deleting, setDeleting] = useState(null)
 
   function setFilter(s) {
     setStatus(s)
     const url = s ? `/admin/pedidos?status=${s}` : '/admin/pedidos'
     router.push(url)
+  }
+
+  async function deleteOrder(id) {
+    if (!confirm('¿Eliminar este pedido permanentemente? Esta acción no se puede deshacer.')) return
+    setDeleting(id)
+    const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setOrders((xs) => xs.filter((o) => o._id !== id))
+    } else {
+      const e = await res.json().catch(() => ({}))
+      alert(e?.error || 'No se pudo eliminar el pedido')
+    }
+    setDeleting(null)
   }
 
   async function changeStatus(id, newStatus) {
@@ -85,6 +99,7 @@ export default function OrdersClient({ initialOrders, initialStatus }) {
               <th className="p-3">Total</th>
               <th className="p-3">Cliente</th>
               <th className="p-3">Estado</th>
+              {isAdmin && <th className="p-3"></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -124,6 +139,18 @@ export default function OrdersClient({ initialOrders, initialStatus }) {
                     ))}
                   </select>
                 </td>
+                {isAdmin && (
+                  <td className="p-3">
+                    <button
+                      onClick={() => deleteOrder(o._id)}
+                      disabled={deleting === o._id}
+                      className="text-rose-400 hover:text-rose-600 text-xs font-semibold disabled:opacity-40"
+                      title="Eliminar pedido"
+                    >
+                      {deleting === o._id ? '…' : '🗑 Eliminar'}
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
             {!orders.length && (

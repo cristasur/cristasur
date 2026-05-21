@@ -7,7 +7,21 @@ import { NextResponse } from 'next/server'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Review from '@/models/Review'
+import Product from '@/models/Product'
 import { getCurrentUser } from '@/lib/auth'
+
+// Recalcula avgRating y reviewCount en el producto padre
+async function refreshProductRating(productId) {
+  try {
+    const agg = await Review.aggregate([
+      { $match: { product: productId, status: 'approved' } },
+      { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ])
+    const avg = agg[0]?.avg ? Math.round(agg[0].avg * 10) / 10 : 0
+    const count = agg[0]?.count ?? 0
+    await Product.findByIdAndUpdate(productId, { avgRating: avg, reviewCount: count })
+  } catch {}
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +47,8 @@ export async function PATCH(request, { params }) {
     if (!review) {
       return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     }
+    // Actualizar caché de rating en el producto
+    await refreshProductRating(review.product)
     return NextResponse.json({ ok: true, review })
   } catch (err) {
     console.error('PATCH /api/reviews/:id', err)

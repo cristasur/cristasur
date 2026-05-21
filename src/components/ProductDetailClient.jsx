@@ -25,7 +25,7 @@ function formatPrice(n) {
   }).format(n || 0)
 }
 
-export default function ProductDetailClient({ product, productUrl }) {
+export default function ProductDetailClient({ product, productUrl, isVip = false }) {
   const variants = Array.isArray(product.variants) ? product.variants : []
   // Pre-selecciona la primera variante con stock, si hay variantes.
   const initialVariant = useMemo(() => {
@@ -54,8 +54,10 @@ export default function ProductDetailClient({ product, productUrl }) {
     !selected && Number.isFinite(Number(product.wholesaleMinQty)) && Number(product.wholesaleMinQty) >= 2
       ? Number(product.wholesaleMinQty)
       : null
+  // VIP: mayoreo activo siempre sin importar la cantidad pedida
   const wholesaleActive =
-    wholesalePrice !== null && wholesaleMinQty !== null && qty >= wholesaleMinQty
+    wholesalePrice !== null &&
+    (isVip || (wholesaleMinQty !== null && qty >= wholesaleMinQty))
   const currentPrice = wholesaleActive ? wholesalePrice : basePrice
 
   // Stock efectivo: si hay variantes, usamos la seleccionada; si no, el del producto.
@@ -82,6 +84,7 @@ export default function ProductDetailClient({ product, productUrl }) {
     '',
     `*Producto:* ${product.name}`,
   ]
+  if (product.sku) waLines.push(`*SKU:* ${product.sku}`)
   if (selected?.label && selected?.value) {
     waLines.push(`*${selected.label}:* ${selected.value}`)
   }
@@ -90,7 +93,6 @@ export default function ProductDetailClient({ product, productUrl }) {
     `*Precio unitario:* ${formatPrice(currentPrice)}${wholesaleActive ? ' (mayoreo)' : ''}`,
     `*Subtotal estimado:* ${formatPrice(subtotal)}`
   )
-  if (product.sku) waLines.push(`*SKU:* ${product.sku}`)
   if (productUrl) {
     waLines.push('')
     waLines.push(`Ver producto: ${productUrl}`)
@@ -120,6 +122,13 @@ export default function ProductDetailClient({ product, productUrl }) {
 
   return (
     <div className="mt-6 space-y-5">
+      {/* Badge VIP */}
+      {isVip && wholesalePrice !== null && (
+        <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-1.5 rounded-full">
+          ⭐ Precio VIP activo — mayoreo aplicado automáticamente
+        </div>
+      )}
+
       {/* Precio actualizado si hay variante con precio distinto */}
       {selected && Number.isFinite(Number(selected.price)) && (
         <div className="text-sm text-slate-500">

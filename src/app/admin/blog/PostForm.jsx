@@ -34,6 +34,7 @@ export default function PostForm({ initial }) {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [tab, setTab] = useState('editor') // 'editor' | 'preview'
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target
@@ -80,7 +81,84 @@ export default function PostForm({ initial }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-4">
+      {/* Tabs Editor / Vista previa */}
+      <div className="flex gap-2 border-b border-slate-200 pb-0">
+        <button
+          type="button"
+          onClick={() => setTab('editor')}
+          className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+            tab === 'editor'
+              ? 'border-brand-600 text-brand-700 bg-brand-50'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          ✏️ Editor
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('preview')}
+          className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+            tab === 'preview'
+              ? 'border-brand-600 text-brand-700 bg-brand-50'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          👁 Vista previa
+        </button>
+      </div>
+
+      {/* ── VISTA PREVIA ── */}
+      {tab === 'preview' && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">
+          {form.coverImage && (
+            <img
+              src={form.coverImage}
+              alt={form.title}
+              className="w-full h-64 object-cover"
+            />
+          )}
+          <div className="max-w-2xl mx-auto px-6 py-10">
+            {form.tags && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {form.tags.split(',').map((t) => t.trim()).filter(Boolean).map((t) => (
+                  <span key={t} className="text-xs bg-brand-50 text-brand-700 font-semibold px-2 py-0.5 rounded-full">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight">
+              {form.title || <span className="text-slate-300">Sin título</span>}
+            </h1>
+            {form.excerpt && (
+              <p className="mt-4 text-lg text-slate-600 leading-relaxed">{form.excerpt}</p>
+            )}
+            <div className="mt-3 flex items-center gap-3 text-sm text-slate-400">
+              <span>{form.author || 'CRISTASUR'}</span>
+              <span>·</span>
+              <span>{new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              {!form.published && (
+                <span className="bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full text-xs">
+                  Borrador
+                </span>
+              )}
+            </div>
+            <hr className="my-8 border-slate-200" />
+            {form.content ? (
+              <div
+                className="prose prose-slate max-w-none"
+                dangerouslySetInnerHTML={{ __html: form.content }}
+              />
+            ) : (
+              <p className="text-slate-400 italic">El contenido aparecerá aquí…</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── EDITOR ── */}
+    <form onSubmit={handleSubmit} className={`space-y-6 ${tab === 'preview' ? 'hidden' : ''}`}>
       {error && (
         <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
       )}
@@ -256,6 +334,13 @@ export default function PostForm({ initial }) {
         >
           {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear artículo'}
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('preview')}
+          className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm"
+        >
+          👁 Vista previa
+        </button>
         <a
           href="/admin/blog"
           className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm"
@@ -264,5 +349,6 @@ export default function PostForm({ initial }) {
         </a>
       </div>
     </form>
+    </div>
   )
 }

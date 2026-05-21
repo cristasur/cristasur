@@ -2,6 +2,7 @@
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
 import OrdersClient from './OrdersClient'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pedidos · CRISTASUR Admin' }
@@ -19,6 +20,12 @@ async function loadOrders(searchParams) {
 }
 
 export default async function PedidosPage({ searchParams }) {
-  const orders = await loadOrders(searchParams)
-  return <OrdersClient initialOrders={orders} initialStatus={searchParams?.status || ''} />
+  const [orders, user] = await Promise.all([loadOrders(searchParams), getCurrentUser()])
+  return (
+    <OrdersClient
+      initialOrders={orders}
+      initialStatus={searchParams?.status || ''}
+      isAdmin={user?.role === 'admin'}
+    />
+  )
 }

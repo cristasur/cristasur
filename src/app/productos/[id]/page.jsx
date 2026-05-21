@@ -14,6 +14,7 @@ import ProductDetailClient from '@/components/ProductDetailClient'
 import ReviewList from '@/components/ReviewList'
 import RecentlyViewed from '@/components/RecentlyViewed'
 import FavoriteButton from '@/components/FavoriteButton'
+import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -132,9 +133,10 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ProductDetail({ params }) {
-  const data = await loadProduct(params.id)
+  const [data, user] = await Promise.all([loadProduct(params.id), getCurrentUser()])
   if (!data) notFound()
   const { product, related, alsoBought } = data
+  const isVip = Boolean(user?.wholesaleAccess)
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const productUrl = `${siteUrl()}/productos/${product._id}`
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0
@@ -268,7 +270,7 @@ export default async function ProductDetail({ params }) {
           )}
 
           {/* Variantes + cantidad + añadir al carrito + WhatsApp + compartir */}
-          <ProductDetailClient product={product} productUrl={productUrl} />
+          <ProductDetailClient product={product} productUrl={productUrl} isVip={isVip} />
         </div>
       </div>
 

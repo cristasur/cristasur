@@ -1,4 +1,5 @@
-// PATCH /api/orders/:id  → cambiar estado y notas (admin)
+// PATCH  /api/orders/:id  → cambiar estado y notas (admin)
+// DELETE /api/orders/:id  → eliminar pedido de la BD (solo admin supremo)
 import { NextResponse } from 'next/server'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
@@ -32,6 +33,20 @@ export async function PATCH(request, { params }) {
   const order = await Order.findByIdAndUpdate(params.id, { $set: update }, { new: true }).lean()
   if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
   return NextResponse.json({ order: JSON.parse(JSON.stringify(order)) })
+}
+
+export async function DELETE(_, { params }) {
+  const user = await getCurrentUser()
+  if (!user || user.role !== 'admin') {
+    return NextResponse.json({ error: 'Solo el admin puede eliminar pedidos' }, { status: 403 })
+  }
+  if (!mongoose.Types.ObjectId.isValid(params.id)) {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+  }
+  await dbConnect()
+  const order = await Order.findByIdAndDelete(params.id)
+  if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+  return NextResponse.json({ ok: true })
 }
 
 export async function GET(_, { params }) {

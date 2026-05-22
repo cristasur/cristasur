@@ -3,6 +3,7 @@ import Link from 'next/link'
 import LogoutButton from './LogoutButton'
 import Icon from '@/components/Icon'
 import { getCurrentUser } from '@/lib/auth'
+import AdminMobileNav from './AdminMobileNav'
 
 export const metadata = {
   title: 'Admin · CRISTASUR',
@@ -35,8 +36,12 @@ export default async function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <div className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-[220px_1fr] gap-6">
-        <aside className="lg:sticky lg:top-8 h-fit bg-white rounded-2xl shadow-card border border-slate-100 p-4">
+      {/* Navegación hamburger — solo móvil */}
+      <AdminMobileNav links={visibleLinks} user={user} />
+
+      <div className="max-w-7xl mx-auto px-4 py-8 lg:grid lg:grid-cols-[220px_1fr] gap-6">
+        {/* Sidebar — solo desktop (lg+) */}
+        <aside className="hidden lg:block lg:sticky lg:top-8 h-fit bg-white rounded-2xl shadow-card border border-slate-100 p-4">
           <div className="px-2 pb-4 mb-2 border-b border-slate-100">
             <img
               src="/logo.png"
@@ -73,7 +78,9 @@ export default async function AdminLayout({ children }) {
             <LogoutButton />
           </nav>
         </aside>
-        <main className="min-w-0">{children}</main>
+
+        {/* Contenido principal */}
+        <main className="min-w-0 overflow-x-auto">{children}</main>
       </div>
     </div>
   )

@@ -284,7 +284,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   return (
     <form
       onSubmit={onSubmit}
-      className="bg-white rounded-2xl shadow-card border border-slate-100 p-6 grid gap-5"
+      className="bg-white rounded-2xl shadow-card border border-slate-100 p-4 md:p-6 grid gap-5"
     >
       {error && (
         <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
@@ -959,7 +959,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             {form.variants.map((v, i) => (
               <div
                 key={i}
-                className="grid grid-cols-1 md:grid-cols-[80px_1fr_1fr_100px_100px_100px_140px_auto] gap-2 items-start p-3 border border-slate-200 rounded-xl bg-slate-50/50"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[80px_1fr_1fr_100px_100px_100px_140px_auto] gap-2 items-start p-3 border border-slate-200 rounded-xl bg-slate-50/50 overflow-x-auto"
               >
                 <div className="w-16 h-16 rounded-lg bg-white border border-slate-200 overflow-hidden grid place-items-center text-slate-300 text-xs">
                   {v.image ? (
@@ -1044,14 +1044,15 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
-        <div className="flex gap-2">
+      {/* Barra de acciones — sticky en móvil para que siempre sea visible */}
+      <div className="sticky bottom-0 z-20 bg-white -mx-4 md:-mx-6 px-4 md:px-6 py-3 border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-3 mt-2">
+        <div className="flex gap-2 flex-wrap">
           {isEdit && (
             <>
               <button
                 type="button"
                 onClick={onPreview}
-                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm"
                 title="Abrir detalle del producto en una pestaña nueva"
               >
                 Vista previa
@@ -1059,7 +1060,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
               <button
                 type="button"
                 onClick={onDuplicate}
-                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm"
               >
                 Duplicar
               </button>
@@ -1070,14 +1071,14 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           <button
             type="button"
             onClick={() => router.push('/admin/productos')}
-            className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+            className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={saving || uploading || uploadingGallery}
-            className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold disabled:opacity-60"
+            className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold disabled:opacity-60 text-sm"
           >
             {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}
           </button>

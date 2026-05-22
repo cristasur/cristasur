@@ -79,7 +79,11 @@ export function validateProductPayload(body) {
 
   const featured = Boolean(body?.featured)
   const active = body?.active === undefined ? true : Boolean(body.active)
-  const stock = body?.stock === undefined ? 0 : Number(body.stock)
+  // null = ilimitado (campo vacío). 0 = sin stock. >0 = cantidad exacta.
+  const stock =
+    body?.stock === undefined || body?.stock === null || body?.stock === ''
+      ? null
+      : Number(body.stock)
   const sku = body?.sku ? cleanString(body.sku, { max: 40 }) : undefined
 
   // Marca (ObjectId string) — opcional
@@ -175,8 +179,8 @@ export function validateProductPayload(body) {
   }
   if (!categories.length || !categories.every((c) => validator.isMongoId(c)))
     errors.push('Debe seleccionar al menos una categoría válida')
-  if (!Number.isFinite(stock) || stock < 0)
-    errors.push('El stock debe ser un número positivo')
+  if (stock !== null && (!Number.isFinite(stock) || stock < 0))
+    errors.push('El stock debe ser un número positivo o dejarse vacío (ilimitado)')
 
   return {
     errors,

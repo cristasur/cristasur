@@ -29,8 +29,8 @@ function isDirectVideo(url) {
 }
 
 export default function ProductGallery({ images = [], alt = 'Producto', videoUrl = '' }) {
-  // Construimos la lista de items: video (si hay) + imágenes
-  const items = useMemo(() => {
+  // Construimos la lista de items base: video (si hay) + imágenes
+  const baseItems = useMemo(() => {
     const seen = new Set()
     const imgs = images.filter((u) => {
       if (!u || typeof u !== 'string') return false
@@ -42,10 +42,45 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
     return imgs.map((u) => ({ type: 'image', url: u }))
   }, [images, videoUrl])
 
+  // Imagen de variante inyectada temporalmente (si no estaba en la galería base)
+  const [variantItem, setVariantItem] = useState(null)
+
+  // Lista final: si la imagen de variante no está en los items base, va primero
+  const items = useMemo(() => {
+    if (!variantItem) return baseItems
+    const already = baseItems.some((it) => it.type === 'image' && it.url === variantItem.url)
+    return already ? baseItems : [variantItem, ...baseItems]
+  }, [baseItems, variantItem])
+
   const [idx, setIdx] = useState(0)
   const stripRef = useRef(null)
 
-  useEffect(() => { setIdx(0) }, [items.length])
+  useEffect(() => { setIdx(0) }, [baseItems.length])
+
+  // Escuchar evento de cambio de variante desde ProductDetailClient
+  useEffect(() => {
+    function onVariantImage(e) {
+      const img = e.detail?.image
+      if (!img) {
+        // Sin imagen de variante → volver al inicio
+        setVariantItem(null)
+        setIdx(0)
+        return
+      }
+      // ¿Ya existe en la galería base?
+      const existingIdx = baseItems.findIndex((it) => it.type === 'image' && it.url === img)
+      if (existingIdx >= 0) {
+        setVariantItem(null)
+        setIdx(existingIdx)
+      } else {
+        // Inyectar como primer item y saltar a él
+        setVariantItem({ type: 'image', url: img, isVariant: true })
+        setIdx(0)
+      }
+    }
+    window.addEventListener('cristasur:variant-image', onVariantImage)
+    return () => window.removeEventListener('cristasur:variant-image', onVariantImage)
+  }, [baseItems])
 
   const total = items.length
   const hasMany = total > 1
@@ -162,14 +197,20 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
                   }`}>
                   {item.type === 'video' ? (
                     <div className="w-full h-full bg-slate-900 grid place-items-center">
-                      {/* Icono play sobre thumbnail de video */}
                       <svg className="w-8 h-8 text-white/80" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                       </svg>
                     </div>
                   ) : (
-                    <img src={item.url} alt={`Miniatura ${i + 1}`}
-                      className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                    <>
+                      <img src={item.url} alt={`Miniatura ${i + 1}`}
+                        className="w-full h-full object-cover" loading="lazy" decoding="async" />
+                      {item.isVariant && (
+                        <span className="absolute bottom-0.5 right-0.5 bg-brand-600 text-white text-[9px] font-bold px-1 rounded">
+                          ✓
+                        </span>
+                      )}
+                    </>
                   )}
                 </button>
               )

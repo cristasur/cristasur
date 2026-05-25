@@ -43,6 +43,29 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     ? Number(product.qtyStep) : 1
   const [qty, setQty] = useState(step)
 
+  // Cuando cambia la variante seleccionada, notificar a ProductGallery para
+  // que salte a la imagen de esa variante (o la inyecte si no estaba en la galería).
+  function selectVariant(v) {
+    setSelected(v)
+    setQty(step)
+    window.dispatchEvent(
+      new CustomEvent('cristasur:variant-image', {
+        detail: { image: v?.image || null },
+      })
+    )
+  }
+
+  // Al montar: si hay variante pre-seleccionada con imagen, disparar el evento
+  useEffect(() => {
+    if (initialVariant?.image) {
+      window.dispatchEvent(
+        new CustomEvent('cristasur:variant-image', {
+          detail: { image: initialVariant.image },
+        })
+      )
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Precio base (variante > producto)
   const basePrice = useMemo(() => {
     if (selected && Number.isFinite(Number(selected.price))) return Number(selected.price)
@@ -199,10 +222,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
           <VariantPicker
             variants={variants}
             selected={selected}
-            onChange={(v) => {
-              setSelected(v)
-              setQty(step)
-            }}
+            onChange={selectVariant}
             optionGroups={optionGroups}
           />
         </div>

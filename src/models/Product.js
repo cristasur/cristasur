@@ -16,6 +16,10 @@ const VariantSchema = new mongoose.Schema(
   {
     label: { type: String, required: true, trim: true, maxlength: 60 }, // "Tamaño", "Color"
     value: { type: String, required: true, trim: true, maxlength: 60 }, // "10L", "Rojo"
+    // optionValues: para variantes multi-dimensionales generadas automáticamente.
+    // Ej: { Tamaño: "7 pies", Color: "Blanco" }
+    // Si está presente, label/value se derivan de él automáticamente.
+    optionValues: { type: mongoose.Schema.Types.Mixed, default: undefined },
     sku: { type: String, trim: true, uppercase: true, maxlength: 40 },
     price: { type: Number, min: 0 },       // null → hereda del producto padre
     comparePrice: { type: Number, min: 0 }, // null → hereda
@@ -60,6 +64,15 @@ const ProductSchema = new mongoose.Schema(
     videoUrl: { type: String, default: '', trim: true },
     // Variantes opcionales. Si el array está vacío, el producto no tiene variantes.
     variants: { type: [VariantSchema], default: [] },
+
+    // Grupos de opciones para variantes multi-dimensionales.
+    // Ej: [{ name: "Tamaño", values: ["7 pies","9 pies","11 pies"] },
+    //      { name: "Color",  values: ["Blanco","Negro","Gris"] }]
+    // Cuando existe con ≥2 grupos, se muestra el picker en cascada (elige Tamaño → elige Color).
+    optionGroups: {
+      type: [{ name: { type: String, trim: true }, values: [String] }],
+      default: [],
+    },
 
     featured: { type: Boolean, default: false, index: true },
     stock: { type: Number, default: null, min: 0 }, // null = sin límite / no se sabe

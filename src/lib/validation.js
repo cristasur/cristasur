@@ -27,16 +27,46 @@ function sanitizeVariants(input) {
   return input
     .slice(0, MAX_VARIANTS)
     .map((v) => {
-      const label = cleanSoft(v?.label, { max: 60 })
-      const value = cleanSoft(v?.value, { max: 60 })
-      if (!label || !value) return null
+      // ¿Variante multi-dimensional? (tiene optionValues con al menos una clave)
+      const rawOV = v?.optionValues
+      const hasOV =
+        rawOV &&
+        typeof rawOV === 'object' &&
+        !Array.isArray(rawOV) &&
+        Object.keys(rawOV).length > 0
+
+      // Sanitizar optionValues → objeto limpio { clave: valor }
+      const optionValues = hasOV
+        ? Object.fromEntries(
+            Object.entries(rawOV)
+              .map(([k, val]) => [
+                cleanSoft(String(k), { max: 40 }),
+                cleanSoft(String(val), { max: 60 }),
+              ])
+              .filter(([k, val]) => k && val)
+          )
+        : undefined
+
+      // label y value: se derivan de optionValues o se usan directamente
+      let label, value
+      if (optionValues && Object.keys(optionValues).length > 0) {
+        const entries = Object.entries(optionValues)
+        label = entries[0][0]                             // primera clave como label
+        value = entries.map(([, val]) => val).join(' / ') // valores concatenados
+      } else {
+        label = cleanSoft(v?.label, { max: 60 })
+        value = cleanSoft(v?.value, { max: 60 })
+        if (!label || !value) return null
+      }
+
       const priceN = v?.price === '' || v?.price == null ? null : Number(v.price)
-      const cmpN =
-        v?.comparePrice === '' || v?.comparePrice == null ? null : Number(v.comparePrice)
+      const cmpN   = v?.comparePrice === '' || v?.comparePrice == null ? null : Number(v.comparePrice)
       const stockN = v?.stock === '' || v?.stock == null ? 0 : Number(v.stock)
+
       return {
         label,
         value,
+        ...(optionValues ? { optionValues } : {}),
         sku: v?.sku ? cleanString(v.sku, { max: 40 }) : undefined,
         price: Number.isFinite(priceN) && priceN >= 0 ? priceN : null,
         comparePrice: Number.isFinite(cmpN) && cmpN >= 0 ? cmpN : null,
@@ -76,6 +106,19 @@ export function validateProductPayload(body) {
     )
   ).slice(0, MAX_GALLERY)
   const variants = sanitizeVariants(body?.variants)
+
+  // Grupos de opciones para variantes multi-dimensionales (máx 3 grupos, 20 valores c/u)
+  const optionGroups = Array.isArray(body?.optionGroups)
+    ? body.optionGroups
+        .map((g) => ({
+          name: cleanSoft(g?.name, { max: 40 }),
+          values: Array.isArray(g?.values)
+            ? g.values.map((v) => cleanSoft(String(v), { max: 60 })).filter(Boolean).slice(0, 20)
+            : [],
+        }))
+        .filter((g) => g.name && g.values.length > 0)
+        .slice(0, 3)
+    : []
 
   const featured = Boolean(body?.featured)
   const active = body?.active === undefined ? true : Boolean(body.active)
@@ -195,6 +238,7 @@ export function validateProductPayload(body) {
       image,
       gallery,
       variants,
+      optionGroups,
       featured,
       active,
       stock,

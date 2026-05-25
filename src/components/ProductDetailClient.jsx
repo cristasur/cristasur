@@ -27,11 +27,16 @@ function formatPrice(n) {
 
 export default function ProductDetailClient({ product, productUrl, isVip = false }) {
   const variants = Array.isArray(product.variants) ? product.variants : []
-  // Pre-selecciona la primera variante con stock, si hay variantes.
+  const optionGroups = Array.isArray(product.optionGroups) ? product.optionGroups : []
+  const isMultiDim = optionGroups.length >= 2
+
+  // En modo multi-dim el cliente elige las opciones paso a paso → no pre-seleccionamos.
+  // En modo simple pre-seleccionamos la primera variante con stock.
   const initialVariant = useMemo(() => {
     if (!variants.length) return null
+    if (isMultiDim) return null
     return variants.find((v) => (v.stock ?? 0) > 0) || variants[0]
-  }, [variants])
+  }, [variants, isMultiDim])
 
   const [selected, setSelected] = useState(initialVariant)
   const step = (Number.isFinite(Number(product.qtyStep)) && Number(product.qtyStep) > 1)
@@ -186,13 +191,19 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
 
       {variants.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-100 p-4">
+          {isMultiDim && (
+            <p className="text-xs text-slate-500 mb-3">
+              Elige todas las opciones para ver precio y disponibilidad exactos.
+            </p>
+          )}
           <VariantPicker
             variants={variants}
             selected={selected}
             onChange={(v) => {
               setSelected(v)
-              setQty(1)
+              setQty(step)
             }}
+            optionGroups={optionGroups}
           />
         </div>
       )}

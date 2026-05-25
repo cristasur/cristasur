@@ -37,6 +37,14 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     active: initial?.active ?? true,
     sku: initial?.sku || '',
     variants: Array.isArray(initial?.variants) ? initial.variants : [],
+    // Grupos de opciones para variantes multi-dim.
+    // Se guarda con valuesStr (string separado por comas) para el input del formulario.
+    optionGroups: Array.isArray(initial?.optionGroups)
+      ? initial.optionGroups.map((g) => ({
+          name: g.name || '',
+          valuesStr: (g.values || []).join(', '),
+        }))
+      : [],
     status: initial?.status || 'published',
     publishAt: initial?.publishAt || '',
     tags: Array.isArray(initial?.tags) ? initial.tags : [],
@@ -225,6 +233,67 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     }
   }
 
+  // ---- Grupos de opciones (multi-dim) ----
+  function addOptionGroup() {
+    setForm((f) => {
+      if (f.optionGroups.length >= 3) return f
+      return { ...f, optionGroups: [...f.optionGroups, { name: '', valuesStr: '' }] }
+    })
+  }
+  function removeOptionGroup(i) {
+    setForm((f) => ({ ...f, optionGroups: f.optionGroups.filter((_, idx) => idx !== i) }))
+  }
+  function updateOptionGroup(i, field, val) {
+    setForm((f) => ({
+      ...f,
+      optionGroups: f.optionGroups.map((g, idx) => (idx === i ? { ...g, [field]: val } : g)),
+    }))
+  }
+
+  // Genera el producto cartesiano de todos los grupos y crea las filas de variantes.
+  // Preserva datos (precio, stock, sku) de combinaciones que ya existían.
+  function generateCombinations() {
+    const groups = form.optionGroups
+      .map((g) => ({
+        name: g.name.trim(),
+        values: g.valuesStr.split(',').map((s) => s.trim()).filter(Boolean),
+      }))
+      .filter((g) => g.name && g.values.length > 0)
+
+    if (!groups.length) return
+
+    // Producto cartesiano
+    let combos = [{}]
+    for (const group of groups) {
+      combos = combos.flatMap((combo) =>
+        group.values.map((v) => ({ ...combo, [group.name]: v }))
+      )
+    }
+
+    const newVariants = combos.map((optionValues) => {
+      // Reutilizar fila existente si ya tiene esa combinación
+      const existing = form.variants.find(
+        (v) =>
+          v.optionValues &&
+          Object.entries(optionValues).every(([k, val]) => v.optionValues[k] === val)
+      )
+      if (existing) return existing
+      const entries = Object.entries(optionValues)
+      return {
+        label: entries[0]?.[0] || 'Opción',
+        value: entries.map(([, val]) => val).join(' / '),
+        optionValues,
+        price: '',
+        comparePrice: '',
+        stock: 0,
+        sku: '',
+        image: '',
+      }
+    })
+
+    update('variants', newVariants)
+  }
+
   async function onDuplicate() {
     if (!isEdit) return
     if (!confirm('¿Duplicar este producto? Se creará una copia inactiva para que la edites.'))
@@ -261,10 +330,22 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     try {
       const endpoint = isEdit ? `/api/products/${initial._id}` : '/api/products'
       const method = isEdit ? 'PUT' : 'POST'
+
+      // Convertir optionGroups de {valuesStr} a {values: string[]} para la API
+      const payload = {
+        ...form,
+        optionGroups: form.optionGroups
+          .map((g) => ({
+            name: g.name.trim(),
+            values: g.valuesStr.split(',').map((s) => s.trim()).filter(Boolean),
+          }))
+          .filter((g) => g.name && g.values.length > 0),
+      }
+
       const res = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -935,27 +1016,168 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         )}
       </div>
 
-      {/* Variantes */}
-      <div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-sm font-medium text-slate-700">Variantes</span>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Presentaciones del mismo producto (ej. tallas, colores). Cada variante
-              puede tener su propio precio, stock e imagen.
-            </p>
+      {/* ── Variantes y opciones ───────────────────────────────────────────── */}
+      <fieldset className="border border-slate-200 rounded-xl p-4 space-y-4">
+        <legend className="px-2 text-sm font-bold text-slate-700">Variantes y opciones</legend>
+        <p className="text-xs text-slate-500 -mt-2">
+          ¿El producto viene en distintos <b>tamaños</b>, <b>colores</b> u otras opciones?
+          Define cada dimensión abajo y genera las combinaciones automáticamente.
+          O usa "Variante simple" para un solo nivel (ej. solo talla sin color).
+        </p>
+
+        {/* Editor de grupos de opciones */}
+        <div className="space-y-2">
+          {form.optionGroups.map((group, i) => (
+            <div key={i} className="flex flex-wrap gap-2 items-center">
+              <input
+                value={group.name}
+                onChange={(e) => updateOptionGroup(i, 'name', e.target.value)}
+                placeholder="Nombre de opción (ej: Tamaño)"
+                className="px-2 py-1.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500 w-40"
+              />
+              <input
+                value={group.valuesStr}
+                onChange={(e) => updateOptionGroup(i, 'valuesStr', e.target.value)}
+                placeholder="Valores separados por coma (ej: 7 pies, 9 pies, 11 pies)"
+                className="px-2 py-1.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500 flex-1 min-w-[180px]"
+              />
+              <button
+                type="button"
+                onClick={() => removeOptionGroup(i)}
+                className="w-8 h-8 grid place-items-center rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-bold shrink-0"
+                title="Eliminar esta opción"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={addOptionGroup}
+              disabled={form.optionGroups.length >= 3}
+              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-40"
+            >
+              + Añadir opción
+            </button>
+
+            {form.optionGroups.length >= 1 && (
+              <button
+                type="button"
+                onClick={generateCombinations}
+                className="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold"
+              >
+                ⚡ Generar combinaciones
+              </button>
+            )}
+
+            {form.optionGroups.length === 0 && (
+              <button
+                type="button"
+                onClick={addVariant}
+                className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50"
+              >
+                + Variante simple
+              </button>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={addVariant}
-            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold"
-          >
-            + Añadir variante
-          </button>
         </div>
 
-        {form.variants.length > 0 && (
-          <div className="mt-3 space-y-3">
+        {/* Tabla multi-dim (cuando hay optionGroups definidos y variantes generadas) */}
+        {form.optionGroups.length >= 1 && form.variants.length > 0 && (() => {
+          // Parsear los grupos para las columnas
+          const cols = form.optionGroups
+            .map((g) => ({ name: g.name.trim() }))
+            .filter((g) => g.name)
+          return (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
+                    {cols.map((c) => (
+                      <th key={c.name} className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">
+                        {c.name}
+                      </th>
+                    ))}
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Precio</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Anterior</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Stock</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">SKU</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Imagen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.variants.map((v, i) => (
+                    <tr key={i} className="hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                      {cols.map((c) => (
+                        <td key={c.name} className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">
+                          {v.optionValues?.[c.name] || v.value || '—'}
+                        </td>
+                      ))}
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="number" min={0} step="0.01"
+                          value={v.price ?? ''}
+                          onChange={(e) => updateVariant(i, 'price', e.target.value)}
+                          placeholder="base"
+                          className="w-24 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="number" min={0} step="0.01"
+                          value={v.comparePrice ?? ''}
+                          onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
+                          className="w-24 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="number" min={0}
+                          value={v.stock ?? 0}
+                          onChange={(e) => updateVariant(i, 'stock', e.target.value)}
+                          className="w-20 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          value={v.sku ?? ''}
+                          onChange={(e) => updateVariant(i, 'sku', e.target.value)}
+                          placeholder="SKU-001"
+                          className="w-28 px-2 py-1 rounded-md border border-slate-200 text-sm uppercase focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {v.image ? (
+                          <div className="flex items-center gap-1">
+                            <img src={v.image} alt="" className="w-8 h-8 rounded object-cover border border-slate-200" />
+                            <button
+                              type="button"
+                              onClick={() => updateVariant(i, 'image', '')}
+                              className="text-rose-500 text-xs hover:text-rose-700"
+                              title="Quitar imagen"
+                            >×</button>
+                          </div>
+                        ) : (
+                          <input
+                            type="file" accept="image/*"
+                            onChange={(e) => uploadVariantImage(i, e.target.files?.[0])}
+                            className="text-xs max-w-[120px]"
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
+
+        {/* Lista simple de variantes (cuando NO hay optionGroups) */}
+        {form.optionGroups.length === 0 && form.variants.length > 0 && (
+          <div className="space-y-3">
             {form.variants.map((v, i) => (
               <div
                 key={i}
@@ -991,9 +1213,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] text-slate-500">Precio</label>
                   <input
-                    type="number"
-                    min={0}
-                    step="0.01"
+                    type="number" min={0} step="0.01"
                     value={v.price ?? ''}
                     onChange={(e) => updateVariant(i, 'price', e.target.value)}
                     placeholder="(usa el base)"
@@ -1003,9 +1223,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] text-slate-500">Anterior</label>
                   <input
-                    type="number"
-                    min={0}
-                    step="0.01"
+                    type="number" min={0} step="0.01"
                     value={v.comparePrice ?? ''}
                     onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
                     className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
@@ -1014,8 +1232,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] text-slate-500">Stock</label>
                   <input
-                    type="number"
-                    min={0}
+                    type="number" min={0}
                     value={v.stock ?? 0}
                     onChange={(e) => updateVariant(i, 'stock', e.target.value)}
                     className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
@@ -1024,8 +1241,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] text-slate-500">Imagen</label>
                   <input
-                    type="file"
-                    accept="image/*"
+                    type="file" accept="image/*"
                     onChange={(e) => uploadVariantImage(i, e.target.files?.[0])}
                     className="text-xs"
                   />
@@ -1042,7 +1258,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             ))}
           </div>
         )}
-      </div>
+      </fieldset>
 
       {/* Barra de acciones — sticky en móvil para que siempre sea visible */}
       <div className="sticky bottom-0 z-20 bg-white -mx-4 md:-mx-6 px-4 md:px-6 py-3 border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-3 mt-2">

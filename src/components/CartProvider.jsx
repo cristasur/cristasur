@@ -306,6 +306,12 @@ export default function CartProvider({ children }) {
     setOpen(true)
   }, [])
 
+  // Borrar el último pedido guardado (cuando ya no tiene productos válidos)
+  const dismissLastOrder = useCallback(() => {
+    try { localStorage.removeItem(LAST_ORDER_KEY) } catch {}
+    setLastOrder(null)
+  }, [])
+
   const value = useMemo(
     () => ({
       items,
@@ -321,6 +327,7 @@ export default function CartProvider({ children }) {
       checkoutViaWhatsApp,
       lastOrder,
       reorderFromSnapshot,
+      dismissLastOrder,
       user, // {id, email, name, role, wholesaleAccess, ...}
     }),
     [
@@ -336,6 +343,7 @@ export default function CartProvider({ children }) {
       checkoutViaWhatsApp,
       lastOrder,
       reorderFromSnapshot,
+      dismissLastOrder,
       user,
     ]
   )

@@ -1,7 +1,8 @@
 'use client'
 // Banner que aparece en home si el cliente tiene un "último pedido" guardado.
 // Click → repone el carrito y abre el drawer.
-import { useState } from 'react'
+// Valida que los productos del snapshot sigan existiendo antes de mostrarse.
+import { useState, useEffect } from 'react'
 import { useCart } from './CartProvider'
 import Icon from './Icon'
 
@@ -22,10 +23,42 @@ function relTime(iso) {
 export default function RepeatOrder() {
   const { lastOrder, reorderFromSnapshot, dismissLastOrder } = useCart()
   const [dismissed, setDismissed] = useState(false)
+  // validOrder: snapshot filtrado solo con productos que aún existen
+  const [validOrder, setValidOrder] = useState(null)
+  const [checking, setChecking] = useState(false)
 
-  if (dismissed || !lastOrder?.items?.length) return null
+  useEffect(() => {
+    if (!lastOrder?.items?.length) return
+    setChecking(true)
 
-  const count = lastOrder.items.reduce((acc, x) => acc + (x.qty || 1), 0)
+    const ids = [...new Set(lastOrder.items.map((x) => x.productId).filter(Boolean))]
+    if (!ids.length) { setChecking(false); return }
+
+    // Consulta la API para saber cuáles siguen activos/existentes
+    fetch(`/api/products?all=1&limit=100`)
+      .then((r) => r.json())
+      .then(({ products = [] }) => {
+        const alive = new Set(products.map((p) => String(p._id)))
+        const filteredItems = lastOrder.items.filter((x) => alive.has(String(x.productId)))
+        if (filteredItems.length > 0) {
+          setValidOrder({ ...lastOrder, items: filteredItems })
+        } else {
+          // Todos borrados — limpia localStorage silenciosamente
+          if (typeof dismissLastOrder === 'function') dismissLastOrder()
+          setDismissed(true)
+        }
+      })
+      .catch(() => {
+        // Si falla la red, mostramos el snapshot original (mejor que nada)
+        setValidOrder(lastOrder)
+      })
+      .finally(() => setChecking(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastOrder])
+
+  if (dismissed || checking || !validOrder?.items?.length) return null
+
+  const count = validOrder.items.reduce((acc, x) => acc + (x.qty || 1), 0)
 
   function handleDismiss() {
     setDismissed(true)
@@ -56,12 +89,12 @@ export default function RepeatOrder() {
               ¿Repetir tu último pedido?
             </div>
             <div className="text-sm text-emerald-800/80">
-              {count} pieza{count === 1 ? '' : 's'} · {relTime(lastOrder.at)}
+              {count} pieza{count === 1 ? '' : 's'} · {relTime(validOrder.at)}
             </div>
           </div>
         </div>
         <button
-          onClick={() => reorderFromSnapshot(lastOrder)}
+          onClick={() => reorderFromSnapshot(validOrder)}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm"
         >
           Volver a pedir

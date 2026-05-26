@@ -92,14 +92,24 @@ const ProductSchema = new mongoose.Schema(
     // null o 1 = de uno en uno (comportamiento normal).
     qtyStep: { type: Number, min: 1, default: null },
 
-    // ---- Dimensiones y logística (para envia.com y carriers) ----
-    // Todas las medidas son del paquete listo para enviar (producto + embalaje).
-    // Unidades fijas: peso en kg, dimensiones en cm.
-    // Si algún campo queda null, el carrier usará valores por defecto al cotizar.
-    weight: { type: Number, min: 0, default: null },   // kg  — peso bruto con embalaje
-    length: { type: Number, min: 0, default: null },   // cm  — largo (dimensión mayor)
-    width:  { type: Number, min: 0, default: null },   // cm  — ancho
-    height: { type: Number, min: 0, default: null },   // cm  — alto
+    // ---- Dimensiones del PRODUCTO (visibles al cliente en la ficha) ----
+    // Miden el producto real sin embalaje. Se muestran públicamente.
+    // Unidades: peso en kg, dimensiones en cm.
+    weight: { type: Number, min: 0, default: null },   // kg
+    length: { type: Number, min: 0, default: null },   // cm — largo
+    width:  { type: Number, min: 0, default: null },   // cm — ancho
+    height: { type: Number, min: 0, default: null },   // cm — alto
+
+    // ---- Caja para envío / logística (USO INTERNO — NO se muestran al cliente) ----
+    // Dimensiones de la caja lista para embarcar (producto + embalaje).
+    // Para productos que se venden a granel (qtyStep=3, 6, etc.) estas medidas
+    // deben corresponder al paquete completo que sale del almacén.
+    // Se usan exclusivamente para cotizar envíos en envia.com / carriers.
+    pkgWeight: { type: Number, min: 0, default: null }, // kg — peso bruto con embalaje
+    pkgLength: { type: Number, min: 0, default: null }, // cm — largo de la caja
+    pkgWidth:  { type: Number, min: 0, default: null }, // cm — ancho de la caja
+    pkgHeight: { type: Number, min: 0, default: null }, // cm — alto de la caja
+    pkgNote: { type: String, trim: true, default: '' },  // ej: "caja de 6 piezas", "rollo de 3"
 
     // Marca opcional (ref a la colección Brand)
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },

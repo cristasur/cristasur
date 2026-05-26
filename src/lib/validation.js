@@ -150,7 +150,7 @@ export function validateProductPayload(body) {
   if (qtyStep !== null && !Number.isFinite(qtyStep))
     errors.push('El múltiplo de venta debe ser un número entero positivo')
 
-  // ---- Dimensiones y logística ----
+  // ---- Dimensiones del producto (visibles al cliente) ----
   // Todos opcionales (null = no definido). Unidades: kg y cm.
   function parseDim(val) {
     if (val === undefined || val === null || val === '') return null
@@ -162,7 +162,7 @@ export function validateProductPayload(body) {
   const width  = parseDim(body?.width)  // cm
   const height = parseDim(body?.height) // cm
 
-  // Validaciones de dimensiones (solo si se rellenan)
+  // Validaciones de dimensiones del producto
   if (weight !== null && weight > 999)
     errors.push('El peso no puede superar 999 kg')
   if (length !== null && length > 999)
@@ -171,6 +171,22 @@ export function validateProductPayload(body) {
     errors.push('El ancho no puede superar 999 cm')
   if (height !== null && height > 999)
     errors.push('El alto no puede superar 999 cm')
+
+  // ---- Caja para envío / logística (uso interno, no se muestra al cliente) ----
+  const pkgWeight = parseDim(body?.pkgWeight)
+  const pkgLength = parseDim(body?.pkgLength)
+  const pkgWidth  = parseDim(body?.pkgWidth)
+  const pkgHeight = parseDim(body?.pkgHeight)
+  const pkgNote   = cleanSoft(body?.pkgNote, { max: 120 })
+
+  if (pkgWeight !== null && pkgWeight > 999)
+    errors.push('El peso de la caja no puede superar 999 kg')
+  if (pkgLength !== null && pkgLength > 999)
+    errors.push('El largo de la caja no puede superar 999 cm')
+  if (pkgWidth !== null && pkgWidth > 999)
+    errors.push('El ancho de la caja no puede superar 999 cm')
+  if (pkgHeight !== null && pkgHeight > 999)
+    errors.push('El alto de la caja no puede superar 999 cm')
 
   // Estado y publicación programada
   const status = body?.status === 'draft' ? 'draft' : 'published'
@@ -254,6 +270,11 @@ export function validateProductPayload(body) {
       length,
       width,
       height,
+      pkgWeight,
+      pkgLength,
+      pkgWidth,
+      pkgHeight,
+      pkgNote,
     },
   }
 }
@@ -385,8 +406,11 @@ export function diffFields(before, after, fields) {
     wholesaleMinQty: 'Mínimo mayoreo', stock: 'Stock', featured: 'Destacado',
     active: 'Activo', sku: 'SKU', image: 'Imagen', gallery: 'Galería',
     variants: 'Variantes', categories: 'Categorías', brand: 'Marca',
-    color: 'Color', weight: 'Peso (kg)', length: 'Largo (cm)',
-    width: 'Ancho (cm)', height: 'Alto (cm)', status: 'Estado',
+    color: 'Color', weight: 'Peso producto (kg)', length: 'Largo producto (cm)',
+    width: 'Ancho producto (cm)', height: 'Alto producto (cm)',
+    pkgWeight: 'Peso caja (kg)', pkgLength: 'Largo caja (cm)',
+    pkgWidth: 'Ancho caja (cm)', pkgHeight: 'Alto caja (cm)',
+    pkgNote: 'Nota caja envío', status: 'Estado',
     publishAt: 'Publicar el', qtyStep: 'Paso de cantidad',
     materials: 'Materiales', tags: 'Etiquetas',
   }

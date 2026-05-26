@@ -130,7 +130,7 @@ function ColorSwatch({ value, active, out, onClick }) {
 }
 
 // ── Componente principal ───────────────────────────────────────────────────
-export default function VariantPicker({ variants = [], selected, onChange, optionGroups = [] }) {
+export default function VariantPicker({ variants = [], selected, onChange, optionGroups = [], baseImage = null, onSelectBase = null }) {
   const isMultiDim = optionGroups.length >= 2
 
   // ── Modo multi-dimensional ────────────────────────────────────────────────
@@ -183,9 +183,10 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
 
   if (isMultiDim) {
     const allChosen = optionGroups.every((g) => selections[g.name])
+    const baseActive = Object.keys(selections).length === 0
     return (
       <div className="space-y-4">
-        {optionGroups.map((group) => (
+        {optionGroups.map((group, gi) => (
           <div key={group.name}>
             <div className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
               {group.name}
@@ -195,7 +196,39 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Swatch "Principal" solo en el primer grupo de Color */}
+              {gi === 0 && onSelectBase && isColorGroup(group.name) && (
+                <button
+                  type="button"
+                  onClick={() => { setSelections({}); onSelectBase() }}
+                  title="Ver fotos principales"
+                  aria-label="Principal"
+                  className="relative focus:outline-none"
+                  style={{ padding: 3 }}
+                >
+                  <span
+                    className="absolute inset-0 rounded-full"
+                    style={{
+                      border: baseActive ? '2.5px solid #2563eb' : '2.5px solid transparent',
+                      borderRadius: '50%',
+                    }}
+                  />
+                  {baseImage ? (
+                    <img
+                      src={baseImage}
+                      alt="Principal"
+                      className="block rounded-full object-cover hover:scale-110 transition-transform"
+                      style={{ width: 32, height: 32, border: '1.5px solid #d1d5db' }}
+                    />
+                  ) : (
+                    <span
+                      className="block rounded-full bg-slate-200 hover:scale-110 transition-transform"
+                      style={{ width: 32, height: 32, border: '1.5px solid #d1d5db' }}
+                    />
+                  )}
+                </button>
+              )}
               {(group.values || []).map((value) => {
                 const present = isValuePresent(group.name, value)
                 const out = present && isValueOutOfStock(group.name, value)
@@ -260,9 +293,8 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
 
   if (!simpleOpts.length) return null
 
-  const activeOpt = simpleOpts.find(
-    (v) => selected?.value === v.value
-  )
+  const activeOpt = simpleOpts.find((v) => selected?.value === v.value)
+  const baseActive = !selected
 
   return (
     <div className="space-y-2">
@@ -273,8 +305,50 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
             — {activeOpt.value}
           </span>
         )}
+        {baseActive && (
+          <span className="ml-1.5 font-normal normal-case text-slate-500">
+            — Principal
+          </span>
+        )}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* Swatch "Principal" — restaura la galería base */}
+        {onSelectBase && (
+          <button
+            type="button"
+            onClick={onSelectBase}
+            title="Ver fotos principales"
+            aria-label="Principal"
+            className="relative focus:outline-none"
+            style={{ padding: 3 }}
+          >
+            <span
+              className="absolute inset-0 rounded-full"
+              style={{
+                border: baseActive ? '2.5px solid #2563eb' : '2.5px solid transparent',
+                borderRadius: '50%',
+              }}
+            />
+            {baseImage ? (
+              <img
+                src={baseImage}
+                alt="Principal"
+                className="block rounded-full object-cover transition-transform hover:scale-110"
+                style={{
+                  width: 32,
+                  height: 32,
+                  border: '1.5px solid #d1d5db',
+                }}
+              />
+            ) : (
+              <span
+                className="block rounded-full bg-slate-200 transition-transform hover:scale-110"
+                style={{ width: 32, height: 32, border: '1.5px solid #d1d5db' }}
+              />
+            )}
+          </button>
+        )}
+
         {simpleOpts.map((v) => {
           const active = selected?.value === v.value
           const out = (v.stock ?? 0) <= 0

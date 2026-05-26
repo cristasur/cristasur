@@ -230,6 +230,8 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
             selected={selected}
             onChange={selectVariant}
             optionGroups={optionGroups}
+            baseImage={product.image || null}
+            onSelectBase={() => selectVariant(null)}
           />
         </div>
       )}

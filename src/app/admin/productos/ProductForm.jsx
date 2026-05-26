@@ -1619,245 +1619,205 @@ export default function ProductForm({ categories, brands = [], materials = [], i
 
         {/* Lista simple de variantes (cuando NO hay optionGroups) */}
         {form.optionGroups.length === 0 && form.variants.length > 0 && (
-          <div className="space-y-3">
-            {form.variants.map((v, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[80px_1fr_1fr_100px_100px_100px_140px_auto] gap-2 items-start p-3 border border-slate-200 rounded-xl bg-slate-50/50 overflow-x-auto"
-              >
-                <div className="w-16 h-16 rounded-lg bg-white border border-slate-200 overflow-hidden grid place-items-center text-slate-300 text-xs">
-                  {v.image ? (
-                    <img src={v.image} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span>sin foto</span>
-                  )}
-                </div>
-                {/* Tipo de variante + valor */}
-                <div className="flex flex-col gap-2 col-span-2">
-                  {/* Selector de tipo */}
-                  <div className="flex gap-1 flex-wrap">
-                    {['Color', 'Tamaño'].map((tipo) => (
-                      <button
-                        key={tipo}
-                        type="button"
-                        onClick={() => updateVariant(i, 'label', tipo)}
-                        className={`px-3 py-1 rounded-lg border text-xs font-semibold transition ${
-                          (v.label || 'Color') === tipo
-                            ? 'bg-brand-600 text-white border-brand-600'
-                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
-                        }`}
-                      >
-                        {tipo === 'Color' ? '🎨 Color' : '📐 Tamaño'}
-                      </button>
-                    ))}
-                    {/* Tipo personalizado */}
-                    {!['Color', 'Tamaño'].includes(v.label || 'Color') && (
-                      <span className="px-3 py-1 rounded-lg border border-brand-600 bg-brand-50 text-brand-700 text-xs font-semibold">
-                        {v.label}
-                      </span>
+          <div className="space-y-4">
+            {form.variants.map((v, i) => {
+              const vLabel = v.label || 'Color'
+              const vImgs = Array.isArray(v.images) && v.images.length > 0 ? v.images : v.image ? [v.image] : []
+              const vStockMode = v.stock === null || v.stock === undefined || v.stock === '' ? 'disponible' : Number(v.stock) === 0 ? 'agotado' : 'cantidad'
+              return (
+                <div key={i} className="border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+
+                  {/* ── Cabecera: tipo + valor + eliminar ── */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
+                    {/* Miniatura */}
+                    <div className="w-10 h-10 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0 grid place-items-center">
+                      {v.image
+                        ? <img src={v.image} alt="" className="w-full h-full object-cover" />
+                        : <span className="text-slate-300 text-[10px] text-center leading-tight">sin foto</span>
+                      }
+                    </div>
+
+                    {/* Tipo */}
+                    <div className="flex gap-1 shrink-0">
+                      {['Color', 'Tamaño'].map((tipo) => (
+                        <button key={tipo} type="button" onClick={() => updateVariant(i, 'label', tipo)}
+                          className={`px-3 py-1 rounded-lg border text-xs font-semibold transition ${
+                            vLabel === tipo ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                          }`}>
+                          {tipo === 'Color' ? '🎨 Color' : '📐 Tamaño'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Valor */}
+                    <input
+                      value={v.value}
+                      onChange={(e) => updateVariant(i, 'value', e.target.value)}
+                      placeholder={vLabel === 'Color' ? 'Ej: Rojo, Azul marino…' : vLabel === 'Tamaño' ? 'Ej: S, M, L, XL…' : 'Valor'}
+                      maxLength={60}
+                      className="flex-1 px-3 py-1.5 text-sm font-semibold border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 bg-white min-w-0"
+                    />
+
+                    {/* Tipo personalizado (si no es Color ni Tamaño) */}
+                    {!['Color', 'Tamaño'].includes(vLabel) && (
+                      <input
+                        value={vLabel}
+                        onChange={(e) => updateVariant(i, 'label', e.target.value || 'Color')}
+                        placeholder="Otro tipo…"
+                        maxLength={30}
+                        className="w-28 px-2 py-1.5 text-xs border border-brand-300 rounded-lg focus:outline-none focus:border-brand-500 bg-brand-50 text-brand-800"
+                      />
                     )}
-                    <input
-                      value={['Color', 'Tamaño'].includes(v.label || 'Color') ? '' : (v.label || '')}
-                      onChange={(e) => updateVariant(i, 'label', e.target.value || 'Color')}
-                      placeholder="Otro tipo…"
-                      maxLength={30}
-                      className="px-2 py-1 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 w-28"
-                    />
+                    {['Color', 'Tamaño'].includes(vLabel) && (
+                      <input
+                        value=""
+                        onChange={(e) => { if (e.target.value) updateVariant(i, 'label', e.target.value) }}
+                        placeholder="Otro tipo…"
+                        maxLength={30}
+                        className="w-24 px-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-brand-400 text-slate-500 bg-white"
+                      />
+                    )}
+
+                    {/* Eliminar */}
+                    <button type="button" onClick={() => removeVariant(i)}
+                      className="w-8 h-8 shrink-0 grid place-items-center rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 hover:text-rose-700 font-bold text-lg transition ml-auto"
+                      title="Eliminar variante">×</button>
                   </div>
 
-                  {/* Input del valor */}
-                  <input
-                    value={v.value}
-                    onChange={(e) => updateVariant(i, 'value', e.target.value)}
-                    placeholder={
-                      (v.label || 'Color') === 'Color'
-                        ? 'Ej: Rojo, Azul marino…'
-                        : (v.label || 'Color') === 'Tamaño'
-                        ? 'Ej: S, M, L, XL…'
-                        : 'Valor de la opción'
-                    }
-                    maxLength={60}
-                    className="px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
-                  />
+                  <div className="px-4 py-3 space-y-4">
+                    {/* ── Chips rápidos ── */}
+                    {vLabel === 'Color' && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {COMMON_COLORS.map((c) => (
+                          <button key={c} type="button" onClick={() => updateVariant(i, 'value', c)}
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition ${
+                              v.value === c ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-600 border-slate-200 hover:border-brand-300'
+                            }`}>{c}</button>
+                        ))}
+                      </div>
+                    )}
+                    {vLabel === 'Tamaño' && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {COMMON_SIZES.map((s) => (
+                          <button key={s} type="button" onClick={() => updateVariant(i, 'value', s)}
+                            className={`px-3 py-0.5 rounded-lg text-xs font-semibold border transition ${
+                              v.value === s ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-700 border-slate-200 hover:border-brand-300'
+                            }`}>{s}</button>
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Chips rápidos según tipo */}
-                  {(v.label || 'Color') === 'Color' && (
-                    <div className="flex flex-wrap gap-1">
-                      {COMMON_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => updateVariant(i, 'value', c)}
-                          className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition ${
-                            v.value === c
-                              ? 'bg-brand-600 text-white border-brand-600'
-                              : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400'
-                          }`}
-                        >
-                          {c}
-                        </button>
-                      ))}
+                    {/* ── Precios ── */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <label className="block">
+                        <span className="text-xs font-semibold text-slate-600 block mb-1">Precio unitario</span>
+                        <input type="number" min={0} step="0.01"
+                          value={v.price ?? ''}
+                          onChange={(e) => updateVariant(i, 'price', e.target.value)}
+                          placeholder="Hereda del producto"
+                          className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-400 bg-slate-50 placeholder:text-slate-300"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-semibold text-slate-600 block mb-1">Precio anterior</span>
+                        <input type="number" min={0} step="0.01"
+                          value={v.comparePrice ?? ''}
+                          onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
+                          placeholder="—"
+                          className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-400 bg-slate-50 placeholder:text-slate-300"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-semibold text-amber-700 block mb-1">Mayoreo — precio</span>
+                        <input type="number" min={0} step="0.01"
+                          value={v.wholesalePrice ?? ''}
+                          onChange={(e) => updateVariant(i, 'wholesalePrice', e.target.value)}
+                          placeholder="Hereda del producto"
+                          className="w-full px-2.5 py-1.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-amber-50/40 placeholder:text-slate-300"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-semibold text-amber-700 block mb-1">Mayoreo — mín. piezas</span>
+                        <input type="number" min={2} step="1"
+                          value={v.wholesaleMinQty ?? ''}
+                          onChange={(e) => updateVariant(i, 'wholesaleMinQty', e.target.value)}
+                          placeholder="Hereda del producto"
+                          className="w-full px-2.5 py-1.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-amber-50/40 placeholder:text-slate-300"
+                        />
+                      </label>
                     </div>
-                  )}
-                  {(v.label || 'Color') === 'Tamaño' && (
-                    <div className="flex flex-wrap gap-1">
-                      {COMMON_SIZES.map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => updateVariant(i, 'value', s)}
-                          className={`px-2 py-0.5 rounded-lg text-[11px] font-medium border transition ${
-                            v.value === s
-                              ? 'bg-brand-600 text-white border-brand-600'
-                              : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-slate-500">Precio</label>
-                  <input
-                    type="number" min={0} step="0.01"
-                    value={v.price ?? ''}
-                    onChange={(e) => updateVariant(i, 'price', e.target.value)}
-                    placeholder="(usa el base)"
-                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-slate-500">Anterior</label>
-                  <input
-                    type="number" min={0} step="0.01"
-                    value={v.comparePrice ?? ''}
-                    onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
-                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
-                  />
-                </div>
-                {/* Precio mayoreo por variante (opcional — hereda del producto si vacío) */}
-                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                  <label className="text-[11px] text-amber-700 font-semibold">Mayoreo</label>
-                  <div className="flex gap-1">
-                    <input
-                      type="number" min={0} step="0.01"
-                      value={v.wholesalePrice ?? ''}
-                      onChange={(e) => updateVariant(i, 'wholesalePrice', e.target.value)}
-                      placeholder="precio"
-                      title="Precio mayoreo de esta variante (vacío = hereda del producto)"
-                      className="w-20 px-2 py-1 text-xs border border-amber-200 rounded-md focus:outline-none focus:border-amber-400 placeholder:text-slate-300"
-                    />
-                    <input
-                      type="number" min={2} step="1"
-                      value={v.wholesaleMinQty ?? ''}
-                      onChange={(e) => updateVariant(i, 'wholesaleMinQty', e.target.value)}
-                      placeholder="mín."
-                      title="Cantidad mínima para mayoreo de esta variante"
-                      className="w-14 px-2 py-1 text-xs border border-amber-200 rounded-md focus:outline-none focus:border-amber-400 placeholder:text-slate-300"
-                    />
-                  </div>
-                  <span className="text-[9px] text-slate-400">vacío = hereda del producto</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-slate-500">Disponibilidad</label>
-                  {(() => {
-                    const vStockMode =
-                      v.stock === null || v.stock === undefined || v.stock === ''
-                        ? 'disponible'
-                        : Number(v.stock) === 0
-                        ? 'agotado'
-                        : 'cantidad'
-                    return (
-                      <div className="flex flex-col gap-1">
-                        <div className="flex gap-1 flex-wrap">
-                          {[
-                            { val: 'disponible', label: '✅' },
-                            { val: 'agotado',    label: '❌' },
-                            { val: 'cantidad',   label: '🔢' },
-                          ].map(({ val, label }) => (
-                            <label
-                              key={val}
-                              title={val === 'disponible' ? 'Disponible' : val === 'agotado' ? 'Sin stock' : 'Cantidad'}
-                              className={`flex items-center gap-1 px-2 py-1 rounded-lg border cursor-pointer text-xs transition ${
-                                vStockMode === val
-                                  ? 'border-brand-500 bg-brand-50 font-semibold'
-                                  : 'border-slate-200 hover:border-slate-300'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name={`stockMode-${i}`}
-                                checked={vStockMode === val}
-                                onChange={() => {
-                                  if (val === 'disponible') updateVariant(i, 'stock', null)
-                                  else if (val === 'agotado') updateVariant(i, 'stock', 0)
-                                  else updateVariant(i, 'stock', v.stock > 0 ? v.stock : 1)
-                                }}
-                                className="w-3 h-3 accent-brand-600"
-                              />
-                              {label}
-                            </label>
-                          ))}
-                        </div>
+
+                    {/* ── Disponibilidad ── */}
+                    <div>
+                      <span className="text-xs font-semibold text-slate-600 block mb-2">Disponibilidad</span>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { val: 'disponible', icon: '✅', text: 'Disponible' },
+                          { val: 'agotado',    icon: '❌', text: 'Sin stock'  },
+                          { val: 'cantidad',   icon: '🔢', text: 'Cantidad'   },
+                        ].map(({ val, icon, text }) => (
+                          <label key={val}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer text-sm transition ${
+                              vStockMode === val
+                                ? 'border-brand-500 bg-brand-50 text-brand-800 font-semibold'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                            }`}>
+                            <input type="radio" name={`stockMode-${i}`} checked={vStockMode === val}
+                              onChange={() => {
+                                if (val === 'disponible') updateVariant(i, 'stock', null)
+                                else if (val === 'agotado') updateVariant(i, 'stock', 0)
+                                else updateVariant(i, 'stock', v.stock > 0 ? v.stock : 1)
+                              }}
+                              className="w-3.5 h-3.5 accent-brand-600"
+                            />
+                            {icon} {text}
+                          </label>
+                        ))}
                         {vStockMode === 'cantidad' && (
-                          <input
-                            type="number" min={1}
+                          <input type="number" min={1}
                             value={v.stock ?? 1}
                             onChange={(e) => updateVariant(i, 'stock', e.target.value)}
                             placeholder="Ej: 10"
-                            className="w-20 px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
+                            className="w-24 px-3 py-1.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-brand-500"
                           />
                         )}
                       </div>
-                    )
-                  })()}
-                </div>
-                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                  <label className="text-[11px] text-slate-500">
-                    Fotos del color{' '}
-                    <span className="text-slate-400">
-                      ({Array.isArray(v.images) && v.images.length > 0 ? v.images.length : v.image ? 1 : 0}/10)
-                    </span>
-                  </label>
-                  {/* Miniaturas existentes */}
-                  {(Array.isArray(v.images) && v.images.length > 0
-                    ? v.images
-                    : v.image ? [v.image] : []
-                  ).map((url, pi) => (
-                    <div key={url} className="flex items-center gap-1.5 mb-1">
-                      <img src={url} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" />
-                      {pi === 0 && (
-                        <span className="text-[9px] bg-brand-100 text-brand-700 font-bold px-1 rounded">principal</span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeVariantGalleryImage(i, url)}
-                        className="text-rose-400 hover:text-rose-600 text-xs ml-auto"
-                        title="Quitar foto"
-                      >×</button>
                     </div>
-                  ))}
-                  {/* Subir más fotos */}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => addVariantGalleryImages(i, e.target.files)}
-                    className="text-xs mt-1"
-                  />
+
+                    {/* ── Fotos de esta variante ── */}
+                    <div>
+                      <span className="text-xs font-semibold text-slate-600 block mb-2">
+                        Fotos de esta variante{' '}
+                        <span className="text-slate-400 font-normal">({vImgs.length}/10)</span>
+                      </span>
+                      {vImgs.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {vImgs.map((url, pi) => (
+                            <div key={url} className="relative group w-16 h-16 rounded-xl overflow-hidden border border-slate-200">
+                              <img src={url} alt="" className="w-full h-full object-cover" />
+                              {pi === 0 && (
+                                <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-brand-600/80 text-white font-bold py-0.5">
+                                  principal
+                                </span>
+                              )}
+                              <button type="button"
+                                onClick={() => removeVariantGalleryImage(i, url)}
+                                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-rose-500 text-white text-xs grid place-items-center opacity-0 group-hover:opacity-100 transition"
+                                title="Quitar">×</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-slate-300 text-xs text-slate-600 cursor-pointer hover:bg-slate-50 transition">
+                        <span>+ Añadir fotos</span>
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e) => addVariantGalleryImages(i, e.target.files)} />
+                      </label>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeVariant(i)}
-                  className="self-end md:self-center w-8 h-8 grid place-items-center rounded-md bg-rose-50 hover:bg-rose-100 text-rose-600"
-                  title="Eliminar variante"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </fieldset>

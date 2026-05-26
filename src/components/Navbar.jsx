@@ -99,12 +99,6 @@ export default async function Navbar() {
                 {c.name}
               </Link>
             ))}
-            <Link
-              href="/envios"
-              className="whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800"
-            >
-              Envíos
-            </Link>
           </div>
         )}
       </div>

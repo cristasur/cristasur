@@ -30,12 +30,12 @@ export default async function Navbar() {
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4">
         {/* Top bar */}
-        <div className="flex items-center justify-between h-20 md:h-24 gap-4">
+        <div className="flex items-center justify-between h-16 md:h-24 gap-4">
           <Link href="/" className="flex items-center gap-3 shrink-0 py-2" aria-label="CRISTASUR inicio">
             <img
               src="/logo.png"
               alt="CRISTASUR Mérida"
-              className="h-16 md:h-20 w-auto object-contain"
+              className="h-10 md:h-20 w-auto object-contain"
             />
             <span className="sr-only">CRISTASUR</span>
           </Link>

@@ -19,6 +19,13 @@ import { LOCATIONS } from '@/lib/locations'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+}
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   verification: {

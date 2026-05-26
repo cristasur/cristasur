@@ -219,7 +219,7 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
                     }
                   }} aria-label={`Ver item ${i + 1}`}
                   aria-current={isActive ? 'true' : undefined}
-                  className={`relative shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 snap-start transition-all ${
+                  className={`relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 snap-start transition-all ${
                     isActive ? 'border-brand-600 ring-2 ring-brand-200' : 'border-slate-200 hover:border-slate-300 opacity-80 hover:opacity-100'
                   }`}>
                   {item.type === 'video' ? (

@@ -228,7 +228,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   }
 
   return (
-    <div className="mt-6 space-y-5">
+    <div className="mt-4 md:mt-6 space-y-4 md:space-y-5">
       {/* Badge VIP */}
       {isVip && wholesalePrice !== null && (
         <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-1.5 rounded-full">
@@ -292,7 +292,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
@@ -318,7 +318,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
                 min="1"
                 value={qty}
                 onChange={onInput}
-                className="w-16 text-center font-semibold text-slate-900 border-x border-slate-200 py-2 focus:outline-none"
+                className="w-16 text-center text-base font-semibold text-slate-900 border-x border-slate-200 py-2 focus:outline-none"
               />
               <button
                 type="button"
@@ -345,7 +345,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
             <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
               Subtotal
             </div>
-            <div className="mt-1 text-2xl font-black text-slate-900">
+            <div className="mt-1 text-xl md:text-2xl font-black text-slate-900">
               {formatPrice(subtotal)}
             </div>
           </div>

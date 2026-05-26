@@ -210,12 +210,12 @@ export default async function ProductDetail({ params }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 md:py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
-      <nav className="text-sm text-slate-500 mb-6">
+      <nav className="text-xs sm:text-sm text-slate-500 mb-4 md:mb-6">
         <Link href="/" className="hover:text-brand-700">Inicio</Link>
         <span className="mx-2">/</span>
         <Link href="/productos" className="hover:text-brand-700">Productos</Link>
@@ -229,7 +229,7 @@ export default async function ProductDetail({ params }) {
         )}
       </nav>
 
-      <div className="grid md:grid-cols-2 gap-8 md:items-start">
+      <div className="grid md:grid-cols-2 gap-4 md:gap-8 md:items-start">
         <ProductGallery
           images={[product.image, ...(product.gallery || [])].filter(Boolean)}
           alt={product.name}
@@ -244,15 +244,15 @@ export default async function ProductDetail({ params }) {
                   {product.categories.map((c) => c.name).join(', ')}
                 </div>
               )}
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 mt-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mt-1.5">
                 {product.name}
               </h1>
             </div>
             <FavoriteButton productId={product._id} />
           </div>
 
-          <div className="mt-4 flex items-baseline gap-3">
-            <span className="text-4xl font-black text-slate-900">
+          <div className="mt-3 md:mt-4 flex items-baseline gap-3">
+            <span className="text-3xl md:text-4xl font-black text-slate-900">
               {formatPrice(product.price)}
             </span>
             {hasDiscount && (
@@ -280,8 +280,8 @@ export default async function ProductDetail({ params }) {
           )}
 
           {product.description && (
-            <div className="mt-5 max-h-40 md:max-h-48 overflow-y-auto pr-1">
-              <p className="text-slate-700 leading-relaxed whitespace-pre-line text-[15px]">
+            <div className="mt-4 max-h-36 md:max-h-48 overflow-y-auto pr-1">
+              <p className="text-slate-700 leading-relaxed whitespace-pre-line text-sm md:text-[15px]">
                 {product.description}
               </p>
             </div>

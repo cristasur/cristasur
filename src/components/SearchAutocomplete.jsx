@@ -75,7 +75,7 @@ export default function SearchAutocomplete({ className = '' }) {
           }}
           onFocus={() => setOpen(true)}
           placeholder="Buscar productos…"
-          className="w-full pl-10 pr-3 py-2 rounded-full border border-slate-200 bg-white text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          className="w-full pl-10 pr-3 py-2 rounded-full border border-slate-200 bg-white text-base focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           aria-label="Buscar"
         />
         <Icon

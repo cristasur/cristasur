@@ -592,17 +592,60 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             Se mostrará tachado para indicar descuento.
           </span>
         </label>
-        <label className="block">
-          <span className="text-sm font-medium text-slate-700">Stock <span className="text-slate-400 font-normal">(opcional — vacío = ilimitado)</span></span>
-          <input
-            type="number"
-            min="0"
-            placeholder="Vacío = sin límite"
-            value={form.stock}
-            onChange={(e) => update('stock', e.target.value)}
-            className={input}
-          />
-        </label>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-slate-700">Disponibilidad</span>
+          {(() => {
+            const stockMode =
+              form.stock === '' || form.stock === null
+                ? 'disponible'
+                : Number(form.stock) === 0
+                ? 'agotado'
+                : 'cantidad'
+            return (
+              <>
+                <div className="flex gap-2 flex-wrap mt-1">
+                  {[
+                    { val: 'disponible', label: '✅ Disponible' },
+                    { val: 'agotado',    label: '❌ Sin stock'  },
+                    { val: 'cantidad',   label: '🔢 Cantidad'   },
+                  ].map(({ val, label }) => (
+                    <label
+                      key={val}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition text-sm ${
+                        stockMode === val
+                          ? 'border-brand-500 bg-brand-50 text-brand-800 font-semibold'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="stockMode"
+                        checked={stockMode === val}
+                        onChange={() => {
+                          if (val === 'disponible') update('stock', '')
+                          else if (val === 'agotado') update('stock', 0)
+                          else update('stock', form.stock > 0 ? form.stock : 1)
+                        }}
+                        className="w-4 h-4 accent-brand-600"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                {stockMode === 'cantidad' && (
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Ej: 50"
+                    value={form.stock}
+                    onChange={(e) => update('stock', e.target.value)}
+                    className={input}
+                  />
+                )}
+              </>
+            )
+          })()}
+        </div>
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Vender de <span className="text-brand-600 font-semibold">N en N</span> <span className="text-slate-400 font-normal">(opcional)</span></span>
           <input
@@ -1562,6 +1605,26 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                       maxLength={60}
                       className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
                     />
+                  </div>
+                  {/* Chips de colores rápidos */}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {COMMON_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          updateVariant(i, 'value', c)
+                          updateVariant(i, 'label', 'Color')
+                        }}
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition ${
+                          v.value === c
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="flex flex-col gap-1">

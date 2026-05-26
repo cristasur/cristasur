@@ -68,13 +68,9 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     )
   }
 
-  // Al montar: si hay variante pre-seleccionada, disparar el evento
-  useEffect(() => {
-    const payload = variantPayload(initialVariant)
-    if (payload.images) {
-      window.dispatchEvent(new CustomEvent('cristasur:variant-image', { detail: payload }))
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Nota: NO disparamos el evento de galería al montar.
+  // La galería base del producto se muestra por defecto.
+  // El swap ocurre únicamente cuando el usuario hace clic en una variante.
 
   // Precio base (variante > producto)
   const basePrice = useMemo(() => {

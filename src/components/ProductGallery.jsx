@@ -215,11 +215,6 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
                     <>
                       <img src={item.url} alt={`Miniatura ${i + 1}`}
                         className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                      {item.isVariant && (
-                        <span className="absolute bottom-0.5 right-0.5 bg-brand-600 text-white text-[9px] font-bold px-1 rounded">
-                          ✓
-                        </span>
-                      )}
                     </>
                   )}
                 </button>

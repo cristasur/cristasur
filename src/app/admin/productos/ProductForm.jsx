@@ -217,7 +217,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       ...f,
       variants: [
         ...f.variants,
-        { label: 'Talla', value: '', price: '', comparePrice: '', stock: 0, sku: '', image: '' },
+        { label: 'Color', value: '', price: '', comparePrice: '', stock: 0, sku: '', image: '' },
       ],
     }))
   }
@@ -1321,25 +1321,21 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                     <span>sin foto</span>
                   )}
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-slate-500">Etiqueta</label>
-                  <input
-                    value={v.label}
-                    onChange={(e) => updateVariant(i, 'label', e.target.value)}
-                    placeholder="Talla, Color, Tamaño…"
-                    maxLength={60}
-                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-slate-500">Valor</label>
-                  <input
-                    value={v.value}
-                    onChange={(e) => updateVariant(i, 'value', e.target.value)}
-                    placeholder="M, Azul, 12oz…"
-                    maxLength={60}
-                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
-                  />
+                <div className="flex flex-col gap-1 col-span-2">
+                  <label className="text-[11px] text-slate-500">Color <span className="text-slate-400">(nombre del color)</span></label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded font-semibold shrink-0">Color</span>
+                    <input
+                      value={v.value}
+                      onChange={(e) => {
+                        updateVariant(i, 'value', e.target.value)
+                        updateVariant(i, 'label', 'Color')
+                      }}
+                      placeholder="Ej: Rojo, Azul marino, Verde olivo…"
+                      maxLength={60}
+                      className="flex-1 px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] text-slate-500">Precio</label>

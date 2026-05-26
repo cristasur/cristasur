@@ -130,7 +130,7 @@ function ColorSwatch({ value, active, out, onClick }) {
 }
 
 // ── Componente principal ───────────────────────────────────────────────────
-export default function VariantPicker({ variants = [], selected, onChange, optionGroups = [], baseImage = null, onSelectBase = null }) {
+export default function VariantPicker({ variants = [], selected, onChange, optionGroups = [], baseColor = '', onSelectBase = null }) {
   const isMultiDim = optionGroups.length >= 2
 
   // ── Modo multi-dimensional ────────────────────────────────────────────────
@@ -199,35 +199,12 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
             <div className="flex flex-wrap gap-2 items-center">
               {/* Swatch "Principal" solo en el primer grupo de Color */}
               {gi === 0 && onSelectBase && isColorGroup(group.name) && (
-                <button
-                  type="button"
+                <ColorSwatch
+                  value={baseColor || '⬜'}
+                  active={baseActive}
+                  out={false}
                   onClick={() => { setSelections({}); onSelectBase() }}
-                  title="Ver fotos principales"
-                  aria-label="Principal"
-                  className="relative focus:outline-none"
-                  style={{ padding: 3 }}
-                >
-                  <span
-                    className="absolute inset-0 rounded-full"
-                    style={{
-                      border: baseActive ? '2.5px solid #2563eb' : '2.5px solid transparent',
-                      borderRadius: '50%',
-                    }}
-                  />
-                  {baseImage ? (
-                    <img
-                      src={baseImage}
-                      alt="Principal"
-                      className="block rounded-full object-cover hover:scale-110 transition-transform"
-                      style={{ width: 32, height: 32, border: '1.5px solid #d1d5db' }}
-                    />
-                  ) : (
-                    <span
-                      className="block rounded-full bg-slate-200 hover:scale-110 transition-transform"
-                      style={{ width: 32, height: 32, border: '1.5px solid #d1d5db' }}
-                    />
-                  )}
-                </button>
+                />
               )}
               {(group.values || []).map((value) => {
                 const present = isValuePresent(group.name, value)
@@ -314,39 +291,12 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
       <div className="flex flex-wrap gap-2 items-center">
         {/* Swatch "Principal" — restaura la galería base */}
         {onSelectBase && (
-          <button
-            type="button"
+          <ColorSwatch
+            value={baseColor || '⬜'}
+            active={baseActive}
+            out={false}
             onClick={onSelectBase}
-            title="Ver fotos principales"
-            aria-label="Principal"
-            className="relative focus:outline-none"
-            style={{ padding: 3 }}
-          >
-            <span
-              className="absolute inset-0 rounded-full"
-              style={{
-                border: baseActive ? '2.5px solid #2563eb' : '2.5px solid transparent',
-                borderRadius: '50%',
-              }}
-            />
-            {baseImage ? (
-              <img
-                src={baseImage}
-                alt="Principal"
-                className="block rounded-full object-cover transition-transform hover:scale-110"
-                style={{
-                  width: 32,
-                  height: 32,
-                  border: '1.5px solid #d1d5db',
-                }}
-              />
-            ) : (
-              <span
-                className="block rounded-full bg-slate-200 transition-transform hover:scale-110"
-                style={{ width: 32, height: 32, border: '1.5px solid #d1d5db' }}
-              />
-            )}
-          </button>
+          />
         )}
 
         {simpleOpts.map((v) => {

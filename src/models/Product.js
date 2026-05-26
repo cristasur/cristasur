@@ -23,7 +23,7 @@ const VariantSchema = new mongoose.Schema(
     sku: { type: String, trim: true, uppercase: true, maxlength: 40 },
     price: { type: Number, min: 0 },       // null → hereda del producto padre
     comparePrice: { type: Number, min: 0 }, // null → hereda
-    stock: { type: Number, min: 0, default: 0 },
+    stock: { type: Number, min: 0, default: null }, // null = ilimitado, 0 = sin stock
     image: { type: String, trim: true, default: '' },   // thumbnail (primera foto)
     images: { type: [String], default: [] },             // galería completa de la variante
   },

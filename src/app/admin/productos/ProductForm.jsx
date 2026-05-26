@@ -1682,13 +1682,58 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-slate-500">Stock</label>
-                  <input
-                    type="number" min={0}
-                    value={v.stock ?? 0}
-                    onChange={(e) => updateVariant(i, 'stock', e.target.value)}
-                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
-                  />
+                  <label className="text-[11px] text-slate-500">Disponibilidad</label>
+                  {(() => {
+                    const vStockMode =
+                      v.stock === null || v.stock === undefined || v.stock === ''
+                        ? 'disponible'
+                        : Number(v.stock) === 0
+                        ? 'agotado'
+                        : 'cantidad'
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex gap-1 flex-wrap">
+                          {[
+                            { val: 'disponible', label: '✅' },
+                            { val: 'agotado',    label: '❌' },
+                            { val: 'cantidad',   label: '🔢' },
+                          ].map(({ val, label }) => (
+                            <label
+                              key={val}
+                              title={val === 'disponible' ? 'Disponible' : val === 'agotado' ? 'Sin stock' : 'Cantidad'}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-lg border cursor-pointer text-xs transition ${
+                                vStockMode === val
+                                  ? 'border-brand-500 bg-brand-50 font-semibold'
+                                  : 'border-slate-200 hover:border-slate-300'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`stockMode-${i}`}
+                                checked={vStockMode === val}
+                                onChange={() => {
+                                  if (val === 'disponible') updateVariant(i, 'stock', null)
+                                  else if (val === 'agotado') updateVariant(i, 'stock', 0)
+                                  else updateVariant(i, 'stock', v.stock > 0 ? v.stock : 1)
+                                }}
+                                className="w-3 h-3 accent-brand-600"
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+                        {vStockMode === 'cantidad' && (
+                          <input
+                            type="number" min={1}
+                            value={v.stock ?? 1}
+                            onChange={(e) => updateVariant(i, 'stock', e.target.value)}
+                            placeholder="Ej: 10"
+                            className="w-20 px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
+                          />
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
                   <label className="text-[11px] text-slate-500">

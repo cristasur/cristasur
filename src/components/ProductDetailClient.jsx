@@ -78,14 +78,14 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     return Number(product.price) || 0
   }, [selected, product.price])
 
-  // Mayoreo aplica sólo cuando NO hay variante seleccionada (variantes tienen
-  // sus propios precios y no se mezclan con el mayoreo del producto padre).
+  // Mayoreo: aplica siempre (con o sin variante seleccionada).
+  // La variante hereda los precios de mayoreo y por-ciento del producto padre.
   const wholesalePrice =
-    !selected && Number.isFinite(Number(product.wholesalePrice)) && Number(product.wholesalePrice) > 0
+    Number.isFinite(Number(product.wholesalePrice)) && Number(product.wholesalePrice) > 0
       ? Number(product.wholesalePrice)
       : null
   const wholesaleMinQty =
-    !selected && Number.isFinite(Number(product.wholesaleMinQty)) && Number(product.wholesaleMinQty) >= 2
+    Number.isFinite(Number(product.wholesaleMinQty)) && Number(product.wholesaleMinQty) >= 2
       ? Number(product.wholesaleMinQty)
       : null
   // VIP: mayoreo activo siempre sin importar la cantidad pedida
@@ -94,12 +94,15 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     (isVip || (wholesaleMinQty !== null && qty >= wholesaleMinQty))
   const currentPrice = wholesaleActive ? wholesalePrice : basePrice
 
-  // Stock efectivo: si hay variantes, usamos la seleccionada; si no, el del producto.
-  // null = ilimitado → nunca sin stock. 0 = sin stock. >0 = con cantidad.
-  const stockUnlimited = !variants.length && product.stock === null
+  // Stock efectivo: null = ilimitado, 0 = sin stock, >0 = cantidad.
+  // Para variantes, null stock también significa ilimitado.
+  const rawVariantStock = variants.length && selected ? selected.stock : undefined
+  const stockUnlimited = variants.length
+    ? (rawVariantStock === null || rawVariantStock === undefined)
+    : product.stock === null
   const effectiveStock = variants.length
-    ? selected?.stock ?? 0
-    : product.stock ?? 0
+    ? (rawVariantStock ?? 0)
+    : (product.stock ?? 0)
   const outOfStock = !stockUnlimited && effectiveStock === 0
 
   // Tracking: view count + lista "vistos recientemente"
@@ -230,7 +233,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
             selected={selected}
             onChange={selectVariant}
             optionGroups={optionGroups}
-            baseImage={product.image || null}
+            baseColor={product.color || ''}
             onSelectBase={() => selectVariant(null)}
           />
         </div>
@@ -276,9 +279,11 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
             </div>
             {variants.length > 0 && selected && (
               <div className="mt-2 text-[11px] text-slate-500">
-                {effectiveStock > 0
-                  ? `${effectiveStock} disponibles`
-                  : 'Sin stock en esta variante'}
+                {stockUnlimited
+                  ? 'Disponible'
+                  : effectiveStock > 0
+                    ? `${effectiveStock} disponibles`
+                    : 'Sin stock en esta variante'}
               </div>
             )}
           </div>

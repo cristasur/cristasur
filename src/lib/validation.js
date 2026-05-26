@@ -61,7 +61,11 @@ function sanitizeVariants(input) {
 
       const priceN = v?.price === '' || v?.price == null ? null : Number(v.price)
       const cmpN   = v?.comparePrice === '' || v?.comparePrice == null ? null : Number(v.comparePrice)
-      const stockN = v?.stock === '' || v?.stock == null ? 0 : Number(v.stock)
+      // null/undefined/'' = ilimitado (Disponible), 0 = sin stock, >0 = cantidad exacta
+      const stockRaw = v?.stock
+      const stockN = (stockRaw === null || stockRaw === undefined || stockRaw === '')
+        ? null
+        : Number(stockRaw)
 
       return {
         label,
@@ -70,7 +74,7 @@ function sanitizeVariants(input) {
         sku: v?.sku ? cleanString(v.sku, { max: 40 }) : undefined,
         price: Number.isFinite(priceN) && priceN >= 0 ? priceN : null,
         comparePrice: Number.isFinite(cmpN) && cmpN >= 0 ? cmpN : null,
-        stock: Number.isFinite(stockN) && stockN >= 0 ? stockN : 0,
+        stock: stockN === null ? null : (Number.isFinite(stockN) && stockN >= 0 ? stockN : null),
         image: cleanSoft(v?.image, { max: 500 }),
         images: Array.isArray(v?.images)
           ? v.images.map((u) => cleanSoft(u, { max: 500 })).filter(Boolean).slice(0, 10)

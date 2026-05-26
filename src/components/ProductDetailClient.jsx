@@ -45,22 +45,33 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
 
   // Cuando cambia la variante seleccionada, notificar a ProductGallery para
   // que salte a la imagen de esa variante (o la inyecte si no estaba en la galería).
+  // Construye el payload de imágenes para la galería:
+  // si la variante tiene galería propia (images[]), la usa;
+  // si solo tiene image, la envuelve en array; si no tiene nada, null.
+  function variantImages(v) {
+    if (!v) return null
+    if (Array.isArray(v.images) && v.images.length > 0) return v.images
+    if (v.image) return [v.image]
+    return null
+  }
+
   function selectVariant(v) {
     setSelected(v)
     setQty(step)
     window.dispatchEvent(
       new CustomEvent('cristasur:variant-image', {
-        detail: { image: v?.image || null },
+        detail: { images: variantImages(v) },
       })
     )
   }
 
-  // Al montar: si hay variante pre-seleccionada con imagen, disparar el evento
+  // Al montar: si hay variante pre-seleccionada con imágenes, disparar el evento
   useEffect(() => {
-    if (initialVariant?.image) {
+    const imgs = variantImages(initialVariant)
+    if (imgs) {
       window.dispatchEvent(
         new CustomEvent('cristasur:variant-image', {
-          detail: { image: initialVariant.image },
+          detail: { images: imgs },
         })
       )
     }

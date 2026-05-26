@@ -42,15 +42,11 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
     return imgs.map((u) => ({ type: 'image', url: u }))
   }, [images, videoUrl])
 
-  // Imagen de variante inyectada temporalmente (si no estaba en la galería base)
-  const [variantItem, setVariantItem] = useState(null)
+  // Galería de variante activa (null = mostrar galería base)
+  const [variantItems, setVariantItems] = useState(null)
 
-  // Lista final: si la imagen de variante no está en los items base, va primero
-  const items = useMemo(() => {
-    if (!variantItem) return baseItems
-    const already = baseItems.some((it) => it.type === 'image' && it.url === variantItem.url)
-    return already ? baseItems : [variantItem, ...baseItems]
-  }, [baseItems, variantItem])
+  // Lista final: galería de variante si existe, si no la base
+  const items = useMemo(() => variantItems ?? baseItems, [baseItems, variantItems])
 
   const [idx, setIdx] = useState(0)
   const stripRef = useRef(null)
@@ -60,23 +56,17 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
   // Escuchar evento de cambio de variante desde ProductDetailClient
   useEffect(() => {
     function onVariantImage(e) {
-      const img = e.detail?.image
-      if (!img) {
-        // Sin imagen de variante → volver al inicio
-        setVariantItem(null)
+      const imgs = e.detail?.images  // array de URLs o null
+      if (!imgs || imgs.length === 0) {
+        // Sin imágenes de variante → restaurar galería base
+        setVariantItems(null)
         setIdx(0)
         return
       }
-      // ¿Ya existe en la galería base?
-      const existingIdx = baseItems.findIndex((it) => it.type === 'image' && it.url === img)
-      if (existingIdx >= 0) {
-        setVariantItem(null)
-        setIdx(existingIdx)
-      } else {
-        // Inyectar como primer item y saltar a él
-        setVariantItem({ type: 'image', url: img, isVariant: true })
-        setIdx(0)
-      }
+      // Construir items de galería para esta variante
+      const newItems = imgs.map((url) => ({ type: 'image', url, isVariant: true }))
+      setVariantItems(newItems)
+      setIdx(0)
     }
     window.addEventListener('cristasur:variant-image', onVariantImage)
     return () => window.removeEventListener('cristasur:variant-image', onVariantImage)

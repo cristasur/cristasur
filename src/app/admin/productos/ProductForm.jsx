@@ -38,7 +38,15 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     featured: initial?.featured || false,
     active: initial?.active ?? true,
     sku: initial?.sku || '',
-    variants: Array.isArray(initial?.variants) ? initial.variants : [],
+    variants: Array.isArray(initial?.variants)
+      ? initial.variants.map((v) => ({
+          ...v,
+          // Garantizar que images exista: si no tiene galería propia y tiene image, la usamos como base
+          images: Array.isArray(v.images) && v.images.length > 0
+            ? v.images
+            : v.image ? [v.image] : [],
+        }))
+      : [],
     // Grupos de opciones para variantes multi-dim.
     // Se guarda con valuesStr (string separado por comas) para el input del formulario.
     optionGroups: Array.isArray(initial?.optionGroups)
@@ -230,11 +238,53 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   function removeVariant(idx) {
     setForm((f) => ({ ...f, variants: f.variants.filter((_, i) => i !== idx) }))
   }
+  async function addVariantGalleryImages(vIdx, files) {
+    if (!files?.length) return
+    try {
+      const urls = await Promise.all(Array.from(files).map(uploadOne))
+      setForm((f) => {
+        const v = f.variants[vIdx]
+        const current = Array.isArray(v.images) ? v.images : (v.image ? [v.image] : [])
+        const merged = [...current, ...urls.filter((u) => !current.includes(u))].slice(0, 10)
+        return {
+          ...f,
+          variants: f.variants.map((vv, i) =>
+            i === vIdx ? { ...vv, images: merged, image: merged[0] || vv.image } : vv
+          ),
+        }
+      })
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+  function removeVariantGalleryImage(vIdx, url) {
+    setForm((f) => {
+      const v = f.variants[vIdx]
+      const newImages = (Array.isArray(v.images) ? v.images : []).filter((u) => u !== url)
+      return {
+        ...f,
+        variants: f.variants.map((vv, i) =>
+          i === vIdx ? { ...vv, images: newImages, image: newImages[0] || '' } : vv
+        ),
+      }
+    })
+  }
   async function uploadVariantImage(idx, file) {
     if (!file) return
     try {
       const url = await uploadOne(file)
-      updateVariant(idx, 'image', url)
+      // Sube como primera foto de la galería de variante y también como thumbnail
+      setForm((f) => {
+        const v = f.variants[idx]
+        const currentImages = Array.isArray(v.images) ? v.images : []
+        const newImages = [url, ...currentImages.filter((u) => u !== url)]
+        return {
+          ...f,
+          variants: f.variants.map((vv, i) =>
+            i === idx ? { ...vv, image: url, images: newImages } : vv
+          ),
+        }
+      })
     } catch (err) {
       setError(err.message)
     }
@@ -1365,12 +1415,38 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                     className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
                   />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] text-slate-500">Imagen</label>
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                  <label className="text-[11px] text-slate-500">
+                    Fotos del color{' '}
+                    <span className="text-slate-400">
+                      ({Array.isArray(v.images) && v.images.length > 0 ? v.images.length : v.image ? 1 : 0}/10)
+                    </span>
+                  </label>
+                  {/* Miniaturas existentes */}
+                  {(Array.isArray(v.images) && v.images.length > 0
+                    ? v.images
+                    : v.image ? [v.image] : []
+                  ).map((url, pi) => (
+                    <div key={url} className="flex items-center gap-1.5 mb-1">
+                      <img src={url} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" />
+                      {pi === 0 && (
+                        <span className="text-[9px] bg-brand-100 text-brand-700 font-bold px-1 rounded">principal</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeVariantGalleryImage(i, url)}
+                        className="text-rose-400 hover:text-rose-600 text-xs ml-auto"
+                        title="Quitar foto"
+                      >×</button>
+                    </div>
+                  ))}
+                  {/* Subir más fotos */}
                   <input
-                    type="file" accept="image/*"
-                    onChange={(e) => uploadVariantImage(i, e.target.files?.[0])}
-                    className="text-xs"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => addVariantGalleryImages(i, e.target.files)}
+                    className="text-xs mt-1"
                   />
                 </div>
                 <button

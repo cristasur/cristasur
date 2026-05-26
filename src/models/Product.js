@@ -24,7 +24,8 @@ const VariantSchema = new mongoose.Schema(
     price: { type: Number, min: 0 },       // null → hereda del producto padre
     comparePrice: { type: Number, min: 0 }, // null → hereda
     stock: { type: Number, min: 0, default: 0 },
-    image: { type: String, trim: true, default: '' },
+    image: { type: String, trim: true, default: '' },   // thumbnail (primera foto)
+    images: { type: [String], default: [] },             // galería completa de la variante
   },
   { _id: true }
 )

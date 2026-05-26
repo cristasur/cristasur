@@ -72,6 +72,9 @@ function sanitizeVariants(input) {
         comparePrice: Number.isFinite(cmpN) && cmpN >= 0 ? cmpN : null,
         stock: Number.isFinite(stockN) && stockN >= 0 ? stockN : 0,
         image: cleanSoft(v?.image, { max: 500 }),
+        images: Array.isArray(v?.images)
+          ? v.images.map((u) => cleanSoft(u, { max: 500 })).filter(Boolean).slice(0, 10)
+          : [],
       }
     })
     .filter(Boolean)

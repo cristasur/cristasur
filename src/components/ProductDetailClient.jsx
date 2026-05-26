@@ -174,8 +174,8 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
         </div>
       )}
 
-      {/* Precio actualizado si hay variante con precio distinto */}
-      {selected && Number.isFinite(Number(selected.price)) && (
+      {/* Precio actualizado solo si la variante tiene precio distinto al base */}
+      {selected && Number.isFinite(Number(selected.price)) && Number(selected.price) > 0 && Number(selected.price) !== Number(product.price) && (
         <div className="text-sm text-slate-500">
           Precio de la variante seleccionada:{' '}
           <b className="text-slate-900">{formatPrice(currentPrice)}</b>

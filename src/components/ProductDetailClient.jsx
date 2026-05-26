@@ -43,34 +43,84 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     ? Number(product.qtyStep) : 1
   const [qty, setQty] = useState(step)
 
-  // Cuando cambia la variante seleccionada, notificar a ProductGallery para
-  // que salte a la imagen de esa variante (o la inyecte si no estaba en la galería).
-  // Construye el payload para el evento de galería.
-  // mode 'gallery' → reemplaza toda la galería con las imágenes de la variante
-  // mode 'jump'    → salta a esa imagen dentro de la galería base (comportamiento antiguo)
-  // mode 'clear'   → restaura la galería base
-  function variantPayload(v) {
-    if (!v) return { mode: 'clear', images: null }
-    // Galería propia con 2+ fotos → reemplazo completo
-    if (Array.isArray(v.images) && v.images.length > 1) {
-      return { mode: 'gallery', images: v.images }
-    }
-    // Una sola imagen (nueva o legacy) → solo saltar a ella
-    const single = (Array.isArray(v.images) && v.images[0]) || v.image || null
-    return { mode: 'jump', images: single ? [single] : null }
-  }
-
   function selectVariant(v) {
     setSelected(v)
     setQty(step)
-    window.dispatchEvent(
-      new CustomEvent('cristasur:variant-image', { detail: variantPayload(v) })
-    )
+    if (!variants.length) return
+    // Siempre usamos 'jump' para no reemplazar la galería combinada
+    let detail
+    if (!v) {
+      // Seleccionar base: saltar a la primera imagen del producto
+      const firstBase = product.image ||
+        (Array.isArray(product.gallery) && product.gallery[0]) || null
+      detail = firstBase
+        ? { mode: 'jump', images: [firstBase] }
+        : { mode: 'clear', images: null }
+    } else {
+      const first = (Array.isArray(v.images) && v.images[0]) || v.image || null
+      detail = first
+        ? { mode: 'jump', images: [first] }
+        : { mode: 'clear', images: null }
+    }
+    window.dispatchEvent(new CustomEvent('cristasur:variant-image', { detail }))
   }
 
-  // Nota: NO disparamos el evento de galería al montar.
-  // La galería base del producto se muestra por defecto.
-  // El swap ocurre únicamente cuando el usuario hace clic en una variante.
+  // Al montar: si hay variantes con imágenes, construir la galería combinada
+  // (imágenes base + imágenes de todas las variantes) y enviarla a ProductGallery.
+  useEffect(() => {
+    if (!variants.length) return
+    const baseImages = [
+      product.image,
+      ...(Array.isArray(product.gallery) ? product.gallery : []),
+    ].filter(Boolean)
+    const variantImgs = variants.flatMap((v) =>
+      Array.isArray(v.images) && v.images.length > 0
+        ? v.images
+        : v.image ? [v.image] : []
+    )
+    if (!variantImgs.length) return
+    // Deduplicar manteniendo el orden
+    const seen = new Set()
+    const all = [...baseImages, ...variantImgs].filter((u) => {
+      if (seen.has(u)) return false
+      seen.add(u)
+      return true
+    })
+    window.dispatchEvent(new CustomEvent('cristasur:variant-image', {
+      detail: { mode: 'all', images: all },
+    }))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Escuchar clics en miniaturas de la galería para seleccionar la variante correspondiente
+  useEffect(() => {
+    function onGalleryThumbClick(e) {
+      const { url } = e.detail ?? {}
+      if (!url || !variants.length) return
+      // ¿Coincide con alguna variante?
+      const matched = variants.find((v) => {
+        const imgs = Array.isArray(v.images) && v.images.length > 0
+          ? v.images
+          : v.image ? [v.image] : []
+        return imgs.includes(url)
+      })
+      if (matched) {
+        setSelected(matched)
+        setQty(step)
+      } else {
+        // Imagen base → deseleccionar variante
+        const baseImgs = [
+          product.image,
+          ...(Array.isArray(product.gallery) ? product.gallery : []),
+        ].filter(Boolean)
+        if (baseImgs.includes(url)) {
+          setSelected(null)
+          setQty(step)
+        }
+      }
+    }
+    window.addEventListener('cristasur:gallery-thumb-click', onGalleryThumbClick)
+    return () => window.removeEventListener('cristasur:gallery-thumb-click', onGalleryThumbClick)
+  }, [variants, product.image, product.gallery, step]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Precio base (variante > producto)
   const basePrice = useMemo(() => {

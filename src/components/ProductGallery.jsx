@@ -42,11 +42,14 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
     return imgs.map((u) => ({ type: 'image', url: u }))
   }, [images, videoUrl])
 
+  // Galería combinada (base + todas las variantes). null = no activa.
+  const [allItems, setAllItems] = useState(null)
+
   // Galería de variante activa (null = mostrar galería base)
   const [variantItems, setVariantItems] = useState(null)
 
-  // Lista final: galería de variante si existe, si no la base
-  const items = useMemo(() => variantItems ?? baseItems, [baseItems, variantItems])
+  // Lista final: allItems tiene prioridad, luego variantItems, luego base
+  const items = useMemo(() => allItems ?? variantItems ?? baseItems, [allItems, variantItems, baseItems])
 
   const [idx, setIdx] = useState(0)
   const stripRef = useRef(null)
@@ -58,29 +61,38 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
     function onVariantImage(e) {
       const { mode, images: imgs } = e.detail ?? {}
 
-      if (mode === 'clear' || !imgs || imgs.length === 0) {
-        // Restaurar galería base
+      if (mode === 'clear') {
         setVariantItems(null)
         setIdx(0)
         return
       }
 
+      if (mode === 'all') {
+        // Galería combinada base + todas las variantes (se establece al montar)
+        if (imgs && imgs.length > 0) {
+          setAllItems(imgs.map((url) => ({ type: 'image', url })))
+          setVariantItems(null)
+          setIdx(0)
+        }
+        return
+      }
+
       if (mode === 'gallery') {
-        // Reemplazar toda la galería con las fotos de esta variante
+        if (!imgs || imgs.length === 0) return
         setVariantItems(imgs.map((url) => ({ type: 'image', url, isVariant: true })))
         setIdx(0)
         return
       }
 
-      // mode === 'jump': una sola imagen — saltar a ella en la galería base
-      // si ya existe ahí, solo moverse; si no, inyectarla al frente
+      // mode === 'jump': saltar a una imagen en la lista activa
+      if (!imgs || imgs.length === 0) return
       const singleUrl = imgs[0]
-      const existingIdx = baseItems.findIndex((it) => it.type === 'image' && it.url === singleUrl)
+      const currentList = allItems ?? baseItems
+      const existingIdx = currentList.findIndex((it) => it.type === 'image' && it.url === singleUrl)
       if (existingIdx >= 0) {
-        setVariantItems(null)   // mantener galería base
+        if (!allItems) setVariantItems(null) // solo limpiar si no estamos en modo combinado
         setIdx(existingIdx)
       } else {
-        // Inyectar al frente sin ocultar el resto de la galería
         setVariantItems([
           { type: 'image', url: singleUrl, isVariant: true },
           ...baseItems,
@@ -90,7 +102,7 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
     }
     window.addEventListener('cristasur:variant-image', onVariantImage)
     return () => window.removeEventListener('cristasur:variant-image', onVariantImage)
-  }, [baseItems])
+  }, [allItems, baseItems])
 
   const total = items.length
   const hasMany = total > 1
@@ -200,7 +212,12 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
               const isActive = i === idx
               return (
                 <button key={`${item.url}-${i}`} data-idx={i} type="button"
-                  onClick={() => setIdx(i)} aria-label={`Ver item ${i + 1}`}
+                  onClick={() => {
+                    setIdx(i)
+                    if (item.type === 'image') {
+                      window.dispatchEvent(new CustomEvent('cristasur:gallery-thumb-click', { detail: { url: item.url } }))
+                    }
+                  }} aria-label={`Ver item ${i + 1}`}
                   aria-current={isActive ? 'true' : undefined}
                   className={`relative shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 snap-start transition-all ${
                     isActive ? 'border-brand-600 ring-2 ring-brand-200' : 'border-slate-200 hover:border-slate-300 opacity-80 hover:opacity-100'

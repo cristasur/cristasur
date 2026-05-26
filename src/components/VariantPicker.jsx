@@ -296,9 +296,9 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
                   — {resolvedActive.value}
                 </span>
               )}
-              {gi === 0 && isColor && baseActive && (
+              {gi === 0 && isColor && baseActive && baseColor && (
                 <span className="ml-1.5 font-normal normal-case text-slate-500">
-                  — Principal
+                  — {baseColor}
                 </span>
               )}
             </div>

@@ -129,7 +129,12 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
     const el = stripRef.current
     if (!el) return
     const active = el.querySelector(`[data-idx="${idx}"]`)
-    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    if (!active) return
+    // Scroll directo en el contenedor (no scrollIntoView) para evitar que
+    // iOS Safari desplace el documento entero horizontalmente.
+    const thumbCenter = active.offsetLeft + active.offsetWidth / 2
+    const targetLeft = thumbCenter - el.clientWidth / 2
+    el.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' })
   }, [idx])
 
   if (total === 0) {
@@ -206,8 +211,8 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
               className="hidden md:grid place-items-center absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow text-slate-700 hover:bg-slate-50">‹</button>
           )}
           <div ref={stripRef}
-            className="flex gap-2 overflow-x-auto scroll-smooth pb-1 px-1 md:px-10 snap-x snap-mandatory"
-            style={{ scrollbarWidth: 'thin' }}>
+            className="flex gap-2 overflow-x-auto scroll-smooth pb-1 px-1 md:px-10 snap-x snap-mandatory overscroll-x-contain"
+            style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
             {items.map((item, i) => {
               const isActive = i === idx
               return (

@@ -21,23 +21,27 @@ export default function AddToCartButton({
     e?.preventDefault?.()
     e?.stopPropagation?.()
     if (disabled) return
-    const price =
-      variant && Number.isFinite(Number(variant.price))
-        ? Number(variant.price)
-        : Number(product.price) || 0
-    const image = variant?.image || product.image || ''
+    // Usar el precio de la variante SOLO si tiene un valor propio positivo.
+    // Number(null) === 0 es finito — hay que excluir null/vacío explícitamente.
+    const vp = variant?.price
+    const variantHasPrice =
+      vp !== null && vp !== undefined && vp !== '' &&
+      Number.isFinite(Number(vp)) && Number(vp) > 0
+    const price = variantHasPrice ? Number(vp) : Number(product.price) || 0
+    const image = variant?.image || (Array.isArray(variant?.images) && variant.images[0]) || product.image || ''
     const categoryIds = Array.isArray(product.categories)
       ? product.categories.map((c) => String(c?._id || c))
       : []
-    // Mayoreo a nivel de producto (no aplica a variantes — si una variante
-    // tiene su propio precio, ese precio gana sobre el mayoreo del padre).
+    // Mayoreo: usar de la variante si tiene, si no heredar del producto.
+    const rawWp = variant?.wholesalePrice ?? product.wholesalePrice
+    const rawWq = variant?.wholesaleMinQty ?? product.wholesaleMinQty
     const wholesalePrice =
-      !variant && Number.isFinite(Number(product.wholesalePrice))
-        ? Number(product.wholesalePrice)
+      Number.isFinite(Number(rawWp)) && Number(rawWp) > 0
+        ? Number(rawWp)
         : null
     const wholesaleMinQty =
-      !variant && Number.isFinite(Number(product.wholesaleMinQty))
-        ? Number(product.wholesaleMinQty)
+      Number.isFinite(Number(rawWq)) && Number(rawWq) >= 2
+        ? Number(rawWq)
         : null
 
     addItem(

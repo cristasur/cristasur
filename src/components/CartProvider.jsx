@@ -51,20 +51,17 @@ export function isWholesaleActive(item) {
 }
 
 function mergeCarts(local, server) {
-  // Combina por (productId + variantValue): si el item existe en ambos, suma
-  // las cantidades. Si sólo está en uno, se conserva.
-  const map = new Map()
-  for (const x of [...(server || []), ...(local || [])]) {
-    if (!x?.productId) continue
-    const k = lineKey(x.productId, x.variantValue)
-    if (map.has(k)) {
-      const a = map.get(k)
-      map.set(k, { ...a, qty: (a.qty || 0) + (x.qty || 0) })
-    } else {
-      map.set(k, { ...x })
-    }
-  }
-  return Array.from(map.values())
+  // Estrategia: el servidor es la fuente de verdad para items que ya existen
+  // en ambos lados (evita duplicar al recargar la página).
+  // Solo se agregan los items que están ÚNICAMENTE en local (añadidos offline
+  // o antes de iniciar sesión y que el servidor no conoce).
+  const serverList = (server || []).filter((x) => x?.productId)
+  const localList  = (local  || []).filter((x) => x?.productId)
+
+  const serverKeys = new Set(serverList.map((x) => lineKey(x.productId, x.variantValue)))
+  const localOnly  = localList.filter((x) => !serverKeys.has(lineKey(x.productId, x.variantValue)))
+
+  return [...serverList, ...localOnly]
 }
 
 export default function CartProvider({ children }) {

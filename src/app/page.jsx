@@ -18,13 +18,13 @@ async function loadHome() {
   await dbConnect()
   const [categories, featured, newest, banners] = await Promise.all([
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
-    Product.find({ active: true, featured: true })
+    Product.find({ active: true, featured: true, deleted: { $ne: true } })
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
       .sort({ createdAt: -1 })
       .limit(8)
       .lean(),
-    Product.find({ active: true })
+    Product.find({ active: true, deleted: { $ne: true } })
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
       .sort({ createdAt: -1 })

@@ -224,9 +224,4 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
           {total > 4 && (
             <button type="button" onClick={() => scrollStrip(1)} aria-label="Ver siguientes"
               className="hidden md:grid place-items-center absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow text-slate-700 hover:bg-slate-50">›</button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+       

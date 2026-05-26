@@ -304,33 +304,4 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
             variant={selected}
             qty={qty}
             disabled={outOfStock}
-            label={outOfStock ? 'Sin stock' : 'Añadir al carrito'}
-            className="w-full"
-          />
-
-          <a
-            href={waHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={onWhatsAppClick}
-            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-sm"
-          >
-            <Icon name="whatsapp" className="w-5 h-5" />
-            Pedir por WhatsApp
-          </a>
-        </div>
-
-        <p className="mt-2 text-[11px] text-slate-500 text-center">
-          Te responderemos con disponibilidad, envío y forma de pago.
-        </p>
-      </div>
-
-      <ShareButtons
-        title={product.name}
-        text={`Mira este producto en CRISTASUR`}
-        productImage={product.image || null}
-        price={formatPrice(currentPrice)}
-      />
-    </div>
-  )
-}
+            label=

@@ -146,34 +146,4 @@ const ProductSchema = new mongoose.Schema(
 
     // "También compraron": contador por producto co-pedido en el mismo carrito.
     // Se incrementa al registrar la intención de pedido (Order pending).
-    coOrders: { type: Map, of: Number, default: {} },
-
-    // ---- Soft delete (papelera) ----
-    deleted: { type: Boolean, default: false, index: true },
-    deletedAt: { type: Date, default: null },
-
-    // ---- Métricas ----
-    viewsCount: { type: Number, default: 0 },
-    whatsappClicks: { type: Number, default: 0 },
-    salesCount: { type: Number, default: 0 }, // se incrementa manualmente al marcar pedido completado
-
-    // ---- Reseñas (caché desnormalizado para no agregar en cada request) ----
-    avgRating: { type: Number, default: 0, min: 0, max: 5 },
-    reviewCount: { type: Number, default: 0, min: 0 },
-
-    // ---- Auditoría ----
-    editHistory: { type: [EditLogSchema], default: [] },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  },
-  { timestamps: true }
-)
-
-ProductSchema.index({ name: 'text', description: 'text', color: 'text' })
-ProductSchema.index({ deleted: 1, active: 1, featured: 1 })
-
-if (process.env.NODE_ENV !== 'production' && mongoose.models.Product) {
-  delete mongoose.models.Product
-}
-
-export default mongoose.models.Product || mongoose.model('Product', ProductSchema)
+    coOrders: { type: Map, of: Number

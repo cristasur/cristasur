@@ -240,13 +240,32 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   }
 
   async function onFileChange(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
     setUploading(true)
     setError('')
     try {
-      const url = await uploadOne(file)
-      update('image', url)
+      // Subimos todos en paralelo
+      const urls = await Promise.all(files.map(uploadOne))
+      const validUrls = urls.filter(Boolean)
+      if (!validUrls.length) return
+
+      setForm((f) => {
+        // Si ya hay imagen principal, todos van a la galería
+        if (f.image) {
+          const slotsLeft = MAX_GALLERY - f.gallery.length
+          const toAdd = validUrls.slice(0, slotsLeft)
+          return { ...f, gallery: [...f.gallery, ...toAdd].slice(0, MAX_GALLERY) }
+        }
+        // Si no hay imagen principal: primera → portada, resto → galería
+        const [first, ...rest] = validUrls
+        const slotsLeft = MAX_GALLERY - f.gallery.length
+        return {
+          ...f,
+          image: first,
+          gallery: [...f.gallery, ...rest.slice(0, slotsLeft)].slice(0, MAX_GALLERY),
+        }
+      })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -1282,32 +1301,20 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           </div>
           <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <input type="file" accept="image/*" onChange={onFileChange} />
-              <button
-                type="button"
-                onClick={async () => {
-                  const url = prompt('Pega la URL de la imagen (Drive, Dropbox público, etc.):')
-                  if (!url) return
-                  setUploading(true)
-                  try {
-                    const res = await fetch('/api/upload/url', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ url }),
-                    })
-                    const data = await res.json().catch(() => ({}))
-                    if (!res.ok) throw new Error(data?.error || 'Error al descargar')
-                    update('image', data.url)
-                  } catch (err) {
-                    setError(err.message)
-                  } finally {
-                    setUploading(false)
-                  }
-                }}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold"
-              >
-                Descargar de URL
-              </button>
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-700 text-sm font-semibold cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {form.image ? 'Añadir más fotos' : 'Seleccionar fotos'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={onFileChange}
+                />
+              </label>
+              <span className="text-xs text-slate-400">Puedes seleccionar varias a la vez</span>
             </div>
             <div className="text-xs text-slate-500">
               O pega una URL externa o ruta local (/uploads/...):

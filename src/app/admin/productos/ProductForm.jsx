@@ -67,6 +67,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     length: initial?.length ?? '',
     width:  initial?.width  ?? '',
     height: initial?.height ?? '',
+    capacity:     initial?.capacity     ?? '',
+    capacityUnit: initial?.capacityUnit || 'L',
     pkgWeight: initial?.pkgWeight ?? '',
     pkgLength: initial?.pkgLength ?? '',
     pkgWidth:  initial?.pkgWidth  ?? '',
@@ -1051,6 +1053,39 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           Medidas reales del producto. Se muestran <strong>públicamente</strong> en la ficha para que el cliente sepa el tamaño.
           Peso en <strong>kg</strong>, dimensiones en <strong>cm</strong>.
         </p>
+
+        {/* Capacidad (opcional) */}
+        <div className="mb-4">
+          <span className="text-sm font-semibold text-slate-700 block mb-1">
+            Capacidad <span className="font-normal text-slate-400">(opcional — para termos, vasos, botellitas…)</span>
+          </span>
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min="0"
+              step="any"
+              placeholder="Ej: 500"
+              value={form.capacity}
+              onChange={(e) => update('capacity', e.target.value)}
+              className="w-32 px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none text-sm"
+            />
+            <select
+              value={form.capacityUnit}
+              onChange={(e) => update('capacityUnit', e.target.value)}
+              className="px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:outline-none text-sm bg-white"
+            >
+              {['L', 'mL', 'oz', 'fl oz', 'gal', 'cl', 'cc'].map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+            {form.capacity && (
+              <span className="text-sm text-slate-500">
+                = {form.capacity} {form.capacityUnit}
+              </span>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <label className="block">
             <span className="text-sm font-semibold text-slate-700">Peso (kg)</span>

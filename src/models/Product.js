@@ -98,6 +98,12 @@ const ProductSchema = new mongoose.Schema(
     // null o 1 = de uno en uno (comportamiento normal).
     qtyStep: { type: Number, min: 1, default: null },
 
+    // ---- Capacidad (visible al cliente, opcional) ----
+    // Para productos que se miden por volumen/capacidad (termos, vasos, botellitas…).
+    // capacityUnit: 'L' | 'mL' | 'oz' | 'fl oz' | 'gal' | 'cl' | 'cc'
+    capacity:     { type: Number, min: 0, default: null },
+    capacityUnit: { type: String, trim: true, default: '' },
+
     // ---- Dimensiones del PRODUCTO (visibles al cliente en la ficha) ----
     // Miden el producto real sin embalaje. Se muestran públicamente.
     // Unidades: peso en kg, dimensiones en cm.

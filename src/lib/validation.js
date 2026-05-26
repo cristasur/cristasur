@@ -168,6 +168,19 @@ export function validateProductPayload(body) {
   if (qtyStep !== null && !Number.isFinite(qtyStep))
     errors.push('El múltiplo de venta debe ser un número entero positivo')
 
+  // ---- Capacidad (opcional, visible al cliente) ----
+  const CAPACITY_UNITS = ['L', 'mL', 'oz', 'fl oz', 'gal', 'cl', 'cc']
+  const capacityRaw = body?.capacity
+  const capacity =
+    capacityRaw === undefined || capacityRaw === null || capacityRaw === ''
+      ? null
+      : parseFloat(capacityRaw)
+  const capacityUnit = CAPACITY_UNITS.includes(body?.capacityUnit)
+    ? body.capacityUnit
+    : ''
+  if (capacity !== null && (!Number.isFinite(capacity) || capacity < 0))
+    errors.push('La capacidad debe ser un número positivo')
+
   // ---- Dimensiones del producto (visibles al cliente) ----
   // Todos opcionales (null = no definido). Unidades: kg y cm.
   function parseDim(val) {
@@ -298,6 +311,8 @@ export function validateProductPayload(body) {
       length,
       width,
       height,
+      capacity,
+      capacityUnit,
       pkgWeight,
       pkgLength,
       pkgWidth,

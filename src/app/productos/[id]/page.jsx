@@ -287,9 +287,18 @@ export default async function ProductDetail({ params }) {
             </div>
           )}
 
-          {/* Dimensiones y peso */}
-          {(product.weight || product.length || product.width || product.height) && (
+          {/* Capacidad + Dimensiones y peso */}
+          {(product.capacity || product.weight || product.length || product.width || product.height) && (
             <div className="mt-4 flex flex-wrap gap-3">
+              {product.capacity && (
+                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
+                  <span className="text-slate-400">🧴</span>
+                  <span className="text-slate-500">Capacidad:</span>
+                  <span className="font-semibold text-slate-800">
+                    {product.capacity} {product.capacityUnit || 'L'}
+                  </span>
+                </div>
+              )}
               {product.weight && (
                 <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
                   <span className="text-slate-400">⚖️</span>

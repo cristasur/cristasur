@@ -64,15 +64,14 @@ function ColorSwatch({ value, active, out, onClick }) {
     return (
       <button
         type="button"
-        disabled={out}
         onClick={onClick}
-        title={out ? 'Sin stock' : value}
+        title={out ? `${value} — Sin stock` : value}
         className={
           'px-3 py-1.5 rounded-lg border text-sm font-semibold transition ' +
-          (out
-            ? 'bg-slate-50 border-slate-200 text-slate-400 line-through cursor-not-allowed'
-            : active
-              ? 'bg-brand-600 border-brand-600 text-white shadow'
+          (active
+            ? 'bg-brand-600 border-brand-600 text-white shadow'
+            : out
+              ? 'bg-slate-50 border-slate-200 text-slate-400 line-through'
               : 'bg-white border-slate-300 text-slate-700 hover:border-brand-400')
         }
       >
@@ -86,9 +85,8 @@ function ColorSwatch({ value, active, out, onClick }) {
   return (
     <button
       type="button"
-      disabled={out}
       onClick={onClick}
-      title={value}
+      title={out ? `${value} — Sin stock` : value}
       aria-label={value}
       className="relative focus:outline-none"
       style={{ padding: 3 }}
@@ -252,74 +250,45 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
   }
 
   // ── Modo simple (1 dimensión) ─────────────────────────────────────────────
-  const groups = useMemo(() => {
-    const map = new Map()
-    for (const v of variants || []) {
-      if (!v?.label || !v?.value) continue
-      if (!map.has(v.label)) map.set(v.label, [])
-      map.get(v.label).push(v)
-    }
-    return Array.from(map.entries())
-  }, [variants])
+  // Agrupamos TODAS las variantes bajo una sola fila "Color" sin importar
+  // el label guardado (puede ser 'Color', 'Talla', '', etc. por datos antiguos).
+  // Filtramos las que no tienen value para no mostrar swatches vacíos.
+  const simpleOpts = useMemo(
+    () => (variants || []).filter((v) => v?.value),
+    [variants]
+  )
 
-  if (!groups.length) return null
+  if (!simpleOpts.length) return null
+
+  const activeOpt = simpleOpts.find(
+    (v) => selected?.value === v.value
+  )
 
   return (
-    <div className="space-y-4">
-      {groups.map(([label, opts]) => {
-        const isColor = isColorGroup(label)
-        const activeOpt = opts.find(
-          (v) => selected?.label === v.label && selected?.value === v.value
-        )
-        return (
-          <div key={label}>
-            <div className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
-              {label}
-              {isColor && activeOpt && (
-                <span className="ml-1.5 font-normal normal-case text-slate-500">
-                  — {activeOpt.value}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {opts.map((v) => {
-                const active = selected?.label === v.label && selected?.value === v.value
-                const out = (v.stock ?? 0) <= 0
-                if (isColor) {
-                  return (
-                    <ColorSwatch
-                      key={`${v.label}-${v.value}`}
-                      value={v.value}
-                      active={active}
-                      out={out}
-                      onClick={() => onChange?.(v)}
-                    />
-                  )
-                }
-                return (
-                  <button
-                    key={`${v.label}-${v.value}`}
-                    type="button"
-                    disabled={out}
-                    onClick={() => onChange?.(v)}
-                    className={
-                      'px-3 py-1.5 rounded-lg border text-sm font-semibold transition ' +
-                      (out
-                        ? 'bg-slate-50 border-slate-200 text-slate-400 line-through cursor-not-allowed'
-                        : active
-                          ? 'bg-brand-600 border-brand-600 text-white shadow'
-                          : 'bg-white border-slate-300 text-slate-700 hover:border-brand-400')
-                    }
-                    title={out ? 'Sin stock' : `${label}: ${v.value}`}
-                  >
-                    {v.value}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+    <div className="space-y-2">
+      <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+        Color
+        {activeOpt && (
+          <span className="ml-1.5 font-normal normal-case text-slate-500">
+            — {activeOpt.value}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {simpleOpts.map((v) => {
+          const active = selected?.value === v.value
+          const out = (v.stock ?? 0) <= 0
+          return (
+            <ColorSwatch
+              key={`${v.label}-${v.value}`}
+              value={v.value}
+              active={active}
+              out={out}
+              onClick={() => onChange?.(v)}
+            />
+          )
+        })}
+      </div>
     </div>
   )
 }

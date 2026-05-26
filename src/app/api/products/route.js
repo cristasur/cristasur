@@ -106,6 +106,7 @@ export async function GET(request) {
         { name: { $regex: safe, $options: 'i' } },
         { description: { $regex: safe, $options: 'i' } },
         { color: { $regex: safe, $options: 'i' } },
+        { sku: { $regex: safe, $options: 'i' } },
       ]
       if (brandIds.length) orClauses.push({ brand: { $in: brandIds } })
 

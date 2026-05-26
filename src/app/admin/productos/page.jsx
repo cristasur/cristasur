@@ -14,10 +14,17 @@ function formatPrice(n) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(n)
 }
 
-async function loadProducts(categoryId) {
+async function loadProducts(categoryId, q) {
   await dbConnect()
   const filter = { deleted: { $ne: true } }
   if (categoryId) filter.categories = categoryId
+  if (q) {
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    filter.$or = [
+      { name: { $regex: safe, $options: 'i' } },
+      { sku:  { $regex: safe, $options: 'i' } },
+    ]
+  }
   const products = await Product.find(filter)
     .populate('categories', 'name')
     .sort({ createdAt: -1 })
@@ -39,8 +46,9 @@ async function loadCategories() {
 
 export default async function AdminProductos({ searchParams }) {
   const categoryId = searchParams?.category || ''
+  const q = (searchParams?.q || '').trim()
   const [products, categories, trashCount] = await Promise.all([
-    loadProducts(categoryId),
+    loadProducts(categoryId, q),
     loadCategories(),
     countTrash(),
   ])
@@ -83,23 +91,44 @@ export default async function AdminProductos({ searchParams }) {
         </div>
       </div>
 
-      <div className="mb-4 bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between gap-4">
-        <form method="GET" className="flex items-center gap-3">
-          <label className="text-sm font-semibold text-slate-700">Filtrar por categoría:</label>
-          <select 
-            name="category" 
-            defaultValue={categoryId} 
+      <div className="mb-4 bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+        <form method="GET" className="flex flex-wrap items-center gap-3">
+          {/* Búsqueda por nombre o SKU */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar por nombre o SKU…"
+              className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500"
+            />
+          </div>
+          {/* Filtro por categoría */}
+          <select
+            name="category"
+            defaultValue={categoryId}
             className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:border-brand-500"
           >
-            <option value="">Todas</option>
+            <option value="">Todas las categorías</option>
             {categories.map(c => (
               <option key={c._id} value={c._id}>{c.icon} {c.name}</option>
             ))}
           </select>
-          <button type="submit" className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium">
-            Filtrar
+          <button type="submit" className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold">
+            Buscar
           </button>
+          {(q || categoryId) && (
+            <a href="/admin/productos" className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium">
+              Limpiar
+            </a>
+          )}
         </form>
+        {q && (
+          <p className="mt-2 text-xs text-slate-500">
+            {products.length} resultado{products.length !== 1 ? 's' : ''} para <strong>"{q}"</strong>
+          </p>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
@@ -129,7 +158,11 @@ export default async function AdminProductos({ searchParams }) {
                       </div>
                       <div className="min-w-0">
                         <div className="font-semibold text-slate-900 line-clamp-1">{p.name}</div>
-                        <div className="text-xs text-slate-500 line-clamp-1">{p.description}</div>
+                        {p.sku ? (
+                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">SKU: {p.sku}</div>
+                        ) : (
+                          <div className="text-xs text-slate-400 line-clamp-1">{p.description}</div>
+                        )}
                       </div>
                     </div>
                   </td>

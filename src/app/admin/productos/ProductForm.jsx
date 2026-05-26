@@ -100,7 +100,68 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   const [galleryUrlInput, setGalleryUrlInput] = useState('')
   const [addingGalleryUrl, setAddingGalleryUrl] = useState(false)
 
-  // ---- Búsqueda de productos relacionados ----
+  // ---- Chip input de etiquetas ----
+  const [familyTagInput, setFamilyTagInput] = useState('')
+  const [familyTagSuggestions, setFamilyTagSuggestions] = useState([])
+  const [allExistingTags, setAllExistingTags] = useState([])
+  const [tagsLoaded, setTagsLoaded] = useState(false)
+
+  async function loadFamilyTagSuggestions() {
+    if (tagsLoaded) return
+    try {
+      const res = await fetch('/api/products/tags')
+      const data = await res.json().catch(() => ({}))
+      setAllExistingTags(data.tags || [])
+      setTagsLoaded(true)
+    } catch {}
+  }
+
+  function onFamilyTagInputChange(e) {
+    const val = e.target.value
+    // Si escribe coma, confirmar el tag automáticamente
+    if (val.endsWith(',')) {
+      addFamilyTag(val.slice(0, -1).trim())
+      return
+    }
+    setFamilyTagInput(val)
+    const q = val.trim().toLowerCase()
+    if (q.length >= 1) {
+      const current = Array.isArray(form.tags) ? form.tags : []
+      setFamilyTagSuggestions(
+        allExistingTags
+          .filter((t) => t.toLowerCase().includes(q) && !current.includes(t))
+          .slice(0, 8)
+      )
+    } else {
+      setFamilyTagSuggestions([])
+    }
+  }
+
+  function onFamilyTagInputKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addFamilyTag(familyTagInput.trim())
+    } else if (e.key === 'Backspace' && familyTagInput === '') {
+      const current = Array.isArray(form.tags) ? form.tags : []
+      if (current.length > 0) update('tags', current.slice(0, -1))
+    }
+  }
+
+  function addFamilyTag(raw) {
+    const val = raw.toLowerCase().trim().replace(/\s+/g, '-')
+    if (!val) return
+    const current = Array.isArray(form.tags) ? form.tags : []
+    if (!current.includes(val)) update('tags', [...current, val])
+    setFamilyTagInput('')
+    setFamilyTagSuggestions([])
+  }
+
+  function removeFamilyTag(tag) {
+    const current = Array.isArray(form.tags) ? form.tags : []
+    update('tags', current.filter((t) => t !== tag))
+  }
+
+  // ---- Búsqueda de productos relacionados (mantenido internamente, UI removida) ----
   const [relSearch, setRelSearch] = useState('')
   const [relResults, setRelResults] = useState([])
   const [relSearching, setRelSearching] = useState(false)
@@ -922,132 +983,82 @@ export default function ProductForm({ categories, brands = [], materials = [], i
               Opcional. Si lo dejas en el futuro, no se mostrará hasta esa fecha.
             </span>
           </label>
-          <label className="block md:col-span-1">
-            <span className="text-sm font-medium text-slate-700">Tags</span>
-            <input
-              value={Array.isArray(form.tags) ? form.tags.join(', ') : (form.tags || '')}
-              onChange={(e) => update('tags', e.target.value)}
-              className={input}
-              placeholder="navidad, eco, restaurante"
-            />
-            <span className="text-xs text-slate-500">
-              Separados por coma. Aparecen como filtros en /tag/&lt;nombre&gt;.
-            </span>
-          </label>
         </div>
       </fieldset>
 
-      {/* ── Productos relacionados (selección manual) ── */}
-      <fieldset className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4">
-        <legend className="px-2 text-sm font-bold text-indigo-800">
-          🔗 Productos relacionados{' '}
-          <span className="font-normal text-indigo-500 text-xs">(opcional)</span>
+      {/* ── Etiquetas de familia (productos relacionados por tag) ── */}
+      <fieldset className="border border-violet-200 bg-violet-50/30 rounded-xl p-4">
+        <legend className="px-2 text-sm font-bold text-violet-800">
+          🏷️ Etiquetas de familia{' '}
+          <span className="font-normal text-violet-500 text-xs">(opcional)</span>
         </legend>
-        <p className="text-xs text-indigo-700/80 mb-3">
-          Selecciona productos que aparecerán en la sección{' '}
-          <strong>"También disponible en"</strong> de este producto.
-          Úsalo para agrupar variantes por capacidad, presentación, etc.
+        <p className="text-xs text-violet-700/70 mb-3">
+          Escribe una etiqueta (ej: <strong>termo</strong> o <strong>silla-plastico</strong>). Todos los
+          productos con la misma etiqueta aparecerán en la sección{' '}
+          <strong>"También disponible en"</strong>. No es visible para los clientes —
+          solo sirve para agrupar productos relacionados. Se muestran hasta 6 al azar.
         </p>
 
-        {/* Chips de relacionados ya añadidos */}
-        {form.relatedProducts.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {form.relatedProducts.map((r) => (
-              <div
-                key={r._id}
-                className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-xl px-2 py-1 text-sm"
+        {/* Área de chips + input */}
+        <div
+          className="flex flex-wrap gap-2 min-h-[46px] p-2 rounded-xl border border-violet-200 bg-white cursor-text focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100 transition-all"
+          onClick={(e) => e.currentTarget.querySelector('input')?.focus()}
+        >
+          {(Array.isArray(form.tags) ? form.tags : []).map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 bg-violet-100 text-violet-800 text-xs font-semibold px-2.5 py-1.5 rounded-full shrink-0"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); removeFamilyTag(tag) }}
+                className="text-violet-400 hover:text-rose-500 ml-0.5 leading-none text-sm font-bold"
+                aria-label={`Quitar ${tag}`}
               >
-                {r.image ? (
-                  <img
-                    src={r.image}
-                    alt=""
-                    className="w-7 h-7 rounded-lg object-cover border border-slate-100 shrink-0"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-lg bg-slate-100 shrink-0" />
-                )}
-                <span className="font-medium text-slate-800 max-w-[160px] truncate">
-                  {r.name || r._id}
-                </span>
-                {r.price > 0 && (
-                  <span className="text-slate-400 text-xs">
-                    {new Intl.NumberFormat('es-MX', {
-                      style: 'currency',
-                      currency: 'MXN',
-                      minimumFractionDigits: 0,
-                    }).format(r.price)}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => removeRelated(r._id)}
-                  className="ml-0.5 text-slate-400 hover:text-rose-600 font-bold text-base leading-none"
-                  aria-label="Quitar"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Buscador */}
-        <div className="relative">
-          <input
-            type="text"
-            value={relSearch}
-            onChange={onRelSearchChange}
-            placeholder="Buscar producto por nombre…"
-            className="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none text-sm"
-          />
-          {relSearching && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
-              Buscando…
+                ×
+              </button>
             </span>
-          )}
-
-          {/* Dropdown de resultados */}
-          {relResults.length > 0 && (
-            <div className="absolute z-30 top-full mt-1 left-0 right-0 bg-white border border-indigo-200 rounded-xl shadow-lg overflow-hidden">
-              {relResults.map((p) => (
-                <button
-                  key={p._id}
-                  type="button"
-                  onClick={() => addRelated(p)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 text-left"
-                >
-                  {p.image ? (
-                    <img
-                      src={p.image}
-                      alt=""
-                      className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-slate-100 shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-slate-800 truncate">{p.name}</div>
-                    <div className="text-xs text-slate-500">
-                      {new Intl.NumberFormat('es-MX', {
-                        style: 'currency',
-                        currency: 'MXN',
-                        minimumFractionDigits: 0,
-                      }).format(p.price)}
-                    </div>
-                  </div>
-                  <span className="text-indigo-500 text-xs font-semibold shrink-0">+ Añadir</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Ningún resultado */}
-          {relSearch.length >= 2 && !relSearching && relResults.length === 0 && (
-            <div className="absolute z-30 top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-3 text-sm text-slate-500">
-              No se encontraron productos con ese nombre.
-            </div>
-          )}
+          ))}
+          <div className="relative flex-1 min-w-[140px]">
+            <input
+              type="text"
+              value={familyTagInput}
+              onChange={onFamilyTagInputChange}
+              onKeyDown={onFamilyTagInputKeyDown}
+              onFocus={loadFamilyTagSuggestions}
+              placeholder={(Array.isArray(form.tags) && form.tags.length > 0) ? 'Añadir otra…' : 'Ej: termo, silla-plastico…'}
+              className="w-full bg-transparent text-sm text-slate-800 outline-none py-1 placeholder-slate-400"
+            />
+            {/* Dropdown de sugerencias */}
+            {familyTagSuggestions.length > 0 && (
+              <div className="absolute z-30 top-full mt-1 left-0 min-w-[200px] bg-white border border-violet-200 rounded-xl shadow-lg overflow-hidden">
+                <div className="px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold text-slate-400 border-b border-slate-100">
+                  Etiquetas ya usadas
+                </div>
+                {familyTagSuggestions.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); addFamilyTag(t) }}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-violet-50 flex items-center gap-2"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-violet-400 shrink-0" />
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        <p className="mt-1.5 text-[11px] text-slate-400">
+          Presiona{' '}
+          <kbd className="bg-slate-100 px-1 rounded text-slate-500 font-mono text-[10px]">Enter</kbd>{' '}
+          o{' '}
+          <kbd className="bg-slate-100 px-1 rounded text-slate-500 font-mono text-[10px]">,</kbd>{' '}
+          para añadir. Backspace borra la última.
+        </p>
       </fieldset>
 
       {/* ── Dimensiones del PRODUCTO (visibles al cliente) ── */}

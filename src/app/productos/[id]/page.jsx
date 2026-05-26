@@ -111,10 +111,18 @@ async function loadProduct(id) {
     : []
 
   const manualIds = new Set(manualRelated.map((p) => String(p._id)))
-  const sameFamily = [
+  const sameFamilyAll = [
     ...manualRelated,
     ...tagFamily.filter((p) => !manualIds.has(String(p._id))),
-  ].slice(0, 12)
+  ]
+  // Mostrar hasta 6 al azar para que cada visita sea fresca cuando hay muchos
+  const sameFamily = sameFamilyAll.length <= 6
+    ? sameFamilyAll
+    : sameFamilyAll
+        .map((p) => ({ p, r: Math.random() }))
+        .sort((a, b) => a.r - b.r)
+        .slice(0, 6)
+        .map(({ p }) => p)
 
   // Related clásico (misma categoría) — excluye alsoBought y sameFamily para no repetir.
   const excludeIds = [product._id, ...alsoBought.map((x) => x._id), ...sameFamily.map((x) => x._id)]

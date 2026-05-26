@@ -66,6 +66,11 @@ function sanitizeVariants(input) {
       const stockN = (stockRaw === null || stockRaw === undefined || stockRaw === '')
         ? null
         : Number(stockRaw)
+      // Precios de mayoreo y por-ciento opcionales (null = hereda del padre)
+      const wsPriceN  = v?.wholesalePrice === '' || v?.wholesalePrice == null ? null : Number(v.wholesalePrice)
+      const wsMinQtyN = v?.wholesaleMinQty === '' || v?.wholesaleMinQty == null ? null : Number(v.wholesaleMinQty)
+      const hPriceN   = v?.hundredPrice === '' || v?.hundredPrice == null ? null : Number(v.hundredPrice)
+      const hMinQtyN  = v?.hundredMinQty === '' || v?.hundredMinQty == null ? null : Number(v.hundredMinQty)
 
       return {
         label,
@@ -74,6 +79,10 @@ function sanitizeVariants(input) {
         sku: v?.sku ? cleanString(v.sku, { max: 40 }) : undefined,
         price: Number.isFinite(priceN) && priceN >= 0 ? priceN : null,
         comparePrice: Number.isFinite(cmpN) && cmpN >= 0 ? cmpN : null,
+        wholesalePrice:  Number.isFinite(wsPriceN)  && wsPriceN  >= 0 ? wsPriceN  : null,
+        wholesaleMinQty: Number.isFinite(wsMinQtyN) && wsMinQtyN >= 2 ? wsMinQtyN : null,
+        hundredPrice:    Number.isFinite(hPriceN)   && hPriceN   >= 0 ? hPriceN   : null,
+        hundredMinQty:   Number.isFinite(hMinQtyN)  && hMinQtyN  >= 2 ? hMinQtyN  : null,
         stock: stockN === null ? null : (Number.isFinite(stockN) && stockN >= 0 ? stockN : null),
         image: cleanSoft(v?.image, { max: 500 }),
         images: Array.isArray(v?.images)
@@ -416,4 +425,62 @@ export function validateCouponPayload(body) {
       code,
       description,
       type,
-      value
+      value,
+      minSubtotal,
+      usageLimit,
+      active,
+      startsAt: startsAt && !isNaN(startsAt) ? startsAt : null,
+      endsAt: endsAt && !isNaN(endsAt) ? endsAt : null,
+      categories,
+      products,
+    },
+  }
+}
+
+// Resume los cambios en texto (fallback para entradas antiguas).
+export function diffSummary(before, after, fields) {
+  const parts = []
+  for (const f of fields) {
+    const a = before?.[f]
+    const b = after?.[f]
+    const sa = typeof a === 'object' ? JSON.stringify(a) : String(a ?? '')
+    const sb = typeof b === 'object' ? JSON.stringify(b) : String(b ?? '')
+    if (sa !== sb) {
+      const fmtA = sa.length > 60 ? sa.slice(0, 57) + '…' : sa
+      const fmtB = sb.length > 60 ? sb.slice(0, 57) + '…' : sb
+      parts.push(`${f}: ${fmtA || '∅'} → ${fmtB || '∅'}`)
+    }
+  }
+  return parts.join(' | ')
+}
+
+// Diff estructurado [{field, from, to}] con valores completos sin truncar.
+// Se guarda en editHistory.diff para mostrar detalle total en el historial.
+export function diffFields(before, after, fields) {
+  const LABELS = {
+    name: 'Nombre', description: 'Descripción', price: 'Precio',
+    comparePrice: 'Precio tachado', wholesalePrice: 'Precio mayoreo',
+    wholesaleMinQty: 'Mínimo mayoreo', hundredPrice: 'Precio por ciento',
+    hundredMinQty: 'Mínimo precio por ciento', stock: 'Stock', featured: 'Destacado',
+    active: 'Activo', sku: 'SKU', image: 'Imagen', gallery: 'Galería',
+    variants: 'Variantes', categories: 'Categorías', brand: 'Marca',
+    color: 'Color', weight: 'Peso producto (kg)', length: 'Largo producto (cm)',
+    width: 'Ancho producto (cm)', height: 'Alto producto (cm)',
+    pkgWeight: 'Peso caja (kg)', pkgLength: 'Largo caja (cm)',
+    pkgWidth: 'Ancho caja (cm)', pkgHeight: 'Alto caja (cm)',
+    pkgNote: 'Nota caja envío', status: 'Estado',
+    publishAt: 'Publicar el', qtyStep: 'Paso de cantidad',
+    materials: 'Materiales', tags: 'Etiquetas',
+  }
+  const result = []
+  for (const f of fields) {
+    const a = before?.[f]
+    const b = after?.[f]
+    const sa = typeof a === 'object' ? JSON.stringify(a) : String(a ?? '')
+    const sb = typeof b === 'object' ? JSON.stringify(b) : String(b ?? '')
+    if (sa !== sb) {
+      result.push({ field: LABELS[f] || f, from: sa || '∅', to: sb || '∅' })
+    }
+  }
+  return result
+}

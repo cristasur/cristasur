@@ -34,4 +34,9 @@ export default async function EditProductPage({ params }) {
       <ProductForm
         categories={serialize(categories)}
         brands={serialize(brands)}
-        materials={serialize(materialsList
+        materials={serialize(materialsList)}
+        initial={serialize(product)}
+      />
+    </div>
+  )
+}

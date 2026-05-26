@@ -47,6 +47,10 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           images: Array.isArray(v.images) && v.images.length > 0
             ? v.images
             : v.image ? [v.image] : [],
+          wholesalePrice:  v.wholesalePrice  ?? '',
+          wholesaleMinQty: v.wholesaleMinQty ?? '',
+          hundredPrice:    v.hundredPrice    ?? '',
+          hundredMinQty:   v.hundredMinQty   ?? '',
         }))
       : [],
     // Grupos de opciones para variantes multi-dim.
@@ -293,7 +297,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       ...f,
       variants: [
         ...f.variants,
-        { label: 'Color', value: '', price: '', comparePrice: '', stock: 0, sku: '', image: '' },
+        { label: 'Color', value: '', price: '', comparePrice: '', wholesalePrice: '', wholesaleMinQty: '', hundredPrice: '', hundredMinQty: '', stock: null, sku: '', image: '', images: [] },
       ],
     }))
   }
@@ -1442,4 +1446,462 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                       type="button"
                       onClick={() => removeGalleryItem(i)}
                       className="w-7 h-7 grid place-items-center rounded-md bg-rose-500 hover:bg-rose-600 text-white shadow"
-                      title="Elimin
+                      title="Eliminar"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Variantes y opciones ───────────────────────────────────────────── */}
+      <fieldset className="border border-slate-200 rounded-xl p-4 space-y-4">
+        <legend className="px-2 text-sm font-bold text-slate-700">Variantes y opciones</legend>
+        <p className="text-xs text-slate-500 -mt-2">
+          ¿El producto viene en distintos <b>tamaños</b>, <b>colores</b> u otras opciones?
+          Define cada dimensión abajo y genera las combinaciones automáticamente.
+          O usa "Variante simple" para un solo nivel (ej. solo talla sin color).
+        </p>
+
+        {/* Editor de grupos de opciones */}
+        <div className="space-y-2">
+          {form.optionGroups.map((group, i) => (
+            <div key={i} className="flex flex-wrap gap-2 items-center">
+              <input
+                value={group.name}
+                onChange={(e) => updateOptionGroup(i, 'name', e.target.value)}
+                placeholder="Nombre de opción (ej: Tamaño)"
+                className="px-2 py-1.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500 w-40"
+              />
+              <input
+                value={group.valuesStr}
+                onChange={(e) => updateOptionGroup(i, 'valuesStr', e.target.value)}
+                placeholder="Valores separados por coma (ej: 7 pies, 9 pies, 11 pies)"
+                className="px-2 py-1.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500 flex-1 min-w-[180px]"
+              />
+              <button
+                type="button"
+                onClick={() => removeOptionGroup(i)}
+                className="w-8 h-8 grid place-items-center rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-bold shrink-0"
+                title="Eliminar esta opción"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              onClick={addOptionGroup}
+              disabled={form.optionGroups.length >= 3}
+              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-40"
+            >
+              + Añadir opción
+            </button>
+
+            {form.optionGroups.length >= 1 && (
+              <button
+                type="button"
+                onClick={generateCombinations}
+                className="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold"
+              >
+                ⚡ Generar combinaciones
+              </button>
+            )}
+
+            {form.optionGroups.length === 0 && (
+              <button
+                type="button"
+                onClick={addVariant}
+                className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50"
+              >
+                + Variante simple
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tabla multi-dim (cuando hay optionGroups definidos y variantes generadas) */}
+        {form.optionGroups.length >= 1 && form.variants.length > 0 && (() => {
+          // Parsear los grupos para las columnas
+          const cols = form.optionGroups
+            .map((g) => ({ name: g.name.trim() }))
+            .filter((g) => g.name)
+          return (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
+                    {cols.map((c) => (
+                      <th key={c.name} className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">
+                        {c.name}
+                      </th>
+                    ))}
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Precio</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Anterior</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Stock</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">SKU</th>
+                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Imagen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.variants.map((v, i) => (
+                    <tr key={i} className="hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                      {cols.map((c) => (
+                        <td key={c.name} className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">
+                          {v.optionValues?.[c.name] || v.value || '—'}
+                        </td>
+                      ))}
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="number" min={0} step="0.01"
+                          value={v.price ?? ''}
+                          onChange={(e) => updateVariant(i, 'price', e.target.value)}
+                          placeholder="base"
+                          className="w-24 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="number" min={0} step="0.01"
+                          value={v.comparePrice ?? ''}
+                          onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
+                          className="w-24 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="number" min={0}
+                          value={v.stock ?? 0}
+                          onChange={(e) => updateVariant(i, 'stock', e.target.value)}
+                          className="w-20 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          value={v.sku ?? ''}
+                          onChange={(e) => updateVariant(i, 'sku', e.target.value)}
+                          placeholder="SKU-001"
+                          className="w-28 px-2 py-1 rounded-md border border-slate-200 text-sm uppercase focus:outline-none focus:border-brand-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {v.image ? (
+                          <div className="flex items-center gap-1">
+                            <img src={v.image} alt="" className="w-8 h-8 rounded object-cover border border-slate-200" />
+                            <button
+                              type="button"
+                              onClick={() => updateVariant(i, 'image', '')}
+                              className="text-rose-500 text-xs hover:text-rose-700"
+                              title="Quitar imagen"
+                            >×</button>
+                          </div>
+                        ) : (
+                          <input
+                            type="file" accept="image/*"
+                            onChange={(e) => uploadVariantImage(i, e.target.files?.[0])}
+                            className="text-xs max-w-[120px]"
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
+
+        {/* Lista simple de variantes (cuando NO hay optionGroups) */}
+        {form.optionGroups.length === 0 && form.variants.length > 0 && (
+          <div className="space-y-3">
+            {form.variants.map((v, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[80px_1fr_1fr_100px_100px_100px_140px_auto] gap-2 items-start p-3 border border-slate-200 rounded-xl bg-slate-50/50 overflow-x-auto"
+              >
+                <div className="w-16 h-16 rounded-lg bg-white border border-slate-200 overflow-hidden grid place-items-center text-slate-300 text-xs">
+                  {v.image ? (
+                    <img src={v.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>sin foto</span>
+                  )}
+                </div>
+                {/* Tipo de variante + valor */}
+                <div className="flex flex-col gap-2 col-span-2">
+                  {/* Selector de tipo */}
+                  <div className="flex gap-1 flex-wrap">
+                    {['Color', 'Tamaño'].map((tipo) => (
+                      <button
+                        key={tipo}
+                        type="button"
+                        onClick={() => updateVariant(i, 'label', tipo)}
+                        className={`px-3 py-1 rounded-lg border text-xs font-semibold transition ${
+                          (v.label || 'Color') === tipo
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                        }`}
+                      >
+                        {tipo === 'Color' ? '🎨 Color' : '📐 Tamaño'}
+                      </button>
+                    ))}
+                    {/* Tipo personalizado */}
+                    {!['Color', 'Tamaño'].includes(v.label || 'Color') && (
+                      <span className="px-3 py-1 rounded-lg border border-brand-600 bg-brand-50 text-brand-700 text-xs font-semibold">
+                        {v.label}
+                      </span>
+                    )}
+                    <input
+                      value={['Color', 'Tamaño'].includes(v.label || 'Color') ? '' : (v.label || '')}
+                      onChange={(e) => updateVariant(i, 'label', e.target.value || 'Color')}
+                      placeholder="Otro tipo…"
+                      maxLength={30}
+                      className="px-2 py-1 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-brand-500 w-28"
+                    />
+                  </div>
+
+                  {/* Input del valor */}
+                  <input
+                    value={v.value}
+                    onChange={(e) => updateVariant(i, 'value', e.target.value)}
+                    placeholder={
+                      (v.label || 'Color') === 'Color'
+                        ? 'Ej: Rojo, Azul marino…'
+                        : (v.label || 'Color') === 'Tamaño'
+                        ? 'Ej: S, M, L, XL…'
+                        : 'Valor de la opción'
+                    }
+                    maxLength={60}
+                    className="px-2 py-1.5 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
+                  />
+
+                  {/* Chips rápidos según tipo */}
+                  {(v.label || 'Color') === 'Color' && (
+                    <div className="flex flex-wrap gap-1">
+                      {COMMON_COLORS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => updateVariant(i, 'value', c)}
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition ${
+                            v.value === c
+                              ? 'bg-brand-600 text-white border-brand-600'
+                              : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {(v.label || 'Color') === 'Tamaño' && (
+                    <div className="flex flex-wrap gap-1">
+                      {COMMON_SIZES.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => updateVariant(i, 'value', s)}
+                          className={`px-2 py-0.5 rounded-lg text-[11px] font-medium border transition ${
+                            v.value === s
+                              ? 'bg-brand-600 text-white border-brand-600'
+                              : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400'
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Precio</label>
+                  <input
+                    type="number" min={0} step="0.01"
+                    value={v.price ?? ''}
+                    onChange={(e) => updateVariant(i, 'price', e.target.value)}
+                    placeholder="(usa el base)"
+                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Anterior</label>
+                  <input
+                    type="number" min={0} step="0.01"
+                    value={v.comparePrice ?? ''}
+                    onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
+                    className="px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                {/* Precio mayoreo por variante (opcional — hereda del producto si vacío) */}
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                  <label className="text-[11px] text-amber-700 font-semibold">Mayoreo</label>
+                  <div className="flex gap-1">
+                    <input
+                      type="number" min={0} step="0.01"
+                      value={v.wholesalePrice ?? ''}
+                      onChange={(e) => updateVariant(i, 'wholesalePrice', e.target.value)}
+                      placeholder="precio"
+                      title="Precio mayoreo de esta variante (vacío = hereda del producto)"
+                      className="w-20 px-2 py-1 text-xs border border-amber-200 rounded-md focus:outline-none focus:border-amber-400 placeholder:text-slate-300"
+                    />
+                    <input
+                      type="number" min={2} step="1"
+                      value={v.wholesaleMinQty ?? ''}
+                      onChange={(e) => updateVariant(i, 'wholesaleMinQty', e.target.value)}
+                      placeholder="mín."
+                      title="Cantidad mínima para mayoreo de esta variante"
+                      className="w-14 px-2 py-1 text-xs border border-amber-200 rounded-md focus:outline-none focus:border-amber-400 placeholder:text-slate-300"
+                    />
+                  </div>
+                  <span className="text-[9px] text-slate-400">vacío = hereda del producto</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[11px] text-slate-500">Disponibilidad</label>
+                  {(() => {
+                    const vStockMode =
+                      v.stock === null || v.stock === undefined || v.stock === ''
+                        ? 'disponible'
+                        : Number(v.stock) === 0
+                        ? 'agotado'
+                        : 'cantidad'
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex gap-1 flex-wrap">
+                          {[
+                            { val: 'disponible', label: '✅' },
+                            { val: 'agotado',    label: '❌' },
+                            { val: 'cantidad',   label: '🔢' },
+                          ].map(({ val, label }) => (
+                            <label
+                              key={val}
+                              title={val === 'disponible' ? 'Disponible' : val === 'agotado' ? 'Sin stock' : 'Cantidad'}
+                              className={`flex items-center gap-1 px-2 py-1 rounded-lg border cursor-pointer text-xs transition ${
+                                vStockMode === val
+                                  ? 'border-brand-500 bg-brand-50 font-semibold'
+                                  : 'border-slate-200 hover:border-slate-300'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`stockMode-${i}`}
+                                checked={vStockMode === val}
+                                onChange={() => {
+                                  if (val === 'disponible') updateVariant(i, 'stock', null)
+                                  else if (val === 'agotado') updateVariant(i, 'stock', 0)
+                                  else updateVariant(i, 'stock', v.stock > 0 ? v.stock : 1)
+                                }}
+                                className="w-3 h-3 accent-brand-600"
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+                        {vStockMode === 'cantidad' && (
+                          <input
+                            type="number" min={1}
+                            value={v.stock ?? 1}
+                            onChange={(e) => updateVariant(i, 'stock', e.target.value)}
+                            placeholder="Ej: 10"
+                            className="w-20 px-2 py-1 text-sm border border-slate-300 rounded-md focus:outline-none focus:border-brand-500"
+                          />
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+                <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+                  <label className="text-[11px] text-slate-500">
+                    Fotos del color{' '}
+                    <span className="text-slate-400">
+                      ({Array.isArray(v.images) && v.images.length > 0 ? v.images.length : v.image ? 1 : 0}/10)
+                    </span>
+                  </label>
+                  {/* Miniaturas existentes */}
+                  {(Array.isArray(v.images) && v.images.length > 0
+                    ? v.images
+                    : v.image ? [v.image] : []
+                  ).map((url, pi) => (
+                    <div key={url} className="flex items-center gap-1.5 mb-1">
+                      <img src={url} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" />
+                      {pi === 0 && (
+                        <span className="text-[9px] bg-brand-100 text-brand-700 font-bold px-1 rounded">principal</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeVariantGalleryImage(i, url)}
+                        className="text-rose-400 hover:text-rose-600 text-xs ml-auto"
+                        title="Quitar foto"
+                      >×</button>
+                    </div>
+                  ))}
+                  {/* Subir más fotos */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => addVariantGalleryImages(i, e.target.files)}
+                    className="text-xs mt-1"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeVariant(i)}
+                  className="self-end md:self-center w-8 h-8 grid place-items-center rounded-md bg-rose-50 hover:bg-rose-100 text-rose-600"
+                  title="Eliminar variante"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </fieldset>
+
+      {/* Barra de acciones — sticky en móvil para que siempre sea visible */}
+      <div className="sticky bottom-0 z-20 bg-white -mx-4 md:-mx-6 px-4 md:px-6 py-3 border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.06)] flex flex-wrap items-center justify-between gap-3 mt-2">
+        <div className="flex gap-2 flex-wrap">
+          {isEdit && (
+            <>
+              <button
+                type="button"
+                onClick={onPreview}
+                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm"
+                title="Abrir detalle del producto en una pestaña nueva"
+              >
+                Vista previa
+              </button>
+              <button
+                type="button"
+                onClick={onDuplicate}
+                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm"
+              >
+                Duplicar
+              </button>
+            </>
+          )}
+        </div>
+        <div className="flex gap-3 ml-auto">
+          <button
+            type="button"
+            onClick={() => router.push('/admin/productos')}
+            className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={saving || uploading || uploadingGallery}
+            className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold disabled:opacity-60 text-sm"
+          >
+            {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto'}
+          </button>
+        </div>
+      </div>
+    </form>
+  )
+}

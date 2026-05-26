@@ -191,4 +191,169 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
             <div className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
               {group.name}
               {selections[group.name] && (
-                <span className="ml
+                <span className="ml-1.5 font-normal normal-case text-slate-500">
+                  — {selections[group.name]}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Swatch "Principal" solo en el primer grupo de Color */}
+              {gi === 0 && onSelectBase && isColorGroup(group.name) && (
+                <ColorSwatch
+                  value={baseColor || '⬜'}
+                  active={baseActive}
+                  out={false}
+                  onClick={() => { setSelections({}); onSelectBase() }}
+                />
+              )}
+              {(group.values || []).map((value) => {
+                const present = isValuePresent(group.name, value)
+                const out = present && isValueOutOfStock(group.name, value)
+                const active = selections[group.name] === value
+                if (isColorGroup(group.name)) {
+                  return (
+                    <ColorSwatch
+                      key={value}
+                      value={value}
+                      active={active}
+                      out={out}
+                      onClick={() => setSelections((s) => ({ ...s, [group.name]: value }))}
+                    />
+                  )
+                }
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={out}
+                    onClick={() => setSelections((s) => ({ ...s, [group.name]: value }))}
+                    className={
+                      'px-3 py-1.5 rounded-lg border text-sm font-semibold transition ' +
+                      (out
+                        ? 'bg-slate-50 border-slate-200 text-slate-400 line-through cursor-not-allowed'
+                        : active
+                          ? 'bg-brand-600 border-brand-600 text-white shadow'
+                          : 'bg-white border-slate-300 text-slate-700 hover:border-brand-400')
+                    }
+                    title={out ? 'Sin stock en esta combinación' : value}
+                  >
+                    {value}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+
+        {allChosen && !matchedVariant && (
+          <p className="text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">
+            Esta combinación no está disponible.
+          </p>
+        )}
+        {matchedVariant && (matchedVariant.stock ?? 0) > 0 && (
+          <p className="text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
+            {matchedVariant.stock} disponibles en esta combinación.
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  // ── Modo simple (1 dimensión) ─────────────────────────────────────────────
+  // Agrupa por label. Variantes sin label se meten en 'Color' por compatibilidad.
+  const groups = useMemo(() => {
+    const map = new Map()
+    for (const v of variants || []) {
+      if (!v?.value) continue
+      const lbl = v?.label?.trim() || 'Color'
+      if (!map.has(lbl)) map.set(lbl, [])
+      map.get(lbl).push(v)
+    }
+    return Array.from(map.entries()) // [[label, [variants...]], ...]
+  }, [variants])
+
+  if (!groups.length) return null
+
+  const baseActive = !selected
+
+  return (
+    <div className="space-y-4">
+      {groups.map(([label, opts], gi) => {
+        const isColor = isColorGroup(label)
+        const activeOpt = opts.find(
+          (v) => selected?.label === v.label && selected?.value === v.value
+        )
+        // Para compatibilidad con datos viejos que no tienen label: comparar solo por value
+        const activeOptFallback = !activeOpt && opts.find((v) => selected?.value === v.value)
+        const resolvedActive = activeOpt || activeOptFallback
+
+        return (
+          <div key={label}>
+            <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
+              {label}
+              {resolvedActive && (
+                <span className="ml-1.5 font-normal normal-case text-slate-500">
+                  — {resolvedActive.value}
+                </span>
+              )}
+              {gi === 0 && isColor && baseActive && (
+                <span className="ml-1.5 font-normal normal-case text-slate-500">
+                  — Principal
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Swatch "Principal" solo en primer grupo de Color */}
+              {gi === 0 && isColor && onSelectBase && (
+                <ColorSwatch
+                  value={baseColor || 'gris'}
+                  active={baseActive}
+                  out={false}
+                  onClick={onSelectBase}
+                />
+              )}
+
+              {opts.map((v) => {
+                const active =
+                  (selected?.label === v.label && selected?.value === v.value) ||
+                  (!selected?.label && selected?.value === v.value)
+                const out = v.stock !== null && v.stock !== undefined && (v.stock ?? 0) <= 0
+                if (isColor) {
+                  return (
+                    <ColorSwatch
+                      key={`${v.label}-${v.value}`}
+                      value={v.value}
+                      active={active}
+                      out={out}
+                      onClick={() => onChange?.(v)}
+                    />
+                  )
+                }
+                // Pills de texto para Tamaño u otros
+                return (
+                  <button
+                    key={`${v.label}-${v.value}`}
+                    type="button"
+                    onClick={() => onChange?.(v)}
+                    title={out ? `${v.value} — Sin stock` : v.value}
+                    className={
+                      'px-3 py-1.5 rounded-lg border text-sm font-semibold transition ' +
+                      (active
+                        ? 'bg-brand-600 border-brand-600 text-white shadow'
+                        : out
+                          ? 'bg-slate-50 border-slate-200 text-slate-400 line-through'
+                          : 'bg-white border-slate-300 text-slate-700 hover:border-brand-400')
+                    }
+                  >
+                    {v.value}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}

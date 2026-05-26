@@ -23,6 +23,12 @@ const VariantSchema = new mongoose.Schema(
     sku: { type: String, trim: true, uppercase: true, maxlength: 40 },
     price: { type: Number, min: 0 },       // null → hereda del producto padre
     comparePrice: { type: Number, min: 0 }, // null → hereda
+    // Precios de mayoreo y por-ciento por variante (opcionales).
+    // null = hereda del producto padre.
+    wholesalePrice:  { type: Number, min: 0, default: null },
+    wholesaleMinQty: { type: Number, min: 1, default: null },
+    hundredPrice:    { type: Number, min: 0, default: null },
+    hundredMinQty:   { type: Number, min: 1, default: null },
     stock: { type: Number, min: 0, default: null }, // null = ilimitado, 0 = sin stock
     image: { type: String, trim: true, default: '' },   // thumbnail (primera foto)
     images: { type: [String], default: [] },             // galería completa de la variante
@@ -146,4 +152,34 @@ const ProductSchema = new mongoose.Schema(
 
     // "También compraron": contador por producto co-pedido en el mismo carrito.
     // Se incrementa al registrar la intención de pedido (Order pending).
-    coOrders: { type: Map, of: Number
+    coOrders: { type: Map, of: Number, default: {} },
+
+    // ---- Soft delete (papelera) ----
+    deleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
+
+    // ---- Métricas ----
+    viewsCount: { type: Number, default: 0 },
+    whatsappClicks: { type: Number, default: 0 },
+    salesCount: { type: Number, default: 0 }, // se incrementa manualmente al marcar pedido completado
+
+    // ---- Reseñas (caché desnormalizado para no agregar en cada request) ----
+    avgRating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0, min: 0 },
+
+    // ---- Auditoría ----
+    editHistory: { type: [EditLogSchema], default: [] },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  },
+  { timestamps: true }
+)
+
+ProductSchema.index({ name: 'text', description: 'text', color: 'text' })
+ProductSchema.index({ deleted: 1, active: 1, featured: 1 })
+
+if (process.env.NODE_ENV !== 'production' && mongoose.models.Product) {
+  delete mongoose.models.Product
+}
+
+export default mongoose.models.Product || mongoose.model('Product', ProductSchema)

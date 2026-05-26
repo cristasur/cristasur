@@ -78,16 +78,19 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     return Number(product.price) || 0
   }, [selected, product.price])
 
-  // Mayoreo: aplica siempre (con o sin variante seleccionada).
-  // La variante hereda los precios de mayoreo y por-ciento del producto padre.
-  const wholesalePrice =
-    Number.isFinite(Number(product.wholesalePrice)) && Number(product.wholesalePrice) > 0
-      ? Number(product.wholesalePrice)
-      : null
-  const wholesaleMinQty =
-    Number.isFinite(Number(product.wholesaleMinQty)) && Number(product.wholesaleMinQty) >= 2
-      ? Number(product.wholesaleMinQty)
-      : null
+  // Mayoreo: usa el precio de la variante si tiene uno, si no hereda del producto padre.
+  const wholesalePrice = useMemo(() => {
+    const vp = selected?.wholesalePrice
+    if (Number.isFinite(Number(vp)) && Number(vp) > 0) return Number(vp)
+    const pp = product.wholesalePrice
+    return Number.isFinite(Number(pp)) && Number(pp) > 0 ? Number(pp) : null
+  }, [selected, product.wholesalePrice])
+  const wholesaleMinQty = useMemo(() => {
+    const vq = selected?.wholesaleMinQty
+    if (Number.isFinite(Number(vq)) && Number(vq) >= 2) return Number(vq)
+    const pq = product.wholesaleMinQty
+    return Number.isFinite(Number(pq)) && Number(pq) >= 2 ? Number(pq) : null
+  }, [selected, product.wholesaleMinQty])
   // VIP: mayoreo activo siempre sin importar la cantidad pedida
   const wholesaleActive =
     wholesalePrice !== null &&
@@ -304,4 +307,33 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
             variant={selected}
             qty={qty}
             disabled={outOfStock}
-            label=
+            label={outOfStock ? 'Sin stock' : 'Añadir al carrito'}
+            className="w-full"
+          />
+
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onWhatsAppClick}
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-sm"
+          >
+            <Icon name="whatsapp" className="w-5 h-5" />
+            Pedir por WhatsApp
+          </a>
+        </div>
+
+        <p className="mt-2 text-[11px] text-slate-500 text-center">
+          Te responderemos con disponibilidad, envío y forma de pago.
+        </p>
+      </div>
+
+      <ShareButtons
+        title={product.name}
+        text={`Mira este producto en CRISTASUR`}
+        productImage={product.image || null}
+        price={formatPrice(currentPrice)}
+      />
+    </div>
+  )
+}

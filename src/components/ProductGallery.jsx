@@ -56,17 +56,37 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
   // Escuchar evento de cambio de variante desde ProductDetailClient
   useEffect(() => {
     function onVariantImage(e) {
-      const imgs = e.detail?.images  // array de URLs o null
-      if (!imgs || imgs.length === 0) {
-        // Sin imágenes de variante → restaurar galería base
+      const { mode, images: imgs } = e.detail ?? {}
+
+      if (mode === 'clear' || !imgs || imgs.length === 0) {
+        // Restaurar galería base
         setVariantItems(null)
         setIdx(0)
         return
       }
-      // Construir items de galería para esta variante
-      const newItems = imgs.map((url) => ({ type: 'image', url, isVariant: true }))
-      setVariantItems(newItems)
-      setIdx(0)
+
+      if (mode === 'gallery') {
+        // Reemplazar toda la galería con las fotos de esta variante
+        setVariantItems(imgs.map((url) => ({ type: 'image', url, isVariant: true })))
+        setIdx(0)
+        return
+      }
+
+      // mode === 'jump': una sola imagen — saltar a ella en la galería base
+      // si ya existe ahí, solo moverse; si no, inyectarla al frente
+      const singleUrl = imgs[0]
+      const existingIdx = baseItems.findIndex((it) => it.type === 'image' && it.url === singleUrl)
+      if (existingIdx >= 0) {
+        setVariantItems(null)   // mantener galería base
+        setIdx(existingIdx)
+      } else {
+        // Inyectar al frente sin ocultar el resto de la galería
+        setVariantItems([
+          { type: 'image', url: singleUrl, isVariant: true },
+          ...baseItems,
+        ])
+        setIdx(0)
+      }
     }
     window.addEventListener('cristasur:variant-image', onVariantImage)
     return () => window.removeEventListener('cristasur:variant-image', onVariantImage)

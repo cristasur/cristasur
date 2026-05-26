@@ -45,35 +45,34 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
 
   // Cuando cambia la variante seleccionada, notificar a ProductGallery para
   // que salte a la imagen de esa variante (o la inyecte si no estaba en la galería).
-  // Construye el payload de imágenes para la galería:
-  // si la variante tiene galería propia (images[]), la usa;
-  // si solo tiene image, la envuelve en array; si no tiene nada, null.
-  function variantImages(v) {
-    if (!v) return null
-    if (Array.isArray(v.images) && v.images.length > 0) return v.images
-    if (v.image) return [v.image]
-    return null
+  // Construye el payload para el evento de galería.
+  // mode 'gallery' → reemplaza toda la galería con las imágenes de la variante
+  // mode 'jump'    → salta a esa imagen dentro de la galería base (comportamiento antiguo)
+  // mode 'clear'   → restaura la galería base
+  function variantPayload(v) {
+    if (!v) return { mode: 'clear', images: null }
+    // Galería propia con 2+ fotos → reemplazo completo
+    if (Array.isArray(v.images) && v.images.length > 1) {
+      return { mode: 'gallery', images: v.images }
+    }
+    // Una sola imagen (nueva o legacy) → solo saltar a ella
+    const single = (Array.isArray(v.images) && v.images[0]) || v.image || null
+    return { mode: 'jump', images: single ? [single] : null }
   }
 
   function selectVariant(v) {
     setSelected(v)
     setQty(step)
     window.dispatchEvent(
-      new CustomEvent('cristasur:variant-image', {
-        detail: { images: variantImages(v) },
-      })
+      new CustomEvent('cristasur:variant-image', { detail: variantPayload(v) })
     )
   }
 
-  // Al montar: si hay variante pre-seleccionada con imágenes, disparar el evento
+  // Al montar: si hay variante pre-seleccionada, disparar el evento
   useEffect(() => {
-    const imgs = variantImages(initialVariant)
-    if (imgs) {
-      window.dispatchEvent(
-        new CustomEvent('cristasur:variant-image', {
-          detail: { images: imgs },
-        })
-      )
+    const payload = variantPayload(initialVariant)
+    if (payload.images) {
+      window.dispatchEvent(new CustomEvent('cristasur:variant-image', { detail: payload }))
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

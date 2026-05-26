@@ -1,4 +1,9 @@
 import { Resend } from 'resend'
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'CRISTASUR <noreply@cristasur.com>'
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://cristasur.com'
@@ -36,7 +41,7 @@ export async function sendVerificationEmail(to, token) {
 export async function sendAbandonedCartEmail(to, name, items, total) {
   const itemsHtml = items.slice(0, 3).map(x =>
     `<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9">
-      <strong>${x.name}</strong>${x.variantValue ? ` — ${x.variantValue}` : ''} x${x.qty}
+      <strong>${escapeHtml(x.name)}</strong>${x.variantValue ? ` — ${escapeHtml(x.variantValue)}` : ''} x${x.qty}
     </td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right">
       $${(x.price * x.qty).toFixed(2)}
     </td></tr>`
@@ -46,7 +51,7 @@ export async function sendAbandonedCartEmail(to, name, items, total) {
     subject: '¿Olvidaste algo? Tu carrito te espera 🛒',
     html: `<div style="font-family:sans-serif;max-width:500px;margin:auto;padding:32px">
       <img src="${SITE}/logo.png" alt="CRISTASUR" style="height:48px;margin-bottom:24px"/>
-      <h2 style="color:#1e293b">Hola ${name || ''}, dejaste productos en tu carrito</h2>
+      <h2 style="color:#1e293b">Hola ${escapeHtml(name)}, dejaste productos en tu carrito</h2>
       <p style="color:#475569">Estos artículos te están esperando:</p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0">${itemsHtml}</table>
       <p style="font-weight:700;color:#1e293b">Total: $${Number(total).toFixed(2)} MXN</p>

@@ -81,12 +81,16 @@ export async function POST(request) {
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT)
     let res
     try {
-      res = await fetch(urlStr, { redirect: 'follow', signal: ctrl.signal })
+      res = await fetch(urlStr, { redirect: 'manual', signal: ctrl.signal })
     } catch (e) {
       clearTimeout(timer)
       return NextResponse.json({ error: 'No se pudo descargar la imagen' }, { status: 502 })
     }
     clearTimeout(timer)
+    // Bloquear redirecciones para evitar SSRF a través de 3xx
+    if (res.status >= 300 && res.status < 400) {
+      return NextResponse.json({ error: 'Redirects no permitidos' }, { status: 400 })
+    }
     if (!res.ok) {
       return NextResponse.json({ error: `La URL devolvió ${res.status}` }, { status: 502 })
     }
@@ -128,19 +132,29 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No se pudo procesar la imagen' }, { status: 500 })
     }
 
-    const fileName = `${Date.now()}-${crypto.randomBytes(16).toString('hex')}${ext}`
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-    const fullPath = path.join(uploadDir, fileName)
-    if (!fullPath.startsWith(uploadDir + path.sep)) {
-      return NextResponse.json({ error: 'Ruta inválida' }, { status: 400 })
-    }
-    await mkdir(uploadDir, { recursive: true })
-    await writeFile(fullPath, processed)
-    return NextResponse.json({
-      url: `/uploads/${fileName}`,
-      bytes: processed.length,
-      originalBytes: bytes.length,
-    })
+    // NOTA: escritura a filesystem local no soportada en producción (Vercel serverless).
+    // El filesystem de Vercel es de solo lectura excepto /tmp, y los archivos no persisten
+    // entre invocaciones. Usa Vercel Blob o similar para almacenamiento persistente.
+    // El código original se preserva comentado para referencia:
+    //
+    // const fileName = `${Date.now()}-${crypto.randomBytes(16).toString('hex')}${ext}`
+    // const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+    // const fullPath = path.join(uploadDir, fileName)
+    // if (!fullPath.startsWith(uploadDir + path.sep)) {
+    //   return NextResponse.json({ error: 'Ruta inválida' }, { status: 400 })
+    // }
+    // await mkdir(uploadDir, { recursive: true })
+    // await writeFile(fullPath, processed)
+    // return NextResponse.json({
+    //   url: `/uploads/${fileName}`,
+    //   bytes: processed.length,
+    //   originalBytes: bytes.length,
+    // })
+
+    return NextResponse.json(
+      { error: 'Almacenamiento local no soportado en producción. Configura Vercel Blob.' },
+      { status: 501 }
+    )
   } catch (err) {
     console.error('POST /api/upload/url', err)
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })

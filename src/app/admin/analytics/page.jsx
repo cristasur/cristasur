@@ -75,7 +75,7 @@ async function loadStats() {
     yesterday: yestData,
     week7: {
       pageviews: sum('pageviews', week7Data),
-      visitors: new Set(week7Data.flatMap((d) => [])).size || sum('visitors', week7Data),
+      visitors: sum('visitors', week7Data),
     },
     month30: {
       pageviews: sum('pageviews', all30),

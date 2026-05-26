@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
-import mongoose from 'mongoose'
-
-// Simple schema for newsletter subscribers
-const subscriberSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true, lowercase: true },
-  source: { type: String, default: 'popup' },
-  createdAt: { type: Date, default: Date.now },
-})
-
-const Subscriber = mongoose.models.Subscriber || mongoose.model('Subscriber', subscriberSchema)
+import Newsletter from '@/models/Newsletter'
 
 export async function POST(req) {
   try {
@@ -18,9 +9,9 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
     }
     await dbConnect()
-    await Subscriber.findOneAndUpdate(
+    await Newsletter.findOneAndUpdate(
       { email: email.toLowerCase() },
-      { email: email.toLowerCase(), source: 'popup' },
+      { email: email.toLowerCase() },
       { upsert: true }
     )
     return NextResponse.json({ ok: true })

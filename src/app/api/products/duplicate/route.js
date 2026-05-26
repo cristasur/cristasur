@@ -35,7 +35,7 @@ export async function POST(request) {
       _id, __v, createdAt, updatedAt,
       sku, deleted, deletedAt,
       viewsCount, whatsappClicks, salesCount,
-      editHistory, createdBy, updatedBy,
+      coOrders, editHistory, createdBy, updatedBy,
       ...rest
     } = original
 

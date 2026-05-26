@@ -31,9 +31,13 @@ export function useFavorites() {
   useEffect(() => {
     setList(readFavs())
     const onChange = (e) => setList(e.detail?.list || readFavs())
+    const onStorage = () => setList(readFavs())
     window.addEventListener(EVENT, onChange)
-    window.addEventListener('storage', () => setList(readFavs()))
-    return () => window.removeEventListener(EVENT, onChange)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(EVENT, onChange)
+      window.removeEventListener('storage', onStorage)
+    }
   }, [])
   const toggle = useCallback((id) => {
     const current = readFavs()

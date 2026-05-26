@@ -48,6 +48,14 @@ export async function GET(request) {
     const colorParam    = (url.searchParams.get('color')    || '').trim()
     const materialParam = (url.searchParams.get('material') || '').trim()
 
+    const needsAdmin = includeInactive || includeDeleted || deletedOnly
+    if (needsAdmin) {
+      const user = await getCurrentUser()
+      if (!user || !['admin', 'editor'].includes(user.role)) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      }
+    }
+
     const filter = {}
     if (deletedOnly) filter.deleted = true
     else if (!includeDeleted) filter.deleted = { $ne: true }

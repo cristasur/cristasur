@@ -12,7 +12,8 @@ import { signToken, buildAuthCookie } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request) {
-  const { searchParams } = new URL(request.url)
+  const url = new URL(request.url)
+  const { searchParams } = url
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   const error = searchParams.get('error')
@@ -22,6 +23,13 @@ export async function GET(request) {
   // El usuario canceló
   if (error || !code) {
     return NextResponse.redirect(`${siteUrl}/cuenta/login`)
+  }
+
+  // Validación CSRF: el state del callback debe coincidir con la cookie oauth_state
+  const stateParam = url.searchParams.get('state') || ''
+  const stateCookie = request.cookies.get('oauth_state')?.value || ''
+  if (!stateParam || stateParam !== stateCookie) {
+    return NextResponse.redirect(new URL('/cuenta/login?error=oauth_state', request.url))
   }
 
   try {

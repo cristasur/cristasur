@@ -15,7 +15,7 @@ export async function POST(request) {
     if (!email) return NextResponse.json({ ok: true })
 
     await dbConnect()
-    const user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } })
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
 
     if (!user) return NextResponse.json({ ok: true })
 

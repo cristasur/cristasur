@@ -129,7 +129,7 @@ export default function UsersClient({ initialUsers, meId }) {
     if (filterVerified === 'verified' && !u.emailVerified) return false
     if (filterVerified === 'unverified' && u.emailVerified) return false
     if (filterRole !== 'all' && u.role !== filterRole) return false
-    if (search && !u.email.includes(search.toLowerCase()) && !(u.name || '').toLowerCase().includes(search.toLowerCase())) return false
+    if (search && !u.email.toLowerCase().includes(search.toLowerCase()) && !(u.name || '').toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 

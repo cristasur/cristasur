@@ -6,7 +6,7 @@
 //   - Upload múltiple a la galería (varias imágenes adicionales)
 //   - Reordenar y eliminar imágenes de la galería
 // ============================================================
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 const MAX_GALLERY = 10
@@ -165,7 +165,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   const [relSearch, setRelSearch] = useState('')
   const [relResults, setRelResults] = useState([])
   const [relSearching, setRelSearching] = useState(false)
-  const relTimerRef = typeof window !== 'undefined' ? { current: null } : { current: null }
+  const relTimerRef = useRef(null)
 
   async function searchRelated(q) {
     if (!q || q.length < 2) { setRelResults([]); return }

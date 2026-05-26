@@ -28,7 +28,8 @@ export default function LoginPage() {
         setError(data.error || 'Error al iniciar sesión')
         return
       }
-      router.push(next)
+      const safeNext = next?.startsWith('/') ? next : '/admin'
+      router.push(safeNext)
       router.refresh()
     } catch (err) {
       setError('No se pudo conectar al servidor')

@@ -5,12 +5,22 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from './CartProvider'
 
+function b64ToUtf8(b64) {
+  try {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+    return new TextDecoder().decode(bytes)
+  } catch {
+    return null
+  }
+}
+
 function decodeItems(encoded) {
   if (!encoded) return null
   try {
     // base64url → base64 → JSON
     const b64 = String(encoded).replace(/-/g, '+').replace(/_/g, '/')
-    const json = decodeURIComponent(escape(atob(b64)))
+    const json = b64ToUtf8(b64)
+    if (!json) return null
     const data = JSON.parse(json)
     if (!Array.isArray(data?.items)) return null
     return data.items

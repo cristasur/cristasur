@@ -112,12 +112,12 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
   useEffect(() => {
     if (!hasMany) return
     const onKey = (e) => {
-      if (e.key === 'ArrowLeft') goPrev()
-      if (e.key === 'ArrowRight') goNext()
+      if (e.key === 'ArrowLeft') setIdx((i) => (i - 1 + total) % total)
+      if (e.key === 'ArrowRight') setIdx((i) => (i + 1) % total)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [hasMany])
+  }, [hasMany, total])
 
   const scrollStrip = (dir) => {
     const el = stripRef.current

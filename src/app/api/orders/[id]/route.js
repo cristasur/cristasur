@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Order from '@/models/Order'
+import Coupon from '@/models/Coupon'
 import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -32,6 +33,14 @@ export async function PATCH(request, { params }) {
 
   const order = await Order.findByIdAndUpdate(params.id, { $set: update }, { new: true }).lean()
   if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+
+  // Incrementar usageCount del cupón cuando el pedido se confirma o entrega
+  if (update.status === 'confirmed' || update.status === 'delivered') {
+    if (order.couponCode) {
+      await Coupon.updateOne({ code: order.couponCode }, { $inc: { usageCount: 1 } })
+    }
+  }
+
   return NextResponse.json({ order: JSON.parse(JSON.stringify(order)) })
 }
 

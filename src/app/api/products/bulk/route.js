@@ -137,27 +137,29 @@ export async function POST(request) {
     await dbConnect()
     const filter = { _id: { $in: ids }, deleted: { $ne: true } }
 
-    const result = await Product.updateMany(filter, built.update)
-
-    // Log a editHistory en bulk también (otra writeMany)
-    await Product.updateMany(filter, {
-      $push: {
-        editHistory: {
-          $each: [
-            {
-              userId: user.sub ? new mongoose.Types.ObjectId(String(user.sub)) : undefined,
-              userEmail: user.email,
-              action: 'bulk-update',
-              changes: `bulk: ${op} (${built.summary})`,
-            },
-          ],
-          $slice: -50,
-        },
-        // updatedBy y updatedAt se actualizan vía updatedBy explícito (mongoose
-        // no toca timestamps en updateMany sin {timestamps: true} explícito)
+    // Combinar el update principal con el $push al historial en una sola operación atómica
+    const finalUpdate = { ...built.update }
+    finalUpdate.$push = {
+      editHistory: {
+        $each: [
+          {
+            userId: user.sub ? new mongoose.Types.ObjectId(String(user.sub)) : undefined,
+            userEmail: user.email,
+            action: 'bulk-update',
+            changes: `bulk: ${op} (${built.summary})`,
+          },
+        ],
+        $slice: -50,
       },
-      $set: { updatedBy: user.sub },
-    })
+    }
+    // Merge $set if it already exists (most ops use $set)
+    if (finalUpdate.$set) {
+      finalUpdate.$set.updatedBy = user.sub
+    } else {
+      finalUpdate.$set = { updatedBy: user.sub }
+    }
+
+    const result = await Product.updateMany(filter, finalUpdate)
 
     return NextResponse.json({
       ok: true,

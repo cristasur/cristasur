@@ -183,8 +183,8 @@ export default async function AdminProductos({ searchParams }) {
                   </td>
                   <td className="p-3 font-semibold">{formatPrice(p.price)}</td>
                   <td className="p-3">
-                    <span className={p.stock < 5 ? 'text-rose-600 font-semibold' : 'text-slate-700'}>
-                      {p.stock}
+                    <span className={p.stock !== null && p.stock < 5 ? 'text-rose-600 font-semibold' : 'text-slate-700'}>
+                      {p.stock === null ? '∞' : p.stock}
                     </span>
                   </td>
                   <td className="p-3">

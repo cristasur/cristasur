@@ -52,7 +52,7 @@ const EditLogSchema = new mongoose.Schema(
 
 const ProductSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true, minlength: 2, maxlength: 120, index: 'text' },
+    name: { type: String, required: true, trim: true, minlength: 2, maxlength: 120 },
     description: { type: String, required: true, trim: true, minlength: 5, maxlength: 800 },
     price: { type: Number, required: true, min: 0 },
     comparePrice: { type: Number, min: 0, default: null },

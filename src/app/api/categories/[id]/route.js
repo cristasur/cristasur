@@ -59,7 +59,7 @@ export async function DELETE(_request, { params }) {
     const category = await findCategory(params.id)
     if (!category) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
 
-    const productsCount = await Product.countDocuments({ category: category._id })
+    const productsCount = await Product.countDocuments({ categories: category._id })
     if (productsCount > 0) {
       return NextResponse.json({
         error: `No se puede eliminar: hay ${productsCount} productos en esta categoría. Muévelos o elimínalos primero.`,

@@ -67,9 +67,9 @@ function isSameOrigin(request) {
   const origin = request.headers.get('origin')
   const referer = request.headers.get('referer')
 
-  // Si el browser no envía origin ni referer (raro), dejamos pasar — el JWT
-  // y el rate limit siguen siendo barreras.
-  if (!origin && !referer) return true
+  // Si el browser no envía origin ni referer en un request mutante, lo bloqueamos
+  // para evitar CSRF con clientes que omiten ambas cabeceras.
+  if (!origin && !referer) return false
 
   try {
     if (origin) {
@@ -176,5 +176,7 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/:path*'],
+  matcher: ['/admin/:path*', '/api/:path*', '/cuenta/:path*', '/mayoreo/:path*'],
+}
+h*', '/api/:path*', '/cuenta/:path*', '/mayoreo/:path*'],
 }

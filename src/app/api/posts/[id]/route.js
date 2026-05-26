@@ -9,6 +9,15 @@ import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import { getCurrentUser } from '@/lib/auth'
 
+function sanitizeContent(html) {
+  return (html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/on\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '')
+}
+
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request, { params }) {
@@ -47,6 +56,8 @@ export async function PUT(request, { params }) {
     if (body.published && !existing.publishedAt && !body.publishedAt) {
       body.publishedAt = new Date()
     }
+
+    if (body.content) body.content = sanitizeContent(body.content)
 
     const post = await Post.findByIdAndUpdate(params.id, body, { new: true, runValidators: true }).lean()
     return NextResponse.json({ post: JSON.parse(JSON.stringify(post)) })

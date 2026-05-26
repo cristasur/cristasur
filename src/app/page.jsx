@@ -10,6 +10,7 @@ import Hero from '@/components/Hero'
 import ProductGrid from '@/components/ProductGrid'
 import Icon from '@/components/Icon'
 import RepeatOrder from '@/components/RepeatOrder'
+import CategoryCarousel from '@/components/CategoryCarousel'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,36 +71,7 @@ export default async function HomePage() {
             <Icon name="arrow" className="w-4 h-4" />
           </Link>
         </div>
-        <div className="stagger grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map((c) => (
-            <Link
-              key={c._id}
-              href={`/categoria/${c.slug}`}
-              className="card-hover group bg-white rounded-2xl overflow-hidden shadow-card border border-slate-100 hover:border-brand-200 flex flex-col"
-            >
-              <div className="aspect-square bg-brand-50 overflow-hidden relative">
-                {c.image ? (
-                  <img
-                    src={c.image}
-                    alt={c.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : c.icon ? (
-                  <div className="w-full h-full grid place-items-center text-4xl text-brand-700">
-                    {c.icon}
-                  </div>
-                ) : (
-                  <div className="w-full h-full grid place-items-center text-3xl font-black text-brand-700">
-                    {c.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="px-3 py-3 text-center">
-                <div className="font-semibold text-slate-900 text-sm line-clamp-1">{c.name}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <CategoryCarousel categories={categories} />
       </section>
 
       {/* Destacados */}

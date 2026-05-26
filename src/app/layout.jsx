@@ -140,7 +140,7 @@ gtag('config', 'G-CG871WYQHV', { page_path: window.location.pathname });`}
         <CartProvider>
           <CompareProvider>
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1 overflow-x-hidden">{children}</main>
             <Footer />
             <CartDrawer />
             <WhatsAppFab />

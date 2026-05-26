@@ -13,6 +13,11 @@
 html, body {
   max-width: 100vw;
   overflow-x: hidden;
+  /* overflow-x: clip es más efectivo que hidden en iOS Safari:
+     no crea un nuevo scroll container y evita el scroll horizontal
+     causado por elementos fixed/absolute que sobresalen del viewport. */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   color: var(--foreground);
   background: var(--background);
 }

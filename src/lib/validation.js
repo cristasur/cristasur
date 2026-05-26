@@ -93,6 +93,13 @@ export function validateProductPayload(body) {
   const hasMinQty =
     body?.wholesaleMinQty !== undefined && body?.wholesaleMinQty !== null && body?.wholesaleMinQty !== ''
   const wholesaleMinQty = hasMinQty ? Math.floor(Number(body.wholesaleMinQty)) : null
+  // Tercer precio (precio por ciento). Sin lógica activa aún — solo se almacena.
+  const hasHundred =
+    body?.hundredPrice !== undefined && body?.hundredPrice !== null && body?.hundredPrice !== ''
+  const hundredPrice = hasHundred ? Number(body.hundredPrice) : null
+  const hasHundredMin =
+    body?.hundredMinQty !== undefined && body?.hundredMinQty !== null && body?.hundredMinQty !== ''
+  const hundredMinQty = hasHundredMin ? Math.floor(Number(body.hundredMinQty)) : null
   const categories = Array.isArray(body?.categories)
     ? body.categories.map((c) => (typeof c === 'string' ? c.trim() : '')).filter(Boolean)
     : []
@@ -236,6 +243,14 @@ export function validateProductPayload(body) {
   } else if (wholesaleMinQty !== null && wholesaleMinQty > 0) {
     errors.push('Definiste cantidad mínima de mayoreo pero falta el precio de mayoreo')
   }
+  if (hundredPrice !== null) {
+    if (!Number.isFinite(hundredPrice) || hundredPrice < 0)
+      errors.push('El precio por ciento debe ser un número positivo')
+    if (!Number.isFinite(hundredMinQty) || hundredMinQty < 2)
+      errors.push('La cantidad mínima para precio por ciento debe ser 2 o más')
+  } else if (hundredMinQty !== null && hundredMinQty > 0) {
+    errors.push('Definiste cantidad mínima para precio por ciento pero falta el precio')
+  }
   if (!categories.length || !categories.every((c) => validator.isMongoId(c)))
     errors.push('Debe seleccionar al menos una categoría válida')
   if (stock !== null && (!Number.isFinite(stock) || stock < 0))
@@ -250,6 +265,8 @@ export function validateProductPayload(body) {
       comparePrice,
       wholesalePrice,
       wholesaleMinQty,
+      hundredPrice,
+      hundredMinQty,
       categories,
       image,
       gallery,
@@ -403,7 +420,8 @@ export function diffFields(before, after, fields) {
   const LABELS = {
     name: 'Nombre', description: 'Descripción', price: 'Precio',
     comparePrice: 'Precio tachado', wholesalePrice: 'Precio mayoreo',
-    wholesaleMinQty: 'Mínimo mayoreo', stock: 'Stock', featured: 'Destacado',
+    wholesaleMinQty: 'Mínimo mayoreo', hundredPrice: 'Precio por ciento',
+    hundredMinQty: 'Mínimo precio por ciento', stock: 'Stock', featured: 'Destacado',
     active: 'Activo', sku: 'SKU', image: 'Imagen', gallery: 'Galería',
     variants: 'Variantes', categories: 'Categorías', brand: 'Marca',
     color: 'Color', weight: 'Peso producto (kg)', length: 'Largo producto (cm)',

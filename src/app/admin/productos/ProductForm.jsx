@@ -27,6 +27,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     comparePrice: initial?.comparePrice ?? '',
     wholesalePrice: initial?.wholesalePrice ?? '',
     wholesaleMinQty: initial?.wholesaleMinQty ?? '',
+    hundredPrice: initial?.hundredPrice ?? '',
+    hundredMinQty: initial?.hundredMinQty ?? '',
     categories: initial?.categories?.map((c) => c._id || c) || [],
     image: initial?.image || '',
     gallery: Array.isArray(initial?.gallery) ? initial.gallery : [],
@@ -553,6 +555,55 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           Number(form.wholesalePrice) >= Number(form.price) && (
           <p className="mt-2 text-xs text-rose-600">
             El precio de mayoreo debe ser menor al precio normal.
+          </p>
+        )}
+      </fieldset>
+
+      {/* Precio por ciento (tercer precio — sin funcionalidad activa aún) */}
+      <fieldset className="border border-violet-200 bg-violet-50/30 rounded-xl p-4">
+        <legend className="px-2 text-sm font-bold text-violet-800">
+          Precio por ciento <span className="font-normal text-violet-500 text-xs">(tercer precio — próximamente)</span>
+        </legend>
+        <p className="text-xs text-violet-700/80 mb-3">
+          Para clientes que compran 100 piezas o más. Solo se guarda por ahora — la lógica automática se activará próximamente.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Precio por ciento (MXN)
+            </span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.hundredPrice}
+              onChange={(e) => update('hundredPrice', e.target.value)}
+              className={input}
+              placeholder="Debe ser menor al precio normal"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              Cantidad mínima
+            </span>
+            <input
+              type="number"
+              min="2"
+              step="1"
+              value={form.hundredMinQty}
+              onChange={(e) => update('hundredMinQty', e.target.value)}
+              className={input}
+              placeholder="Ej. 100"
+            />
+            <span className="text-xs text-slate-500">
+              Desde esa cantidad se aplicará el precio por ciento.
+            </span>
+          </label>
+        </div>
+        {form.hundredPrice && form.price &&
+          Number(form.hundredPrice) >= Number(form.price) && (
+          <p className="mt-2 text-xs text-rose-600">
+            El precio por ciento debe ser menor al precio normal.
           </p>
         )}
       </fieldset>

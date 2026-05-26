@@ -54,6 +54,11 @@ const ProductSchema = new mongoose.Schema(
     // automáticamente el wholesalePrice por unidad.
     wholesalePrice: { type: Number, min: 0, default: null },
     wholesaleMinQty: { type: Number, min: 1, default: null },
+    // Tercer precio ("precio por ciento"). Se activa cuando el cliente compra
+    // una cantidad ≥ hundredMinQty (por lo general 100 piezas).
+    // Sin funcionalidad activa aún — solo se almacena para uso futuro.
+    hundredPrice:    { type: Number, min: 0, default: null },
+    hundredMinQty:   { type: Number, min: 1, default: null },
     categories: [
       { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     ],

@@ -30,13 +30,9 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   const optionGroups = Array.isArray(product.optionGroups) ? product.optionGroups : []
   const isMultiDim = optionGroups.length >= 2
 
-  // En modo multi-dim el cliente elige las opciones paso a paso → no pre-seleccionamos.
-  // En modo simple pre-seleccionamos la primera variante con stock.
-  const initialVariant = useMemo(() => {
-    if (!variants.length) return null
-    if (isMultiDim) return null
-    return variants.find((v) => (v.stock ?? 0) > 0) || variants[0]
-  }, [variants, isMultiDim])
+  // Siempre arrancamos con la base del producto (null = sin variante seleccionada).
+  // El usuario elige el color/tamaño que quiere; no pre-seleccionamos ninguno.
+  const initialVariant = useMemo(() => null, [])
 
   const [selected, setSelected] = useState(initialVariant)
   const step = (Number.isFinite(Number(product.qtyStep)) && Number(product.qtyStep) > 1)
@@ -122,9 +118,13 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     return () => window.removeEventListener('cristasur:gallery-thumb-click', onGalleryThumbClick)
   }, [variants, product.image, product.gallery, step]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Precio base (variante > producto)
+  // Precio base: variante sobreescribe solo si tiene precio propio (no null/vacío/0).
+  // Si la variante no tiene precio definido, hereda el precio del producto.
   const basePrice = useMemo(() => {
-    if (selected && Number.isFinite(Number(selected.price))) return Number(selected.price)
+    const vp = selected?.price
+    if (vp !== null && vp !== undefined && vp !== '' && Number.isFinite(Number(vp)) && Number(vp) > 0) {
+      return Number(vp)
+    }
     return Number(product.price) || 0
   }, [selected, product.price])
 

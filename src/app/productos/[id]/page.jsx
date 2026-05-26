@@ -51,8 +51,20 @@ async function loadProduct(id) {
   })
     .populate('categories', 'name slug')
     .populate('brand', 'name slug')
+    .populate('relatedProducts', '_id name image price')
     .lean()
   if (!product) return null
+
+  // Productos relacionados vinculados manualmente (populate)
+  const manualRelated = product.relatedProducts?.length > 0
+    ? await Product.find({
+        _id: { $in: product.relatedProducts },
+        active: true,
+        deleted: { $ne: true },
+      })
+        .select('_id name image price')
+        .lean()
+    : []
 
   // "También compraron" — primero buscamos por coOrders (carritos reales).
   // Si aún no hay datos suficientes, fallback a más vistos de la misma categoría.
@@ -81,10 +93,11 @@ async function loadProduct(id) {
     alsoBought = alsoBought.slice(0, 4)
   }
 
-  // "También disponible en" — misma familia por etiqueta (tag).
-  // Si el producto tiene tags (ej: "termo"), muestra otros productos con esa etiqueta.
-  // Cada familia de productos comparte la misma etiqueta en el admin.
-  const sameFamily = product.tags?.length > 0
+  // "También disponible en" — fusión de:
+  //   1. Productos vinculados manualmente (relatedProducts)
+  //   2. Productos con la misma etiqueta (tag) — complementa la selección manual
+  // Los manuales van primero; los de etiqueta se deduplicanSame.
+  const tagFamily = product.tags?.length > 0
     ? await Product.find({
         _id: { $ne: product._id },
         tags: { $in: product.tags },
@@ -93,9 +106,15 @@ async function loadProduct(id) {
       })
         .select('_id name image price slug')
         .sort({ createdAt: -1 })
-        .limit(8)
+        .limit(12)
         .lean()
     : []
+
+  const manualIds = new Set(manualRelated.map((p) => String(p._id)))
+  const sameFamily = [
+    ...manualRelated,
+    ...tagFamily.filter((p) => !manualIds.has(String(p._id))),
+  ].slice(0, 12)
 
   // Related clásico (misma categoría) — excluye alsoBought y sameFamily para no repetir.
   const excludeIds = [product._id, ...alsoBought.map((x) => x._id), ...sameFamily.map((x) => x._id)]

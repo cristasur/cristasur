@@ -117,6 +117,14 @@ const ProductSchema = new mongoose.Schema(
     pkgHeight: { type: Number, min: 0, default: null }, // cm — alto de la caja
     pkgNote: { type: String, trim: true, default: '' },  // ej: "caja de 6 piezas", "rollo de 3"
 
+    // Productos relacionados (vinculados manualmente desde el admin).
+    // Se muestran en la sección "También disponible en" del detalle de producto,
+    // junto a los que comparten etiqueta. Máx 12.
+    relatedProducts: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+      default: [],
+    },
+
     // Marca opcional (ref a la colección Brand)
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
 

@@ -16,7 +16,9 @@ export default async function EditProductPage({ params }) {
   if (!mongoose.Types.ObjectId.isValid(params.id)) notFound()
   await dbConnect()
   const [product, categories, brands, materialsList] = await Promise.all([
-    Product.findById(params.id).lean(),
+    Product.findById(params.id)
+      .populate('relatedProducts', '_id name image price')
+      .lean(),
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Material.find({ active: true }).sort({ order: 1, name: 1 }).lean(),

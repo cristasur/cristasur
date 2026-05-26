@@ -148,6 +148,14 @@ export function validateProductPayload(body) {
     ? body.materials.map(String).filter((m) => validator.isMongoId(m))
     : []
 
+  // Productos relacionados (selección manual). Array de ObjectIds, máx 12.
+  const relatedProducts = Array.isArray(body?.relatedProducts)
+    ? body.relatedProducts
+        .map((r) => (r?._id ? String(r._id) : String(r)))
+        .filter((id) => validator.isMongoId(id))
+        .slice(0, 12)
+    : []
+
   // Color libre (ej: "Rojo", "Azul marino") — opcional
   const color = cleanSoft(body?.color, { max: 60 })
 
@@ -295,6 +303,7 @@ export function validateProductPayload(body) {
       pkgWidth,
       pkgHeight,
       pkgNote,
+      relatedProducts,
     },
   }
 }

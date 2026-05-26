@@ -72,6 +72,18 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     pkgWidth:  initial?.pkgWidth  ?? '',
     pkgHeight: initial?.pkgHeight ?? '',
     pkgNote:   initial?.pkgNote   || '',
+    // Productos relacionados (selección manual). Se guarda como array de objetos
+    // { _id, name, image, price } para mostrar en el formulario.
+    // Al enviar, la API extrae solo los _id.
+    relatedProducts: Array.isArray(initial?.relatedProducts)
+      ? initial.relatedProducts
+          .filter(Boolean)
+          .map((r) =>
+            typeof r === 'object'
+              ? { _id: String(r._id || r), name: r.name || '', image: r.image || '', price: r.price ?? 0 }
+              : { _id: String(r), name: '', image: '', price: 0 }
+          )
+      : [],
   })
   const [uploading, setUploading] = useState(false)
   const [uploadingGallery, setUploadingGallery] = useState(false)
@@ -79,6 +91,58 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   const [error, setError] = useState('')
   const [galleryUrlInput, setGalleryUrlInput] = useState('')
   const [addingGalleryUrl, setAddingGalleryUrl] = useState(false)
+
+  // ---- Búsqueda de productos relacionados ----
+  const [relSearch, setRelSearch] = useState('')
+  const [relResults, setRelResults] = useState([])
+  const [relSearching, setRelSearching] = useState(false)
+  const relTimerRef = typeof window !== 'undefined' ? { current: null } : { current: null }
+
+  async function searchRelated(q) {
+    if (!q || q.length < 2) { setRelResults([]); return }
+    setRelSearching(true)
+    try {
+      const res = await fetch(
+        `/api/products?q=${encodeURIComponent(q)}&limit=8&all=1`,
+        { cache: 'no-store' }
+      )
+      const data = await res.json().catch(() => ({}))
+      const currentId = initial?._id ? String(initial._id) : null
+      const addedIds = new Set(form.relatedProducts.map((r) => String(r._id)))
+      setRelResults(
+        (data.products || [])
+          .filter((p) => String(p._id) !== currentId && !addedIds.has(String(p._id)))
+          .map((p) => ({ _id: String(p._id), name: p.name, image: p.image || '', price: p.price ?? 0 }))
+      )
+    } catch {
+      setRelResults([])
+    } finally {
+      setRelSearching(false)
+    }
+  }
+
+  function onRelSearchChange(e) {
+    const q = e.target.value
+    setRelSearch(q)
+    clearTimeout(relTimerRef.current)
+    relTimerRef.current = setTimeout(() => searchRelated(q), 300)
+  }
+
+  function addRelated(product) {
+    setForm((f) => {
+      if (f.relatedProducts.some((r) => String(r._id) === String(product._id))) return f
+      return { ...f, relatedProducts: [...f.relatedProducts, product] }
+    })
+    setRelSearch('')
+    setRelResults([])
+  }
+
+  function removeRelated(id) {
+    setForm((f) => ({
+      ...f,
+      relatedProducts: f.relatedProducts.filter((r) => String(r._id) !== String(id)),
+    }))
+  }
 
   function update(k, v) {
     setForm((f) => ({ ...f, [k]: v }))
@@ -819,6 +883,119 @@ export default function ProductForm({ categories, brands = [], materials = [], i
               Separados por coma. Aparecen como filtros en /tag/&lt;nombre&gt;.
             </span>
           </label>
+        </div>
+      </fieldset>
+
+      {/* ── Productos relacionados (selección manual) ── */}
+      <fieldset className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4">
+        <legend className="px-2 text-sm font-bold text-indigo-800">
+          🔗 Productos relacionados{' '}
+          <span className="font-normal text-indigo-500 text-xs">(opcional)</span>
+        </legend>
+        <p className="text-xs text-indigo-700/80 mb-3">
+          Selecciona productos que aparecerán en la sección{' '}
+          <strong>"También disponible en"</strong> de este producto.
+          Úsalo para agrupar variantes por capacidad, presentación, etc.
+        </p>
+
+        {/* Chips de relacionados ya añadidos */}
+        {form.relatedProducts.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {form.relatedProducts.map((r) => (
+              <div
+                key={r._id}
+                className="flex items-center gap-1.5 bg-white border border-indigo-200 rounded-xl px-2 py-1 text-sm"
+              >
+                {r.image ? (
+                  <img
+                    src={r.image}
+                    alt=""
+                    className="w-7 h-7 rounded-lg object-cover border border-slate-100 shrink-0"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg bg-slate-100 shrink-0" />
+                )}
+                <span className="font-medium text-slate-800 max-w-[160px] truncate">
+                  {r.name || r._id}
+                </span>
+                {r.price > 0 && (
+                  <span className="text-slate-400 text-xs">
+                    {new Intl.NumberFormat('es-MX', {
+                      style: 'currency',
+                      currency: 'MXN',
+                      minimumFractionDigits: 0,
+                    }).format(r.price)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeRelated(r._id)}
+                  className="ml-0.5 text-slate-400 hover:text-rose-600 font-bold text-base leading-none"
+                  aria-label="Quitar"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Buscador */}
+        <div className="relative">
+          <input
+            type="text"
+            value={relSearch}
+            onChange={onRelSearchChange}
+            placeholder="Buscar producto por nombre…"
+            className="w-full px-3 py-2 rounded-lg border border-indigo-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 focus:outline-none text-sm"
+          />
+          {relSearching && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+              Buscando…
+            </span>
+          )}
+
+          {/* Dropdown de resultados */}
+          {relResults.length > 0 && (
+            <div className="absolute z-30 top-full mt-1 left-0 right-0 bg-white border border-indigo-200 rounded-xl shadow-lg overflow-hidden">
+              {relResults.map((p) => (
+                <button
+                  key={p._id}
+                  type="button"
+                  onClick={() => addRelated(p)}
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-indigo-50 text-left"
+                >
+                  {p.image ? (
+                    <img
+                      src={p.image}
+                      alt=""
+                      className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-lg bg-slate-100 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-slate-800 truncate">{p.name}</div>
+                    <div className="text-xs text-slate-500">
+                      {new Intl.NumberFormat('es-MX', {
+                        style: 'currency',
+                        currency: 'MXN',
+                        minimumFractionDigits: 0,
+                      }).format(p.price)}
+                    </div>
+                  </div>
+                  <span className="text-indigo-500 text-xs font-semibold shrink-0">+ Añadir</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Ningún resultado */}
+          {relSearch.length >= 2 && !relSearching && relResults.length === 0 && (
+            <div className="absolute z-30 top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-3 text-sm text-slate-500">
+              No se encontraron productos con ese nombre.
+            </div>
+          )}
         </div>
       </fieldset>
 

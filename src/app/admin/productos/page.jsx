@@ -5,6 +5,7 @@ import Product from '@/models/Product'
 import DeleteProductButton from './DeleteProductButton'
 import DuplicateButton from './DuplicateButton'
 import ExportCsvButton from './ExportCsvButton'
+import FlagButton from './FlagButton'
 import Icon from '@/components/Icon'
 import Category from '@/models/Category'
 
@@ -157,7 +158,12 @@ export default async function AdminProductos({ searchParams }) {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-semibold text-slate-900 line-clamp-1">{p.name}</div>
+                        <div className="flex items-center gap-1.5">
+                          {p.flagged && (
+                            <span className="shrink-0 w-2 h-2 rounded-full bg-amber-400" title="Pendiente de revisar" />
+                          )}
+                          <div className="font-semibold text-slate-900 line-clamp-1">{p.name}</div>
+                        </div>
                         {p.sku ? (
                           <div className="text-[11px] text-slate-400 font-mono mt-0.5">SKU: {p.sku}</div>
                         ) : (
@@ -194,6 +200,7 @@ export default async function AdminProductos({ searchParams }) {
                   </td>
                   <td className="p-3 text-right">
                     <div className="inline-flex items-center gap-2 flex-wrap justify-end">
+                      <FlagButton id={p._id} flagged={!!p.flagged} />
                       <Link
                         href={`/admin/productos/${p._id}`}
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"

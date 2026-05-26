@@ -161,6 +161,14 @@ export async function PATCH(request, { params }) {
     // Las acciones admin requieren auth (middleware ya la obliga en PATCH)
     const user = await getCurrentUser()
 
+    if (action === 'flag') {
+      const product = await Product.findById(params.id).select('flagged').lean()
+      if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      const next = !product.flagged
+      await Product.updateOne({ _id: params.id }, { flagged: next })
+      return NextResponse.json({ ok: true, flagged: next })
+    }
+
     if (action === 'restore') {
       const product = await Product.findByIdAndUpdate(
         params.id,

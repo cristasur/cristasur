@@ -87,6 +87,7 @@ const ProductSchema = new mongoose.Schema(
     },
 
     featured: { type: Boolean, default: false, index: true },
+    flagged: { type: Boolean, default: false }, // nota visual admin: "pendiente de revisar"
     stock: { type: Number, default: null, min: 0 }, // null = sin límite / no se sabe
     active: { type: Boolean, default: true, index: true },
     sku: { type: String, trim: true, uppercase: true, sparse: true, unique: true },

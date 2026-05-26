@@ -188,7 +188,11 @@ export default async function ProductDetail({ params }) {
   const productUrl = `${siteUrl()}/productos/${product._id}`
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0
   // null = ilimitado (sin número), 0 = sin stock, >0 = muestra cantidad
-  const stockUnlimited = !hasVariants && product.stock === null
+  // Para productos sin variantes: null = ilimitado
+  // Para productos con variantes: si alguna tiene stock null, hay stock disponible
+  const stockUnlimited =
+    (!hasVariants && product.stock === null) ||
+    (hasVariants && product.variants.some((v) => v.stock === null))
   const totalStock = hasVariants
     ? product.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
     : product.stock ?? 0

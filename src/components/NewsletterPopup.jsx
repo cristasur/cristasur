@@ -322,8 +322,8 @@ export default function NewsletterPopup() {
     if (!ready) return
     let timer
 
-    // ---- Prioridad 1: cuenta sin verificar ----
-    if (user && !user.emailVerified) {
+    // ---- Prioridad 1: cuenta sin verificar (solo clientes, no admins/editores) ----
+    if (user && !user.emailVerified && user.role === 'customer') {
       try { if (sessionStorage.getItem(SS_VERIFY_SEEN)) return } catch {}
       timer = setTimeout(() => setWhich('verify'), VERIFY_DELAY_MS)
       return () => clearTimeout(timer)

@@ -71,6 +71,10 @@ export async function POST(request) {
     }
 
     user.lastLoginAt = new Date()
+    // Admins y editores quedan verificados automáticamente
+    if (!user.emailVerified && ['admin', 'editor'].includes(user.role)) {
+      user.emailVerified = true
+    }
     await user.save()
 
     // Login exitoso → limpiamos la deuda de la IP/email

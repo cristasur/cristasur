@@ -48,7 +48,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Email ya registrado' }, { status: 409 })
     }
 
+    // Cuentas admin/editor no requieren verificación de email
     const user = await User.createWithPassword({ email, password, name, role })
+    user.emailVerified = true
+    await user.save()
     return NextResponse.json(
       {
         user: {

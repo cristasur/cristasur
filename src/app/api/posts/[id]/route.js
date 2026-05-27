@@ -9,13 +9,35 @@ import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import { getCurrentUser } from '@/lib/auth'
 
+const ALLOWED_IFRAME_HOSTS = [
+  'www.facebook.com', 'facebook.com',
+  'www.youtube.com', 'youtube.com', 'youtu.be',
+  'www.instagram.com', 'instagram.com',
+  'www.tiktok.com', 'tiktok.com',
+  'www.google.com', 'maps.google.com',
+  'player.vimeo.com', 'vimeo.com',
+]
+
 function sanitizeContent(html) {
-  return (html || '')
+  let clean = (html || '')
     .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '')
     .replace(/on\w+='[^']*'/gi, '')
     .replace(/javascript:/gi, '')
+
+  clean = clean.replace(/<iframe[\s\S]*?<\/iframe>/gi, (match) => {
+    const srcMatch = match.match(/src=["']([^"']+)["']/i)
+    if (!srcMatch) return ''
+    try {
+      const host = new URL(srcMatch[1]).hostname
+      if (ALLOWED_IFRAME_HOSTS.some((allowed) => host === allowed || host.endsWith('.' + allowed))) {
+        return match
+      }
+    } catch {}
+    return ''
+  })
+
+  return clean
 }
 
 export const dynamic = 'force-dynamic'

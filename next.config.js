@@ -31,6 +31,20 @@ const cspDirectives = {
   'media-src': ["'self'", 'data:', 'blob:'],
   'worker-src': ["'self'", 'blob:'],
   'manifest-src': ["'self'"],
+  // Permite cargar iframes de redes sociales y mapas en el blog
+  'frame-src': [
+    "'self'",
+    'https://www.facebook.com',
+    'https://web.facebook.com',
+    'https://www.youtube.com',
+    'https://youtube.com',
+    'https://www.instagram.com',
+    'https://www.tiktok.com',
+    'https://www.google.com',
+    'https://maps.google.com',
+    'https://www.google.com/maps/',
+    'https://player.vimeo.com',
+  ],
   // En prod actualizamos requests inseguras a https
   ...(isProd ? { 'upgrade-insecure-requests': [] } : {}),
 }

@@ -228,11 +228,12 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   }
 
   return (
-    <div className="mt-4 md:mt-6 space-y-4 md:space-y-5">
+    <div className="mt-4 md:mt-6 space-y-4 md:space-y-5 w-full min-w-0">
       {/* Badge VIP */}
       {isVip && wholesalePrice !== null && (
-        <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-1.5 rounded-full">
-          ⭐ Precio VIP activo — mayoreo aplicado automáticamente
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-1.5 rounded-full w-fit max-w-full flex-wrap">
+          <span>⭐</span>
+          <span>Precio VIP activo — mayoreo aplicado automáticamente</span>
         </div>
       )}
 
@@ -292,9 +293,9 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5 w-full">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
+          <div className="min-w-0">
             <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
               Cantidad
             </div>
@@ -341,7 +342,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
             )}
           </div>
 
-          <div className="text-right">
+          <div className="text-right min-w-0 shrink-0">
             <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
               Subtotal
             </div>
@@ -351,7 +352,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
           </div>
         </div>
 
-        <div className="mt-4 grid sm:grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <AddToCartButton
             product={product}
             variant={selected}

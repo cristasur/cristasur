@@ -248,7 +248,7 @@ export default async function ProductDetail({ params }) {
           videoUrl={product.videoUrl || ''}
         />
 
-        <div className="flex flex-col min-w-0">
+        <div className="flex flex-col min-w-0 overflow-x-hidden">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               {product.categories?.[0]?.name && (
@@ -301,9 +301,9 @@ export default async function ProductDetail({ params }) {
 
           {/* Capacidad + Dimensiones y peso */}
           {(product.capacity || product.weight || product.length || product.width || product.height) && (
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-2">
               {product.capacity && (
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
+                <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm shrink-0">
                   <span className="text-slate-400">🧴</span>
                   <span className="text-slate-500">Capacidad:</span>
                   <span className="font-semibold text-slate-800">
@@ -312,14 +312,14 @@ export default async function ProductDetail({ params }) {
                 </div>
               )}
               {product.weight && (
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
+                <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm shrink-0">
                   <span className="text-slate-400">⚖️</span>
                   <span className="text-slate-500">Peso:</span>
                   <span className="font-semibold text-slate-800">{product.weight} kg</span>
                 </div>
               )}
               {product.length && product.width && product.height && (
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
+                <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm shrink-0">
                   <span className="text-slate-400">📐</span>
                   <span className="text-slate-500">Medidas:</span>
                   <span className="font-semibold text-slate-800">

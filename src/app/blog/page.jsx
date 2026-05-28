@@ -83,12 +83,13 @@ export default async function BlogPage({ searchParams }) {
   return (
     <main className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-black text-slate-900 mb-2">
-          Blog CRISTASUR — Consejos y guías
+      <div className="mb-10 border-b border-slate-100 pb-8">
+        <p className="text-xs font-bold text-brand-600 uppercase tracking-widest mb-2">Blog</p>
+        <h1 className="text-3xl md:text-4xl font-black text-slate-900 leading-tight mb-3">
+          Consejos, guías y novedades
         </h1>
-        <p className="text-slate-500 text-lg">
-          Artículos sobre plásticos, cristalería y todo lo que necesitas para tu hogar o negocio.
+        <p className="text-slate-500 max-w-xl">
+          Todo lo que necesitas saber sobre plásticos, cristalería y artículos para tu hogar o negocio.
         </p>
       </div>
 
@@ -102,120 +103,95 @@ export default async function BlogPage({ searchParams }) {
             : 'Próximamente publicaremos artículos y guías.'}
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10">
           {posts.map((post) => {
             const embed = extractEmbed(post.content)
             const plat = embed ? PLATFORM_META[embed.platform] : null
-
-            // Thumbnail: coverImage > YouTube thumb > placeholder de plataforma > sin imagen
             const hasCover = Boolean(post.coverImage)
             const hasYtThumb = embed?.platform === 'youtube' && embed.thumb
             const isVideo = post.postType === 'video' || Boolean(embed)
+            const imgSrc = hasCover ? post.coverImage : hasYtThumb ? embed.thumb : null
 
             return (
-              <article
-                key={post._id}
-                className="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden flex flex-col"
-              >
-                {/* Miniatura */}
-                <Link href={`/blog/${post.slug}`} className="block relative">
-                  {hasCover ? (
-                    <img
-                      src={post.coverImage}
-                      alt={post.title}
-                      className="w-full h-44 object-cover"
-                      loading="lazy"
-                    />
-                  ) : hasYtThumb ? (
-                    <div className="relative w-full h-44 bg-black overflow-hidden">
+              <article key={post._id} className="group flex flex-col">
+
+                {/* Imagen */}
+                <Link href={`/blog/${post.slug}`} className="block relative overflow-hidden rounded-xl mb-4 bg-slate-100">
+                  {imgSrc ? (
+                    <>
                       <img
-                        src={embed.thumb}
+                        src={imgSrc}
                         alt={post.title}
-                        className="w-full h-full object-cover opacity-90"
+                        className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                         loading="lazy"
                       />
-                      {/* Botón play */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-14 h-14 rounded-full bg-red-600 flex items-center justify-center shadow-lg">
-                          <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7 ml-1">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      {/* Play overlay para videos */}
+                      {isVideo && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-11 h-11 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow group-hover:scale-110 transition-transform duration-200">
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-800 ml-0.5">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ) : embed ? (
-                    /* Plataforma sin thumbnail — tarjeta de color */
-                    <div className={`w-full h-44 flex flex-col items-center justify-center gap-3 ${plat?.bg || 'bg-slate-800'}`}>
-                      <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7 ml-1">
+                      )}
+                    </>
+                  ) : isVideo ? (
+                    <div className="w-full h-48 flex items-center justify-center">
+                      <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-400 ml-0.5">
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
-                      <span className="text-white text-xs font-semibold tracking-wide opacity-80">
-                        {plat?.label || 'Video'}
-                      </span>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="w-full h-48" />
+                  )}
 
-                  {/* Badges superpuestos */}
-                  <div className="absolute top-2 left-2 flex gap-1.5">
-                    {post.featured && (
-                      <span className="bg-amber-400 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full shadow">
-                        ⭐ Destacado
-                      </span>
-                    )}
-                    {isVideo && (
-                      <span className="bg-black/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                        ▶ Video
-                      </span>
-                    )}
-                  </div>
+                  {post.featured && (
+                    <span className="absolute top-3 left-3 bg-white/95 text-amber-600 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm tracking-widest uppercase">
+                      Destacado
+                    </span>
+                  )}
                 </Link>
 
-                <div className="p-5 flex flex-col flex-1">
-                  {/* Tags */}
+                {/* Meta superior */}
+                <div className="flex items-center gap-2 mb-2">
                   {post.tags?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {post.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-medium"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                    <span className="text-[11px] font-bold text-brand-600 uppercase tracking-widest">
+                      {post.tags[0]}
+                    </span>
                   )}
-
-                  {/* Título */}
-                  <h2 className="text-lg font-bold text-slate-900 leading-snug mb-2">
-                    <Link href={`/blog/${post.slug}`} className="hover:text-brand-700">
-                      {post.title}
-                    </Link>
-                  </h2>
-
-                  {/* Excerpt */}
-                  {post.excerpt && (
-                    <p className="text-slate-500 text-sm leading-relaxed flex-1 mb-4 line-clamp-3">
-                      {post.excerpt}
-                    </p>
+                  {isVideo && (
+                    <>
+                      {post.tags?.length > 0 && <span className="text-slate-200 text-xs">·</span>}
+                      <span className="text-[11px] text-slate-400 uppercase tracking-widest font-medium">Video</span>
+                    </>
                   )}
+                </div>
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">{formatDate(post.publishedAt)}</span>
-                      {post.viewsCount > 0 && (
-                        <span className="text-xs text-slate-300">· {post.viewsCount} vistas</span>
-                      )}
-                    </div>
-                    <Link
-                      href={`/blog/${post.slug}`}
-                      className="text-sm font-semibold text-brand-700 hover:text-brand-900"
-                    >
-                      {isVideo ? 'Ver video →' : 'Leer más →'}
-                    </Link>
-                  </div>
+                {/* Título */}
+                <h2 className="text-[15px] font-bold text-slate-900 leading-snug mb-2 group-hover:text-brand-700 transition-colors duration-200">
+                  <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+                </h2>
+
+                {/* Excerpt */}
+                {post.excerpt && (
+                  <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 flex-1">
+                    {post.excerpt}
+                  </p>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+                  <span className="text-xs text-slate-400">{formatDate(post.publishedAt)}</span>
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    className="text-xs font-semibold text-slate-400 hover:text-brand-700 transition-colors"
+                  >
+                    {isVideo ? 'Ver →' : 'Leer →'}
+                  </Link>
                 </div>
               </article>
             )

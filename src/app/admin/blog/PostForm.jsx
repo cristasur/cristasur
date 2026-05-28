@@ -3,7 +3,7 @@
 // ============================================================
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 function slugify(str) {
@@ -37,6 +37,26 @@ export default function PostForm({ initial }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('editor') // 'editor' | 'preview'
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Error al subir imagen'); return }
+      setForm((prev) => ({ ...prev, coverImage: data.url }))
+    } catch {
+      setError('Error al subir imagen')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target
@@ -234,22 +254,48 @@ export default function PostForm({ initial }) {
       {/* Cover Image */}
       <div>
         <label className="block text-sm font-semibold text-slate-700 mb-1">
-          URL de imagen de portada
+          Imagen de portada
         </label>
-        <input
-          name="coverImage"
-          value={form.coverImage}
-          onChange={handleChange}
-          type="url"
-          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-          placeholder="https://..."
-        />
-        {form.coverImage && (
-          <img
-            src={form.coverImage}
-            alt="Vista previa"
-            className="mt-2 h-36 w-auto object-cover rounded-lg border border-slate-100"
+        <div className="flex gap-2">
+          <input
+            name="coverImage"
+            value={form.coverImage}
+            onChange={handleChange}
+            type="url"
+            className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            placeholder="https://... o sube un archivo →"
           />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-semibold whitespace-nowrap disabled:opacity-50 transition-colors"
+          >
+            {uploading ? 'Subiendo…' : '📁 Subir'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCoverUpload}
+            className="hidden"
+          />
+        </div>
+        {form.coverImage && (
+          <div className="mt-2 relative w-fit">
+            <img
+              src={form.coverImage}
+              alt="Vista previa"
+              className="h-36 w-auto object-cover rounded-lg border border-slate-100"
+            />
+            <button
+              type="button"
+              onClick={() => setForm((p) => ({ ...p, coverImage: '' }))}
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow hover:bg-red-600"
+            >
+              ✕
+            </button>
+          </div>
         )}
       </div>
 

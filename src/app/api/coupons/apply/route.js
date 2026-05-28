@@ -11,10 +11,21 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Coupon from '@/models/Coupon'
+import { rateLimit, clientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
+  // Rate limit: máx 20 intentos por IP por 10 minutos (evita fuerza bruta de códigos)
+  const ip = clientIp(request)
+  const rl = rateLimit(`coupon:${ip}`, 20, 10 * 60 * 1000)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Espera unos minutos.' },
+      { status: 429 }
+    )
+  }
+
   try {
     const body = await request.json().catch(() => ({}))
     const code = String(body?.code || '').trim().toUpperCase()

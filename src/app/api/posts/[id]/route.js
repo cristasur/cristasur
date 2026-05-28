@@ -8,6 +8,7 @@ import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import { getCurrentUser } from '@/lib/auth'
+import { rateLimit, clientIp } from '@/lib/rate-limit'
 
 const ALLOWED_IFRAME_HOSTS = [
   'www.facebook.com', 'facebook.com',
@@ -93,6 +94,13 @@ export async function PUT(request, { params }) {
 }
 
 export async function PATCH(request, { params }) {
+  // Rate limit: máx 5 vistas por IP por post por 10 min (evita inflar contadores)
+  const ip = clientIp(request)
+  const rl = rateLimit(`view:${ip}:${params.id}`, 5, 10 * 60 * 1000)
+  if (!rl.ok) {
+    return NextResponse.json({ ok: true }) // Silencioso — no informar al cliente
+  }
+
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })

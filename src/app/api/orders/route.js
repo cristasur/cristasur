@@ -45,8 +45,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Carrito vacío' }, { status: 400 })
     }
 
-    // Limpieza/validación mínima de líneas.
-    const cleanItems = items
+    // Validar items básico
+    const rawItems = items
       .map((it) => ({
         product: isValidObjectId(it?.productId) ? it.productId : undefined,
         name: String(it?.name || '').slice(0, 200).trim(),
@@ -55,11 +55,44 @@ export async function POST(request) {
         variantLabel: String(it?.variantLabel || '').slice(0, 60),
         variantValue: String(it?.variantValue || '').slice(0, 60),
         qty: Math.max(1, Math.floor(Number(it?.qty) || 1)),
-        unitPrice: Math.max(0, Number(it?.unitPrice ?? it?.price) || 0),
         wholesaleApplied: Boolean(it?.wholesaleApplied),
+        // Precio del cliente solo como fallback para productos sin ID (ítems customizados)
+        _clientPrice: Math.max(0, Number(it?.unitPrice ?? it?.price) || 0),
       }))
-      .filter((x) => x.name && x.unitPrice >= 0)
+      .filter((x) => x.name)
       .slice(0, 200)
+
+    if (!rawItems.length) {
+      return NextResponse.json({ error: 'Carrito inválido' }, { status: 400 })
+    }
+
+    await dbConnect()
+
+    // Obtener precios reales de la DB para todos los productos con ID
+    const productIds = [...new Set(rawItems.map((x) => x.product).filter(Boolean))]
+    const dbProducts = productIds.length
+      ? await Product.find({ _id: { $in: productIds } })
+          .select('_id price wholesalePrice')
+          .lean()
+      : []
+    const priceMap = {}
+    for (const p of dbProducts) priceMap[String(p._id)] = p
+
+    // Asignar precios desde DB (si hay ID) o del cliente (ítems sin producto)
+    const cleanItems = rawItems
+      .map((it) => {
+        let unitPrice = it._clientPrice
+        if (it.product && priceMap[it.product]) {
+          const dbP = priceMap[it.product]
+          // Usar precio mayoreo si aplica y es menor (más barato), sino precio normal
+          unitPrice = it.wholesaleApplied && dbP.wholesalePrice > 0
+            ? dbP.wholesalePrice
+            : dbP.price
+        }
+        const { _clientPrice, ...rest } = it
+        return { ...rest, unitPrice: Math.max(0, unitPrice) }
+      })
+      .filter((x) => x.unitPrice >= 0)
 
     if (!cleanItems.length) {
       return NextResponse.json({ error: 'Carrito inválido' }, { status: 400 })
@@ -69,7 +102,6 @@ export async function POST(request) {
     const discount = Math.max(0, Number(body?.discount) || 0)
     const total = Math.max(0, subtotal - discount)
 
-    await dbConnect()
     const order = await Order.create({
       items: cleanItems,
       subtotal,

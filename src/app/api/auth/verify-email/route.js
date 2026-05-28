@@ -15,7 +15,15 @@ export async function GET(request) {
     }
 
     await dbConnect()
-    const user = await User.findOne({ verifyToken: token })
+    const user = await User.findOne({
+      verifyToken: token,
+      // Si verifyTokenExpiry existe, comprobar que no haya expirado.
+      // Si es null (tokens viejos sin expiry), también permitirlos por compatibilidad.
+      $or: [
+        { verifyTokenExpiry: { $gt: new Date() } },
+        { verifyTokenExpiry: null },
+      ],
+    })
 
     if (!user) {
       return NextResponse.redirect(`${SITE}/cuenta/verificar-email?status=invalid`)
@@ -23,6 +31,7 @@ export async function GET(request) {
 
     user.emailVerified = true
     user.verifyToken = null
+    user.verifyTokenExpiry = null
     await user.save()
 
     return NextResponse.redirect(`${SITE}/cuenta/verificar-email?status=success`)

@@ -12,6 +12,7 @@ import Review from '@/models/Review'
 import Product from '@/models/Product'
 import { validateReviewPayload } from '@/lib/validation'
 import { getCurrentUser } from '@/lib/auth'
+import { rateLimit, clientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,6 +76,13 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  // Rate limit: máx 5 reseñas por IP por hora
+  const ip = clientIp(request)
+  const rl = rateLimit(`reviews:${ip}`, 5, 60 * 60 * 1000)
+  if (!rl.ok) {
+    return NextResponse.json({ error: 'Demasiados intentos. Espera un momento.' }, { status: 429 })
+  }
+
   try {
     const body = await request.json().catch(() => ({}))
     const { errors, value } = validateReviewPayload(body)

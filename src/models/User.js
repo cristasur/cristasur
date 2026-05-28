@@ -76,6 +76,7 @@ const UserSchema = new mongoose.Schema(
     // Verificación de email
     emailVerified: { type: Boolean, default: false },
     verifyToken: { type: String, default: null },
+    verifyTokenExpiry: { type: Date, default: null },
     // Para recordatorio de carrito abandonado
     cartReminderSentAt: { type: Date, default: null },
     // Suscripción a ofertas y descuentos

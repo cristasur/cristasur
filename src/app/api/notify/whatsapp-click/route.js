@@ -5,15 +5,29 @@
 // ============================================================
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { rateLimit, clientIp } from '@/lib/rate-limit'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const ADMIN_EMAILS = [
-  'Amirhernandezfarah06@gmail.com',
-  'Cristasur03@gmail.com',
-]
+// Los emails de admin se configuran en .env.local — no hardcodeados en código
+function getAdminEmails() {
+  const envEmails = process.env.ADMIN_NOTIFY_EMAILS
+  if (envEmails) return envEmails.split(',').map((e) => e.trim()).filter(Boolean)
+  return [] // Si no está configurado, no enviar (no crashear)
+}
 
 export async function POST(req) {
+  // Rate limit: máx 20 notificaciones por IP por hora
+  // (legítimamente un usuario podría ver varios productos seguidos)
+  const ip = clientIp(req)
+  const rl = rateLimit(`wa-click:${ip}`, 20, 60 * 60 * 1000)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'Demasiadas solicitudes' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } }
+    )
+  }
+
   try {
     const body = await req.json().catch(() => ({}))
     const { productName, productId, sku, price, qty, variant, productUrl } = body
@@ -49,9 +63,15 @@ export async function POST(req) {
       </div>
     `
 
+    const adminEmails = getAdminEmails()
+    if (adminEmails.length === 0) {
+      console.warn('[notify/whatsapp-click] ADMIN_NOTIFY_EMAILS no configurado en .env')
+      return NextResponse.json({ ok: true })
+    }
+
     await resend.emails.send({
       from: 'CRISTASUR Leads <notificaciones@cristasur.com>',
-      to: ADMIN_EMAILS,
+      to: adminEmails,
       subject: `📲 Lead WhatsApp: ${productName || 'Producto'}`,
       html,
     })

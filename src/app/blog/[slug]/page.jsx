@@ -59,6 +59,12 @@ export default async function BlogPostPage({ params }) {
   const post = await fetchPost(params.slug)
   if (!post) return notFound()
 
+  // Incrementar contador de vistas (fire & forget en servidor)
+  try {
+    const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    fetch(`${base}/api/posts/${post._id}?action=view`, { method: 'PATCH' }).catch(() => {})
+  } catch {}
+
   const related = await fetchRelated(post._id)
 
   return (

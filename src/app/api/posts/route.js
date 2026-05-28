@@ -48,10 +48,28 @@ export async function GET(request) {
     await dbConnect()
     const url = new URL(request.url)
     const all = url.searchParams.get('all') === '1'
+    const tipo = url.searchParams.get('tipo') || ''           // 'video' | 'article'
+    const orden = url.searchParams.get('orden') || 'reciente' // 'reciente' | 'vistos' | 'destacados'
+    const q = url.searchParams.get('q') || ''                  // búsqueda libre
 
     const filter = all ? {} : { published: true }
+    if (tipo && tipo !== 'todos') filter.postType = tipo
+    if (orden === 'destacados') filter.featured = true
+    if (q) {
+      const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+      filter.$or = [{ title: rx }, { excerpt: rx }, { tags: rx }]
+    }
+
+    const sortMap = {
+      reciente: { publishedAt: -1, createdAt: -1 },
+      vistos:   { viewsCount: -1, publishedAt: -1 },
+      destacados: { publishedAt: -1, createdAt: -1 },
+    }
+    const sort = sortMap[orden] || sortMap.reciente
+
     const posts = await Post.find(filter)
-      .sort({ publishedAt: -1, createdAt: -1 })
+      .sort(sort)
+      .select('title slug excerpt coverImage author publishedAt tags postType featured viewsCount content')
       .lean()
 
     return NextResponse.json({ posts: JSON.parse(JSON.stringify(posts)) })

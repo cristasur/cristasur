@@ -28,6 +28,8 @@ export default function PostForm({ initial }) {
     author: initial?.author || 'CRISTASUR',
     tags: (initial?.tags || []).join(', '),
     published: initial?.published || false,
+    postType: initial?.postType || 'article',
+    featured: initial?.featured || false,
     seoTitle: initial?.seoTitle || '',
     seoDescription: initial?.seoDescription || '',
   })
@@ -307,6 +309,51 @@ export default function PostForm({ initial }) {
             />
             <p className="text-xs text-slate-400 mt-0.5">{form.seoDescription.length}/160</p>
           </div>
+        </div>
+      </div>
+
+      {/* Tipo de post + Destacado */}
+      <div className="flex flex-wrap gap-4 items-center border border-slate-100 rounded-xl p-4 bg-slate-50">
+        <div>
+          <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
+            Tipo de publicación
+          </label>
+          <div className="flex gap-2">
+            {[{ v: 'article', l: '📝 Artículo' }, { v: 'video', l: '▶ Video' }].map(({ v, l }) => (
+              <label
+                key={v}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer text-sm font-semibold transition-colors ${
+                  form.postType === v
+                    ? 'bg-brand-600 border-brand-600 text-white'
+                    : 'bg-white border-slate-300 text-slate-600 hover:border-brand-400'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="postType"
+                  value={v}
+                  checked={form.postType === v}
+                  onChange={handleChange}
+                  className="sr-only"
+                />
+                {l}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <input
+            id="featured"
+            name="featured"
+            type="checkbox"
+            checked={form.featured}
+            onChange={handleChange}
+            className="w-4 h-4 accent-amber-500"
+          />
+          <label htmlFor="featured" className="text-sm font-semibold text-slate-700 cursor-pointer">
+            ⭐ Destacado
+          </label>
         </div>
       </div>
 

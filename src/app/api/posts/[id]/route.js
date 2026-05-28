@@ -92,6 +92,25 @@ export async function PUT(request, { params }) {
   }
 }
 
+export async function PATCH(request, { params }) {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
+    }
+    const url = new URL(request.url)
+    const action = url.searchParams.get('action')
+    await dbConnect()
+    if (action === 'view') {
+      await Post.findByIdAndUpdate(params.id, { $inc: { viewsCount: 1 } })
+      return NextResponse.json({ ok: true })
+    }
+    return NextResponse.json({ error: 'Acción no reconocida' }, { status: 400 })
+  } catch (err) {
+    console.error('PATCH /api/posts/[id]', err)
+    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request, { params }) {
   try {
     const user = await getCurrentUser()

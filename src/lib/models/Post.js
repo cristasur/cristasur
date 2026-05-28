@@ -17,6 +17,9 @@ const PostSchema = new mongoose.Schema(
     publishedAt: { type: Date },
     seoTitle: { type: String, trim: true, default: '' },
     seoDescription: { type: String, trim: true, default: '' },
+    postType: { type: String, enum: ['article', 'video'], default: 'article' },
+    featured: { type: Boolean, default: false },
+    viewsCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 )

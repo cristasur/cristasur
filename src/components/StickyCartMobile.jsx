@@ -23,7 +23,7 @@ export default function StickyCartMobile() {
     <button
       onClick={() => setOpen(true)}
       aria-label={`Ver carrito (${count} productos)`}
-      className="fixed top-3 right-3 z-[45] md:hidden flex items-center justify-center w-11 h-11 rounded-full bg-white border border-slate-200 shadow-lg active:scale-95 transition-transform"
+      className="fixed bottom-[5.5rem] right-4 z-[45] md:hidden flex items-center justify-center w-11 h-11 rounded-full bg-white border border-slate-200 shadow-lg active:scale-95 transition-transform"
     >
       <Icon name="cart" className="w-5 h-5 text-slate-700" />
       {count > 0 && (

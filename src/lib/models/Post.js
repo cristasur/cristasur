@@ -11,6 +11,7 @@ const PostSchema = new mongoose.Schema(
     excerpt: { type: String, trim: true, default: '' },
     content: { type: String, default: '' }, // HTML almacenado como string
     coverImage: { type: String, trim: true, default: '' },
+    coverPosition: { type: String, trim: true, default: '50% 50%' }, // objectPosition CSS
     author: { type: String, trim: true, default: 'CRISTASUR' },
     tags: [{ type: String, trim: true }],
     published: { type: Boolean, default: false },

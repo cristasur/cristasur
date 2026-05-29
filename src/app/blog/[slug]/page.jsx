@@ -84,6 +84,7 @@ export default async function BlogPostPage({ params }) {
           src={post.coverImage}
           alt={post.title}
           className="w-full h-64 object-cover rounded-2xl mb-8"
+          style={{ objectPosition: post.coverPosition || '50% 50%' }}
         />
       )}
 

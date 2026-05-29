@@ -6,6 +6,89 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
+// ── Editor de encuadre de portada ──────────────────────────────
+function CoverPicker({ src, position, onChange }) {
+  const parsePos = (p) => {
+    if (!p) return { x: 50, y: 50 }
+    const parts = String(p).split(' ')
+    return { x: parseFloat(parts[0]) || 50, y: parseFloat(parts[1]) || 50 }
+  }
+
+  const [pos, setPos] = useState(() => parsePos(position))
+  const dragging = useRef(false)
+  const lastMouse = useRef(null)
+  const containerRef = useRef(null)
+
+  function applyDelta(dx, dy) {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    // Invertimos el delta: arrastrar la imagen a la derecha mueve el foco a la izquierda
+    setPos((prev) => {
+      const next = {
+        x: Math.max(0, Math.min(100, prev.x - (dx / rect.width) * 100)),
+        y: Math.max(0, Math.min(100, prev.y - (dy / rect.height) * 100)),
+      }
+      onChange(`${next.x.toFixed(1)}% ${next.y.toFixed(1)}%`)
+      return next
+    })
+  }
+
+  const onMouseDown = (e) => { e.preventDefault(); dragging.current = true; lastMouse.current = { x: e.clientX, y: e.clientY } }
+  const onMouseMove = (e) => {
+    if (!dragging.current) return
+    applyDelta(e.clientX - lastMouse.current.x, e.clientY - lastMouse.current.y)
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+  }
+  const onMouseUp = () => { dragging.current = false }
+
+  const onTouchStart = (e) => { const t = e.touches[0]; dragging.current = true; lastMouse.current = { x: t.clientX, y: t.clientY } }
+  const onTouchMove = (e) => {
+    if (!dragging.current) return
+    const t = e.touches[0]
+    applyDelta(t.clientX - lastMouse.current.x, t.clientY - lastMouse.current.y)
+    lastMouse.current = { x: t.clientX, y: t.clientY }
+  }
+
+  return (
+    <div className="mt-3">
+      <p className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+        <span>↔</span> Arrastra para ajustar el encuadre — así se verá en el blog
+      </p>
+      <div
+        ref={containerRef}
+        className="relative w-full rounded-xl overflow-hidden cursor-grab active:cursor-grabbing select-none border border-slate-200"
+        style={{ aspectRatio: '16/9' }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={() => { dragging.current = false }}
+      >
+        <img
+          src={src}
+          alt="Portada"
+          draggable={false}
+          className="w-full h-full object-cover pointer-events-none"
+          style={{ objectPosition: `${pos.x}% ${pos.y}%` }}
+        />
+        {/* Mira central */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div className="relative w-5 h-5 opacity-60">
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-white -translate-y-1/2" />
+            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white -translate-x-1/2" />
+          </div>
+        </div>
+        {/* Hint */}
+        <div className="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full pointer-events-none backdrop-blur-sm">
+          Arrastra para ajustar
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function slugify(str) {
   return str
     .toLowerCase()
@@ -25,6 +108,7 @@ export default function PostForm({ initial }) {
     excerpt: initial?.excerpt || '',
     content: initial?.content || '',
     coverImage: initial?.coverImage || '',
+    coverPosition: initial?.coverPosition || '50% 50%',
     author: initial?.author || 'CRISTASUR',
     tags: (initial?.tags || []).join(', '),
     published: initial?.published || false,
@@ -282,19 +366,19 @@ export default function PostForm({ initial }) {
           />
         </div>
         {form.coverImage && (
-          <div className="mt-2 relative w-fit">
-            <img
-              src={form.coverImage}
-              alt="Vista previa"
-              className="h-36 w-auto object-cover rounded-lg border border-slate-100"
-            />
+          <div className="mt-2 relative">
             <button
               type="button"
-              onClick={() => setForm((p) => ({ ...p, coverImage: '' }))}
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow hover:bg-red-600"
+              onClick={() => setForm((p) => ({ ...p, coverImage: '', coverPosition: '50% 50%' }))}
+              className="absolute -top-2 -right-2 z-10 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center shadow hover:bg-red-600"
             >
               ✕
             </button>
+            <CoverPicker
+              src={form.coverImage}
+              position={form.coverPosition}
+              onChange={(pos) => setForm((p) => ({ ...p, coverPosition: pos }))}
+            />
           </div>
         )}
       </div>

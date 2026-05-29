@@ -65,7 +65,7 @@ async function fetchPosts({ tipo, orden, q }) {
     const sort = sortMap[orden] || sortMap.reciente
     const posts = await Post.find(filter)
       .sort(sort)
-      .select('title slug excerpt coverImage author publishedAt tags postType featured viewsCount content')
+      .select('title slug excerpt coverImage coverPosition author publishedAt tags postType featured viewsCount content')
       .lean()
     return JSON.parse(JSON.stringify(posts))
   } catch {
@@ -123,6 +123,7 @@ export default async function BlogPage({ searchParams }) {
                         src={imgSrc}
                         alt={post.title}
                         className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        style={{ objectPosition: post.coverPosition || '50% 50%' }}
                         loading="lazy"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

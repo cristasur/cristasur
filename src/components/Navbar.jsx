@@ -7,6 +7,7 @@ import SearchAutocomplete from './SearchAutocomplete'
 import CartButton from './CartButton'
 import AccountNavLink from './AccountNavLink'
 import MobileMenu from './MobileMenu'
+import CategoryBar from './CategoryBar'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 
@@ -81,26 +82,8 @@ export default async function Navbar() {
           <SearchAutocomplete />
         </div>
 
-        {/* Chips de categoría */}
-        {categories.length > 0 && (
-          <div className="flex items-center gap-2 py-3 overflow-x-auto scroll-chip border-t border-slate-100">
-            <Link
-              href="/productos"
-              className="whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800"
-            >
-              Todos los productos
-            </Link>
-            {categories.map((c) => (
-              <Link
-                key={c._id}
-                href={`/categoria/${c.slug}`}
-                className="whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800"
-              >
-                {c.name}
-              </Link>
-            ))}
-          </div>
-        )}
+        {/* Chips de categoría — retractil */}
+        <CategoryBar categories={categories} />
       </div>
     </header>
   )

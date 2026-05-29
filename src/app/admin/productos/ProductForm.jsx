@@ -69,6 +69,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       ? initial.materials.map((m) => m._id || m)
       : [],
     materialText: initial?.materialText || '',
+    resistencia: initial?.resistencia || '',
     color: initial?.color || '',
     weight: initial?.weight ?? '',
     length: initial?.length ?? '',
@@ -987,6 +988,34 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           />
           <span className="text-xs text-slate-400 mt-1 block">Se mostrará junto al material del desplegable en la ficha del producto.</span>
         </label>
+      </div>
+
+      {/* Resistencia */}
+      <div>
+        <span className="text-sm font-medium text-slate-700 block mb-2">
+          Resistencia <span className="text-slate-400 font-normal">— opcional</span>
+        </span>
+        <div className="flex gap-3">
+          {[
+            { value: '', label: 'Sin especificar' },
+            { value: 'baja', label: '🟡 Baja' },
+            { value: 'media', label: '🟠 Media' },
+            { value: 'alta', label: '🟢 Alta' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => update('resistencia', opt.value)}
+              className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                form.resistencia === opt.value
+                  ? 'bg-brand-600 text-white border-brand-600'
+                  : 'bg-white text-slate-700 border-slate-300 hover:border-brand-400'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tags + estado + publishAt */}

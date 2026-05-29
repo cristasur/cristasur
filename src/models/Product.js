@@ -147,6 +147,9 @@ const ProductSchema = new mongoose.Schema(
     // Material en texto libre (complementa el desplegable, ej: "Polipropileno virgen")
     materialText: { type: String, trim: true, default: '' },
 
+    // Resistencia del producto (baja / media / alta)
+    resistencia: { type: String, enum: ['', 'baja', 'media', 'alta'], default: '' },
+
     // Color principal del producto (texto libre, ej: "Rojo", "Azul marino")
     color: { type: String, trim: true, default: '' },
 

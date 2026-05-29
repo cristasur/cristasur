@@ -172,6 +172,9 @@ export function validateProductPayload(body) {
   // Material en texto libre — opcional
   const materialText = cleanSoft(body?.materialText, { max: 200 })
 
+  // Resistencia — baja / media / alta
+  const resistencia = ['baja', 'media', 'alta'].includes(body?.resistencia) ? body.resistencia : ''
+
   // Color libre (ej: "Rojo", "Azul marino") — opcional
   const color = cleanSoft(body?.color, { max: 60 })
 
@@ -322,6 +325,7 @@ export function validateProductPayload(body) {
       brand,
       materials,
       materialText,
+      resistencia,
       color,
       qtyStep,
       weight,

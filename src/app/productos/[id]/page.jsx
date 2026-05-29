@@ -308,7 +308,8 @@ export default async function ProductDetail({ params }) {
       {/* ── Especificaciones técnicas (estilo Amazon) ── */}
       {(product.capacity || product.weight || product.length || product.width || product.height ||
         product.boxLength || product.boxWidth || product.boxHeight || product.boxWeight ||
-        product.materials?.length > 0 || product.materialText || product.brand?.name) && (
+        product.materials?.length > 0 || product.materialText || product.resistencia ||
+        product.brand?.name) && (
         <section className="mt-10 border-t border-slate-100 pt-8">
           <div className="md:w-1/2">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Detalles del producto</h2>
@@ -364,6 +365,18 @@ export default async function ProductDetail({ params }) {
                   <div className="flex-1 px-4 py-3 text-slate-800">{product.boxWeight} kg</div>
                 </div>
               )}
+              {product.resistencia && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Resistencia</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800 flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      product.resistencia === 'alta' ? 'bg-emerald-500' :
+                      product.resistencia === 'media' ? 'bg-amber-400' : 'bg-red-400'
+                    }`} />
+                    <span className="capitalize">{product.resistencia}</span>
+                  </div>
+                </div>
+              )}
               {product.sku && (
                 <div className="flex">
                   <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">SKU</div>
@@ -371,48 +384,6 @@ export default async function ProductDetail({ params }) {
                 </div>
               )}
             </div>
-          </div>
-        </section>
-      )}
-
-      {/* Productos relacionados — misma familia (por etiqueta) */}
-      {sameFamily?.length > 0 && (
-        <section className="mt-10 border-t border-slate-100 pt-8">
-          <h2 className="text-lg font-bold text-slate-800 mb-5">Productos relacionados</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-            {sameFamily.map((p) => (
-              <a
-                key={p._id}
-                href={`/productos/${p._id}`}
-                className="group flex flex-col rounded-2xl border border-slate-200 bg-white hover:border-brand-400 hover:shadow-md transition-all overflow-hidden"
-              >
-                {/* Imagen cuadrada */}
-                <div className="aspect-square w-full bg-slate-100 overflow-hidden">
-                  {p.image ? (
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full grid place-items-center text-slate-300">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                {/* Info */}
-                <div className="p-2.5 flex flex-col gap-1">
-                  <p className="text-[13px] font-semibold text-slate-800 group-hover:text-brand-700 line-clamp-2 leading-snug">
-                    {p.name}
-                  </p>
-                  <p className="text-[13px] font-bold text-slate-900">
-                    {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(p.price)}
-                  </p>
-                </div>
-              </a>
-            ))}
           </div>
         </section>
       )}
@@ -430,13 +401,22 @@ export default async function ProductDetail({ params }) {
         </section>
       )}
 
-      {/* Productos relacionados (misma categoría) */}
-      {related.length > 0 && (
-        <section className="mt-16">
-          <h2 className="text-2xl font-black text-slate-900 mb-6">Productos relacionados</h2>
-          <ProductGrid products={related} />
-        </section>
-      )}
+      {/* Productos relacionados — etiquetas (random) + categoría como fallback */}
+      {(() => {
+        const seenIds = new Set(alsoBought.map((p) => String(p._id)))
+        // sameFamily ya viene aleatorio; completar con related si hacen falta
+        const pool = [
+          ...sameFamily.filter((p) => !seenIds.has(String(p._id))),
+          ...related.filter((p) => !seenIds.has(String(p._id)) && !sameFamily.find((s) => String(s._id) === String(p._id))),
+        ].slice(0, 8)
+        if (!pool.length) return null
+        return (
+          <section className="mt-16">
+            <h2 className="text-2xl font-black text-slate-900 mb-6">Productos relacionados</h2>
+            <ProductGrid products={pool} />
+          </section>
+        )
+      })()}
 
       {/* Vistos recientemente (se oculta si no hay historial) */}
       <RecentlyViewed excludeId={product._id} />

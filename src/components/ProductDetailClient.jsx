@@ -261,7 +261,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
               <>
                 <b>¡Precio mayoreo activado!</b> Pagas{' '}
                 <b>{formatPrice(wholesalePrice)}</b> por pieza ({qty} unidades).
-                Ahorro: <b>{formatPrice((basePrice - wholesalePrice) * qty)}</b>.
+                <span className="ml-1 font-semibold text-emerald-700">¡Ahorro incluido!</span>
               </>
             ) : (
               <>

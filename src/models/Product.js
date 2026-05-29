@@ -144,6 +144,9 @@ const ProductSchema = new mongoose.Schema(
     // Materiales (puede tener varios: plástico, vidrio, acero…)
     materials: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Material' }],
 
+    // Material en texto libre (complementa el desplegable, ej: "Polipropileno virgen")
+    materialText: { type: String, trim: true, default: '' },
+
     // Color principal del producto (texto libre, ej: "Rojo", "Azul marino")
     color: { type: String, trim: true, default: '' },
 

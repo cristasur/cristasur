@@ -68,6 +68,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     materials: Array.isArray(initial?.materials)
       ? initial.materials.map((m) => m._id || m)
       : [],
+    materialText: initial?.materialText || '',
     color: initial?.color || '',
     weight: initial?.weight ?? '',
     length: initial?.length ?? '',
@@ -970,6 +971,23 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           )}
         </div>
       )}
+
+      {/* Material en texto libre */}
+      <div>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">
+            Material (texto libre) <span className="text-slate-400 font-normal">— opcional</span>
+          </span>
+          <input
+            type="text"
+            value={form.materialText}
+            onChange={(e) => update('materialText', e.target.value)}
+            placeholder="Ej: Polipropileno virgen, acero inoxidable 304…"
+            className="mt-1 block w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <span className="text-xs text-slate-400 mt-1 block">Se mostrará junto al material del desplegable en la ficha del producto.</span>
+        </label>
+      </div>
 
       {/* Tags + estado + publishAt */}
       <fieldset className="border border-slate-200 rounded-xl p-4 space-y-4">

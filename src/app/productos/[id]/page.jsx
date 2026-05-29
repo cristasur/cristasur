@@ -51,6 +51,7 @@ async function loadProduct(id) {
   })
     .populate('categories', 'name slug')
     .populate('brand', 'name slug')
+    .populate('materials', 'name')
     .populate('relatedProducts', '_id name image price')
     .lean()
   if (!product) return null
@@ -307,7 +308,7 @@ export default async function ProductDetail({ params }) {
       {/* ── Especificaciones técnicas (estilo Amazon) ── */}
       {(product.capacity || product.weight || product.length || product.width || product.height ||
         product.boxLength || product.boxWidth || product.boxHeight || product.boxWeight ||
-        product.materials?.length > 0 || product.brand?.name) && (
+        product.materials?.length > 0 || product.materialText || product.brand?.name) && (
         <section className="mt-10 border-t border-slate-100 pt-8">
           <div className="md:w-1/2">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Detalles del producto</h2>
@@ -318,10 +319,15 @@ export default async function ProductDetail({ params }) {
                   <div className="flex-1 px-4 py-3 text-slate-800">{product.brand.name}</div>
                 </div>
               )}
-              {product.materials?.length > 0 && (
+              {(product.materials?.length > 0 || product.materialText) && (
                 <div className="flex border-b border-slate-100">
                   <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Material</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.materials.join(', ')}</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">
+                    {[
+                      ...(product.materials?.map(m => m.name).filter(Boolean) || []),
+                      ...(product.materialText ? [product.materialText] : [])
+                    ].join(', ')}
+                  </div>
                 </div>
               )}
               {product.capacity && (

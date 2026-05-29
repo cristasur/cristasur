@@ -58,7 +58,7 @@ export async function PUT(request, { params }) {
       'wholesaleMinQty', 'stock', 'featured', 'active', 'sku', 'image',
       'gallery', 'variants', 'categories', 'brand', 'color',
       'weight', 'length', 'width', 'height', 'status', 'publishAt',
-      'qtyStep', 'materials', 'tags',
+      'qtyStep', 'materials', 'materialText', 'tags',
     ]
     const summary = diffSummary(before, value, DIFF_FIELDS) || 'sin cambios relevantes'
     const diff = diffFields(before, value, DIFF_FIELDS)

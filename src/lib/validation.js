@@ -169,6 +169,9 @@ export function validateProductPayload(body) {
         .slice(0, 12)
     : []
 
+  // Material en texto libre — opcional
+  const materialText = cleanSoft(body?.materialText, { max: 200 })
+
   // Color libre (ej: "Rojo", "Azul marino") — opcional
   const color = cleanSoft(body?.color, { max: 60 })
 
@@ -318,6 +321,7 @@ export function validateProductPayload(body) {
       tags,
       brand,
       materials,
+      materialText,
       color,
       qtyStep,
       weight,

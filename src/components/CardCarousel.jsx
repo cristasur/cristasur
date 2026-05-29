@@ -1,81 +1,106 @@
 'use client'
-// Mini carrusel automático para tarjetas de producto.
-// - Avanza solo cada 3 s si hay más de 1 imagen.
-// - Se pausa al hacer hover.
-// - Dots clickeables abajo (stopPropagation para no navegar).
-// - Cross-fade suave entre imágenes con opacity transition.
-// - Máximo 5 imágenes para no sobrecargar la red.
-import { useState, useEffect, useRef, useCallback } from 'react'
+// Carrusel de tarjeta — estático por defecto.
+// Al hacer hover aparecen flechas laterales y dots abajo para navegar manualmente.
+// Sin auto-slide: el usuario controla cuándo avanzar.
+import { useState } from 'react'
 
-export default function CardCarousel({ images: rawImages, alt, className = '' }) {
-  const images = rawImages.slice(0, 5)   // límite razonable
-  const [idx, setIdx] = useState(0)
-  const timerRef = useRef(null)
-
-  const start = useCallback(() => {
-    if (images.length < 2) return
-    clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => {
-      setIdx((i) => (i + 1) % images.length)
-    }, 3000)
-  }, [images.length])
-
-  const stop = useCallback(() => {
-    clearInterval(timerRef.current)
-  }, [])
-
-  useEffect(() => {
-    start()
-    return stop
-  }, [start, stop])
+export default function CardCarousel({ images: rawImages, alt }) {
+  const images = rawImages.slice(0, 6)
+  const [idx, setIdx]       = useState(0)
+  const [hovered, setHovered] = useState(false)
 
   if (!images.length) return null
 
+  const hasMultiple = images.length > 1
+
+  function prev(e) {
+    e.preventDefault(); e.stopPropagation()
+    setIdx((i) => (i - 1 + images.length) % images.length)
+  }
+  function next(e) {
+    e.preventDefault(); e.stopPropagation()
+    setIdx((i) => (i + 1) % images.length)
+  }
+  function goTo(e, i) {
+    e.preventDefault(); e.stopPropagation()
+    setIdx(i)
+  }
+
   return (
     <div
-      className={`relative w-full h-full ${className}`}
-      onMouseEnter={stop}
-      onMouseLeave={start}
+      className="relative w-full h-full"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* Todas las imágenes apiladas; solo la activa es opaca */}
+      {/* Imágenes — cross-fade */}
       {images.map((src, i) => (
         <img
           key={src + i}
           src={src}
           alt={i === 0 ? alt : `${alt} ${i + 1}`}
-          loading={i === 0 ? 'lazy' : 'lazy'}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+          loading="lazy"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-400 group-hover:scale-105 transition-transform duration-300 ${
             i === idx ? 'opacity-100' : 'opacity-0'
           }`}
         />
       ))}
 
-      {/* Dots — solo si hay más de 1 imagen */}
-      {images.length > 1 && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-          {images.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              aria-label={`Imagen ${i + 1}`}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setIdx(i)
-                // Reiniciar el timer desde este punto
-                clearInterval(timerRef.current)
-                timerRef.current = setInterval(() => {
-                  setIdx((cur) => (cur + 1) % images.length)
-                }, 3000)
-              }}
-              className={`rounded-full transition-all duration-200 ${
-                i === idx
-                  ? 'w-2 h-2 bg-white shadow'
-                  : 'w-1.5 h-1.5 bg-white/55'
-              }`}
-            />
-          ))}
-        </div>
+      {/* Controles — solo visibles al hover Y si hay más de 1 imagen */}
+      {hasMultiple && (
+        <>
+          {/* Flecha izquierda */}
+          <button
+            type="button"
+            aria-label="Imagen anterior"
+            onClick={prev}
+            className={`absolute left-2 top-1/2 -translate-y-1/2 z-20
+              w-7 h-7 rounded-full bg-white/90 shadow flex items-center justify-center
+              text-slate-700 hover:bg-white transition-opacity duration-200
+              ${hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" clipRule="evenodd"
+                d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" />
+            </svg>
+          </button>
+
+          {/* Flecha derecha */}
+          <button
+            type="button"
+            aria-label="Imagen siguiente"
+            onClick={next}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 z-20
+              w-7 h-7 rounded-full bg-white/90 shadow flex items-center justify-center
+              text-slate-700 hover:bg-white transition-opacity duration-200
+              ${hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" clipRule="evenodd"
+                d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" />
+            </svg>
+          </button>
+
+          {/* Dots */}
+          <div
+            className={`absolute bottom-2 left-1/2 -translate-x-1/2 z-20
+              flex gap-1.5 transition-opacity duration-200
+              ${hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Imagen ${i + 1}`}
+                onClick={(e) => goTo(e, i)}
+                className={`rounded-full transition-all duration-200 ${
+                  i === idx
+                    ? 'w-2 h-2 bg-white shadow'
+                    : 'w-1.5 h-1.5 bg-white/60 hover:bg-white/90'
+                }`}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

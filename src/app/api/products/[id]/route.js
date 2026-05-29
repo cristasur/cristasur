@@ -169,6 +169,14 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ ok: true, flagged: next })
     }
 
+    if (action === 'featured') {
+      const product = await Product.findById(params.id).select('featured').lean()
+      if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      const next = !product.featured
+      await Product.updateOne({ _id: params.id }, { featured: next })
+      return NextResponse.json({ ok: true, featured: next })
+    }
+
     if (action === 'restore') {
       const product = await Product.findByIdAndUpdate(
         params.id,

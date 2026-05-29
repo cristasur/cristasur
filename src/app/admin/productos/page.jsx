@@ -6,6 +6,7 @@ import DeleteProductButton from './DeleteProductButton'
 import DuplicateButton from './DuplicateButton'
 import ExportCsvButton from './ExportCsvButton'
 import FlagButton from './FlagButton'
+import FeaturedButton from './FeaturedButton'
 import Icon from '@/components/Icon'
 import Category from '@/models/Category'
 
@@ -200,6 +201,7 @@ export default async function AdminProductos({ searchParams }) {
                   </td>
                   <td className="p-3 text-right">
                     <div className="inline-flex items-center gap-2 flex-wrap justify-end">
+                      <FeaturedButton id={p._id} featured={!!p.featured} />
                       <FlagButton id={p._id} flagged={!!p.flagged} />
                       <Link
                         href={`/admin/productos/${p._id}`}

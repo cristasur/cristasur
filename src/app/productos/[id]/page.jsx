@@ -15,6 +15,7 @@ import ReviewList from '@/components/ReviewList'
 import RecentlyViewed from '@/components/RecentlyViewed'
 import FavoriteButton from '@/components/FavoriteButton'
 import { getCurrentUser } from '@/lib/auth'
+import User from '@/models/User'
 
 export const dynamic = 'force-dynamic'
 
@@ -181,10 +182,19 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ProductDetail({ params }) {
-  const [data, user] = await Promise.all([loadProduct(params.id), getCurrentUser()])
+  const [data, session] = await Promise.all([loadProduct(params.id), getCurrentUser()])
   if (!data) notFound()
   const { product, sameFamily, related, alsoBought } = data
-  const isVip = Boolean(user?.wholesaleAccess)
+  // Consultar DB directo para el VIP: el JWT puede estar desactualizado si el admin
+  // revocó el acceso mayoreo sin que el usuario haya vuelto a iniciar sesión.
+  let isVip = false
+  if (session?.sub) {
+    try {
+      await dbConnect()
+      const freshUser = await User.findById(session.sub).select('wholesaleAccess').lean()
+      isVip = Boolean(freshUser?.wholesaleAccess)
+    } catch {}
+  }
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const productUrl = `${siteUrl()}/productos/${product._id}`
   const hasVariants = Array.isArray(product.variants) && product.variants.length > 0

@@ -1,7 +1,9 @@
 'use client'
 // ============================================================
-// Barra de chips de categoría — se retrae al bajar y reaparece
-// al subir. Un botón tab en el borde inferior permite toggle manual.
+// Barra de chips de categoría.
+// Se oculta con opacity (NO con max-h) para evitar reflow del
+// header sticky que causaba el loop de scroll.
+// El espacio físico siempre está reservado → sin saltos de layout.
 // ============================================================
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -9,7 +11,7 @@ import Link from 'next/link'
 export default function CategoryBar({ categories }) {
   const [visible, setVisible] = useState(true)
   const lastY = useRef(0)
-  const locked = useRef(false)   // cooldown tras cambio de estado
+  const locked = useRef(false)
 
   useEffect(() => {
     lastY.current = window.scrollY
@@ -19,7 +21,6 @@ export default function CategoryBar({ categories }) {
       const y = window.scrollY
 
       if (y < 80) {
-        // Siempre visible al tope
         setVisible(true)
         lastY.current = y
         return
@@ -27,18 +28,22 @@ export default function CategoryBar({ categories }) {
 
       const delta = y - lastY.current
 
-      if (delta > 50) {
-        // Bajó más de 50px desde la última lectura → ocultar
+      if (delta > 60) {
         setVisible(false)
         lastY.current = y
         locked.current = true
-        setTimeout(() => { locked.current = false }, 400)
-      } else if (delta < -40) {
-        // Subió más de 40px → mostrar
+        setTimeout(() => {
+          lastY.current = window.scrollY   // re-anclar DESPUÉS del cooldown
+          locked.current = false
+        }, 600)
+      } else if (delta < -50) {
         setVisible(true)
         lastY.current = y
         locked.current = true
-        setTimeout(() => { locked.current = false }, 400)
+        setTimeout(() => {
+          lastY.current = window.scrollY
+          locked.current = false
+        }, 600)
       }
     }
 
@@ -50,35 +55,40 @@ export default function CategoryBar({ categories }) {
 
   return (
     <div className="relative border-t border-slate-100">
-      {/* Barra de chips */}
+      {/* Barra — siempre ocupa espacio (no colapsa), solo cambia visibilidad */}
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          visible ? 'max-h-14 opacity-100' : 'max-h-0 opacity-0'
+        className={`flex items-center gap-2 py-3 overflow-x-auto scroll-chip transition-opacity duration-300 ${
+          visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
       >
-        <div className="flex items-center gap-2 py-3 overflow-x-auto scroll-chip">
+        <Link
+          href="/productos"
+          className="whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800"
+        >
+          Todos los productos
+        </Link>
+        {categories.map((c) => (
           <Link
-            href="/productos"
+            key={c._id}
+            href={`/categoria/${c.slug}`}
             className="whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800"
           >
-            Todos los productos
+            {c.name}
           </Link>
-          {categories.map((c) => (
-            <Link
-              key={c._id}
-              href={`/categoria/${c.slug}`}
-              className="whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800"
-            >
-              {c.name}
-            </Link>
-          ))}
-        </div>
+        ))}
       </div>
 
-      {/* Tab toggle — pegado al borde inferior del header */}
+      {/* Tab toggle */}
       <button
         type="button"
-        onClick={() => setVisible((v) => !v)}
+        onClick={() => {
+          setVisible((v) => !v)
+          locked.current = true
+          setTimeout(() => {
+            lastY.current = window.scrollY
+            locked.current = false
+          }, 600)
+        }}
         aria-label={visible ? 'Ocultar categorías' : 'Mostrar categorías'}
         className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-10
           flex items-center justify-center

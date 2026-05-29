@@ -28,63 +28,65 @@ export default async function Navbar() {
   const categories = await fetchCategories()
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Top bar */}
-        <div className="flex items-center justify-between h-16 md:h-24 gap-4">
-          <Link href="/" className="flex items-center gap-3 shrink-0 py-2" aria-label="CRISTASUR inicio">
-            <img
-              src="/logo.png"
-              alt="CRISTASUR Mérida"
-              className="h-14 md:h-16 w-auto object-contain"
-            />
-            <span className="sr-only">CRISTASUR</span>
-          </Link>
+    <>
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Top bar */}
+          <div className="flex items-center justify-between h-16 md:h-24 gap-4">
+            <Link href="/" className="flex items-center gap-3 shrink-0 py-2" aria-label="CRISTASUR inicio">
+              <img
+                src="/logo.png"
+                alt="CRISTASUR Mérida"
+                className="h-14 md:h-16 w-auto object-contain"
+              />
+              <span className="sr-only">CRISTASUR</span>
+            </Link>
 
-          <div className="flex-1 max-w-xl hidden md:block">
-            <SearchAutocomplete />
+            <div className="flex-1 max-w-xl hidden md:block">
+              <SearchAutocomplete />
+            </div>
+
+            <nav className="flex items-center gap-1">
+              <Link
+                href="/productos"
+                className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+              >
+                Catálogo
+              </Link>
+              <Link
+                href="/quienes-somos"
+                className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+              >
+                Conócenos
+              </Link>
+              <Link
+                href="/blog"
+                className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+              >
+                Blog
+              </Link>
+              <Link
+                href="/contacto"
+                className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+              >
+                Contacto
+              </Link>
+              <CartButton />
+              <AccountNavLink />
+              {/* Hamburguesa — solo en móvil */}
+              <MobileMenu categories={categories} />
+            </nav>
           </div>
 
-          <nav className="flex items-center gap-1">
-            <Link
-              href="/productos"
-              className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
-            >
-              Catálogo
-            </Link>
-            <Link
-              href="/quienes-somos"
-              className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
-            >
-              Conócenos
-            </Link>
-            <Link
-              href="/blog"
-              className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
-            >
-              Blog
-            </Link>
-            <Link
-              href="/contacto"
-              className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
-            >
-              Contacto
-            </Link>
-            <CartButton />
-            <AccountNavLink />
-            {/* Hamburguesa — solo en móvil */}
-            <MobileMenu categories={categories} />
-          </nav>
+          {/* Search bar en mobile */}
+          <div className="pb-3 md:hidden">
+            <SearchAutocomplete />
+          </div>
         </div>
+      </header>
 
-        {/* Search bar en mobile */}
-        <div className="pb-3 md:hidden">
-          <SearchAutocomplete />
-        </div>
-
-        {/* Chips de categoría — retractil */}
-        <CategoryBar categories={categories} />
-      </div>
-    </header>
+      {/* Barra de categorías — FUERA del header para no afectar su altura */}
+      <CategoryBar categories={categories} />
+    </>
   )
 }

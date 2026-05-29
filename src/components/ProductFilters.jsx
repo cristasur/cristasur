@@ -32,8 +32,8 @@ export default function ProductFilters({ categories = [], brands = [], materials
     form.sort !== 'newest' ? '1' : '',
   ].filter(Boolean).length
 
-  // En móvil: abierto si ya hay filtros activos, cerrado por defecto
-  const [mobileOpen, setMobileOpen] = useState(activeCount > 0)
+  // En móvil: siempre cerrado al entrar, el usuario lo abre manualmente
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   function set(k, v) {
     setForm((f) => ({ ...f, [k]: v }))

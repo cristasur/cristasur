@@ -9,28 +9,39 @@ import Link from 'next/link'
 export default function CategoryBar({ categories }) {
   const [visible, setVisible] = useState(true)
   const lastY = useRef(0)
-  const ticking = useRef(false)
+  const locked = useRef(false)   // cooldown tras cambio de estado
 
   useEffect(() => {
+    lastY.current = window.scrollY
+
     const onScroll = () => {
-      if (ticking.current) return
-      ticking.current = true
-      requestAnimationFrame(() => {
-        const y = window.scrollY
-        // Siempre visible si estamos muy arriba
-        if (y < 60) {
-          setVisible(true)
-        } else if (y > lastY.current + 4) {
-          // Bajando rápido → ocultar
-          setVisible(false)
-        } else if (y < lastY.current - 4) {
-          // Subiendo → mostrar
-          setVisible(true)
-        }
+      if (locked.current) return
+      const y = window.scrollY
+
+      if (y < 80) {
+        // Siempre visible al tope
+        setVisible(true)
         lastY.current = y
-        ticking.current = false
-      })
+        return
+      }
+
+      const delta = y - lastY.current
+
+      if (delta > 50) {
+        // Bajó más de 50px desde la última lectura → ocultar
+        setVisible(false)
+        lastY.current = y
+        locked.current = true
+        setTimeout(() => { locked.current = false }, 400)
+      } else if (delta < -40) {
+        // Subió más de 40px → mostrar
+        setVisible(true)
+        lastY.current = y
+        locked.current = true
+        setTimeout(() => { locked.current = false }, 400)
+      }
     }
+
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])

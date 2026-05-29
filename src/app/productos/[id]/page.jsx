@@ -335,6 +335,71 @@ export default async function ProductDetail({ params }) {
         </div>
       </div>
 
+      {/* ── Especificaciones técnicas (estilo Amazon) ── */}
+      {(product.capacity || product.weight || product.length || product.width || product.height ||
+        product.boxLength || product.boxWidth || product.boxHeight || product.boxWeight ||
+        product.materials?.length > 0 || product.brand?.name) && (
+        <section className="mt-10 border-t border-slate-100 pt-8">
+          <div className="md:w-1/2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Detalles del producto</h2>
+            <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
+              {product.brand?.name && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Marca</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.brand.name}</div>
+                </div>
+              )}
+              {product.materials?.length > 0 && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Material</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.materials.join(', ')}</div>
+                </div>
+              )}
+              {product.capacity && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Capacidad</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.capacity} {product.capacityUnit || 'L'}</div>
+                </div>
+              )}
+              {product.weight && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Peso</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.weight} kg</div>
+                </div>
+              )}
+              {(product.length || product.width || product.height) && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Dimensiones</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">
+                    {[product.length, product.width, product.height].filter(Boolean).join(' × ')} cm
+                  </div>
+                </div>
+              )}
+              {(product.boxLength || product.boxWidth || product.boxHeight) && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Caja de envío</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">
+                    {[product.boxLength, product.boxWidth, product.boxHeight].filter(Boolean).join(' × ')} cm
+                  </div>
+                </div>
+              )}
+              {product.boxWeight && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Peso c/ caja</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.boxWeight} kg</div>
+                </div>
+              )}
+              {product.sku && (
+                <div className="flex">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">SKU</div>
+                  <div className="flex-1 px-4 py-3 text-slate-500 font-mono text-xs tracking-wide">{product.sku}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Productos relacionados — misma familia (por etiqueta) */}
       {sameFamily?.length > 0 && (
         <section className="mt-10 border-t border-slate-100 pt-8">

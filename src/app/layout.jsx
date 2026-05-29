@@ -32,8 +32,11 @@ export const metadata = {
     google: 'DdA3MOprrb-X0HZ_4Kspj6uYSnffdKE6X5NibDdA4w8',
   },
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon-symbol.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
   title: 'CRISTASUR — Plásticos y Artículos para Hogar',
   description:
@@ -58,13 +61,13 @@ export const metadata = {
     type: 'website',
     siteName: 'CRISTASUR',
     locale: 'es_MX',
-    images: [{ url: '/logo.png', width: 1000, height: 350, alt: 'CRISTASUR Mérida' }],
+    images: [{ url: '/icon-symbol.png', width: 512, height: 512, alt: 'CRISTASUR Mérida' }],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary',
     title: 'CRISTASUR',
     description: 'Plásticos y artículos económicos para hogar y negocio.',
-    images: ['/logo.png'],
+    images: ['/icon-symbol.png'],
   },
 }
 

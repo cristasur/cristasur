@@ -79,14 +79,6 @@ export default async function BlogPostPage({ params }) {
       </nav>
 
       {/* Cover image */}
-      {post.coverImage && (
-        <img
-          src={post.coverImage}
-          alt={post.title}
-          className="w-full h-64 object-cover rounded-2xl mb-8"
-          style={{ objectPosition: post.coverPosition || '50% 50%' }}
-        />
-      )}
 
       {/* Tags */}
       {post.tags?.length > 0 && (

@@ -116,12 +116,43 @@ export default function PostForm({ initial }) {
     featured: initial?.featured || false,
     seoTitle: initial?.seoTitle || '',
     seoDescription: initial?.seoDescription || '',
+    linkedProducts: Array.isArray(initial?.linkedProducts)
+      ? initial.linkedProducts.map((p) => (typeof p === 'object' ? p : { _id: String(p), name: '', image: '', price: 0 }))
+      : [],
   })
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('editor') // 'editor' | 'preview'
   const [uploading, setUploading] = useState(false)
+  const [prodSearch, setProdSearch] = useState('')
+  const [prodResults, setProdResults] = useState([])
+  const [prodSearching, setProdSearching] = useState(false)
+
+  async function searchProducts(q) {
+    if (!q.trim()) { setProdResults([]); return }
+    setProdSearching(true)
+    try {
+      const res = await fetch(`/api/products?q=${encodeURIComponent(q)}&limit=8`)
+      const data = await res.json()
+      setProdResults(data.products || [])
+    } catch { setProdResults([]) }
+    finally { setProdSearching(false) }
+  }
+
+  function addLinkedProduct(p) {
+    if (form.linkedProducts.find((x) => x._id === String(p._id))) return
+    setForm((f) => ({
+      ...f,
+      linkedProducts: [...f.linkedProducts, { _id: String(p._id), name: p.name, image: p.image || '', price: p.price }],
+    }))
+    setProdSearch('')
+    setProdResults([])
+  }
+
+  function removeLinkedProduct(id) {
+    setForm((f) => ({ ...f, linkedProducts: f.linkedProducts.filter((x) => x._id !== id) }))
+  }
   const fileInputRef = useRef(null)
 
   async function handleCoverUpload(e) {
@@ -162,6 +193,7 @@ export default function PostForm({ initial }) {
     const payload = {
       ...form,
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+      linkedProducts: form.linkedProducts.map((p) => p._id),
     }
 
     try {
@@ -500,6 +532,67 @@ export default function PostForm({ initial }) {
         <label htmlFor="published" className="text-sm font-semibold text-slate-700">
           Publicado (visible en /blog)
         </label>
+      </div>
+
+      {/* Productos vinculados */}
+      <div className="border-t border-slate-100 pt-6">
+        <h3 className="text-sm font-bold text-slate-700 mb-1">Productos vinculados</h3>
+        <p className="text-xs text-slate-400 mb-3">Aparecerán como cards "Ver producto" al final del artículo.</p>
+
+        {/* Buscador */}
+        <div className="relative">
+          <input
+            type="text"
+            value={prodSearch}
+            onChange={(e) => { setProdSearch(e.target.value); searchProducts(e.target.value) }}
+            placeholder="Buscar producto por nombre…"
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+          />
+          {prodSearching && (
+            <span className="absolute right-3 top-2.5 text-xs text-slate-400">Buscando…</span>
+          )}
+          {prodResults.length > 0 && (
+            <ul className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+              {prodResults.map((p) => (
+                <li key={p._id}>
+                  <button
+                    type="button"
+                    onClick={() => addLinkedProduct(p)}
+                    className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 text-left"
+                  >
+                    {p.image && <img src={p.image} alt="" className="w-8 h-8 rounded object-cover shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{p.name}</p>
+                      <p className="text-xs text-slate-400">
+                        {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(p.price)}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Lista de vinculados */}
+        {form.linkedProducts.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {form.linkedProducts.map((p) => (
+              <li key={p._id} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                {p.image && <img src={p.image} alt="" className="w-10 h-10 rounded object-cover shrink-0" />}
+                <span className="flex-1 text-sm text-slate-800 truncate">{p.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeLinkedProduct(p._id)}
+                  className="text-slate-400 hover:text-red-500 transition-colors text-lg leading-none px-1"
+                  aria-label="Quitar"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Actions */}

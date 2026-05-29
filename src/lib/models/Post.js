@@ -21,6 +21,8 @@ const PostSchema = new mongoose.Schema(
     postType: { type: String, enum: ['article', 'video'], default: 'article' },
     featured: { type: Boolean, default: false },
     viewsCount: { type: Number, default: 0 },
+    // Productos vinculados al artículo (se muestran como cards "Comprar")
+    linkedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   },
   { timestamps: true }
 )

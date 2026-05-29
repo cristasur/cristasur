@@ -98,10 +98,19 @@ export async function GET(request) {
       filter.materials = matDoc._id
     }
 
-    // Filtro por color (regex insensible a mayúsculas)
+    // Filtro por color — busca en color del producto Y en colores de variantes
     if (colorParam) {
       const safeColor = colorParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      filter.color = { $regex: safeColor, $options: 'i' }
+      const colorReg = { $regex: safeColor, $options: 'i' }
+      filter.$and = [
+        ...(filter.$and || []),
+        {
+          $or: [
+            { color: colorReg },
+            { 'variants.values': colorReg },
+          ],
+        },
+      ]
     }
 
     if (q) {

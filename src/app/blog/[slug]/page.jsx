@@ -11,7 +11,9 @@ export const dynamic = 'force-dynamic'
 async function fetchPost(slug) {
   try {
     await dbConnect()
-    const post = await Post.findOne({ slug, published: true }).lean()
+    const post = await Post.findOne({ slug, published: true })
+      .populate('linkedProducts', '_id name image price comparePrice')
+      .lean()
     return post ? JSON.parse(JSON.stringify(post)) : null
   } catch {
     return null
@@ -111,6 +113,48 @@ export default async function BlogPostPage({ params }) {
         className="prose prose-slate max-w-none"
         dangerouslySetInnerHTML={{ __html: post.content }}
       />
+
+      {/* Productos vinculados */}
+      {post.linkedProducts?.length > 0 && (
+        <section className="mt-10 pt-8 border-t border-slate-100">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">
+            {post.linkedProducts.length === 1 ? 'Producto mencionado' : 'Productos mencionados'}
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {post.linkedProducts.map((p) => (
+              <div key={p._id} className="flex gap-4 items-center bg-slate-50 border border-slate-200 rounded-xl p-4">
+                {p.image && (
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="w-20 h-20 object-cover rounded-lg shrink-0"
+                    loading="lazy"
+                  />
+                )}
+                <div className="flex flex-col min-w-0 flex-1">
+                  <p className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 mb-1">{p.name}</p>
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span className="text-lg font-black text-slate-900">
+                      {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(p.price)}
+                    </span>
+                    {p.comparePrice > p.price && (
+                      <span className="text-sm text-slate-400 line-through">
+                        {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(p.comparePrice)}
+                      </span>
+                    )}
+                  </div>
+                  <Link
+                    href={`/productos/${p._id}`}
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-700 text-white text-sm font-semibold w-fit transition-colors"
+                  >
+                    Ver producto →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Back link */}
       <div className="mt-12 pt-6 border-t border-slate-100">

@@ -102,6 +102,62 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   const [galleryUrlInput, setGalleryUrlInput] = useState('')
   const [addingGalleryUrl, setAddingGalleryUrl] = useState(false)
 
+  // Listas locales de marcas y materiales (se actualizan al crear uno nuevo)
+  const [brandList, setBrandList] = useState(brands)
+  const [materialList, setMaterialList] = useState(materials)
+
+  // Estado para crear nueva marca en línea
+  const [addingBrand, setAddingBrand] = useState(false)
+  const [newBrandName, setNewBrandName] = useState('')
+  const [brandSaving, setBrandSaving] = useState(false)
+  const [brandError, setBrandError] = useState('')
+
+  // Estado para crear nuevo material en línea
+  const [addingMaterial, setAddingMaterial] = useState(false)
+  const [newMaterialName, setNewMaterialName] = useState('')
+  const [materialSaving, setMaterialSaving] = useState(false)
+  const [materialError, setMaterialError] = useState('')
+
+  async function createBrand() {
+    const name = newBrandName.trim()
+    if (!name) return
+    setBrandSaving(true); setBrandError('')
+    try {
+      const res = await fetch('/api/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setBrandError(data.error || 'Error al crear marca'); return }
+      setBrandList((prev) => [...prev, data.brand])
+      update('brand', data.brand._id)
+      setAddingBrand(false)
+      setNewBrandName('')
+    } catch { setBrandError('Error de red') }
+    finally { setBrandSaving(false) }
+  }
+
+  async function createMaterial() {
+    const name = newMaterialName.trim()
+    if (!name) return
+    setMaterialSaving(true); setMaterialError('')
+    try {
+      const res = await fetch('/api/materials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setMaterialError(data.error || 'Error al crear material'); return }
+      setMaterialList((prev) => [...prev, data.material])
+      update('materials', [...form.materials, data.material._id])
+      setAddingMaterial(false)
+      setNewMaterialName('')
+    } catch { setMaterialError('Error de red') }
+    finally { setMaterialSaving(false) }
+  }
+
   // ---- Chip input de etiquetas ----
   const [familyTagInput, setFamilyTagInput] = useState('')
   const [familyTagSuggestions, setFamilyTagSuggestions] = useState([])
@@ -906,19 +962,55 @@ export default function ProductForm({ categories, brands = [], materials = [], i
 
       {/* Marca y color */}
       <div className="grid md:grid-cols-2 gap-5">
-        <label className="block">
+        <div className="block">
           <span className="text-sm font-medium text-slate-700">Marca (opcional)</span>
           <select
-            value={form.brand}
-            onChange={(e) => update('brand', e.target.value)}
+            value={addingBrand ? '__new__' : form.brand}
+            onChange={(e) => {
+              if (e.target.value === '__new__') {
+                setAddingBrand(true); setBrandError(''); setNewBrandName('')
+              } else {
+                setAddingBrand(false); update('brand', e.target.value)
+              }
+            }}
             className={input}
           >
             <option value="">— Sin marca —</option>
-            {brands.map((b) => (
+            <option value="__new__">＋ Añadir nueva marca…</option>
+            {brandList.map((b) => (
               <option key={b._id} value={b._id}>{b.name}</option>
             ))}
           </select>
-        </label>
+          {addingBrand && (
+            <div className="mt-2 flex gap-2 items-center">
+              <input
+                autoFocus
+                type="text"
+                placeholder="Nombre de la nueva marca"
+                value={newBrandName}
+                onChange={(e) => setNewBrandName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createBrand() } }}
+                className="flex-1 px-3 py-2 rounded-lg border border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none text-sm"
+              />
+              <button
+                type="button"
+                onClick={createBrand}
+                disabled={brandSaving || !newBrandName.trim()}
+                className="px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold"
+              >
+                {brandSaving ? '…' : 'Crear'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAddingBrand(false); setNewBrandName('') }}
+                className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          {brandError && <p className="text-xs text-rose-600 mt-1">{brandError}</p>}
+        </div>
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Color (opcional)</span>
           <input
@@ -936,42 +1028,80 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       </div>
 
       {/* Materiales (multi-selección) */}
-      {materials.length > 0 && (
-        <div>
-          <span className="text-sm font-medium text-slate-700 block mb-2">
-            Materiales <span className="text-slate-400 font-normal">(opcional, puedes seleccionar varios)</span>
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {materials.map((m) => {
-              const selected = form.materials.includes(m._id)
-              return (
-                <button
-                  key={m._id}
-                  type="button"
-                  onClick={() =>
-                    update(
-                      'materials',
-                      selected
-                        ? form.materials.filter((id) => id !== m._id)
-                        : [...form.materials, m._id]
-                    )
-                  }
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+      <div>
+        <span className="text-sm font-medium text-slate-700 block mb-2">
+          Materiales <span className="text-slate-400 font-normal">(opcional, puedes seleccionar varios)</span>
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {materialList.map((m) => {
+            const selected = form.materials.includes(m._id)
+            return (
+              <button
+                key={m._id}
+                type="button"
+                onClick={() =>
+                  update(
+                    'materials',
                     selected
-                      ? 'bg-brand-600 text-white border-brand-600'
-                      : 'bg-white text-slate-700 border-slate-300 hover:border-brand-400'
-                  }`}
-                >
-                  {selected ? '✓ ' : ''}{m.name}
-                </button>
-              )
-            })}
-          </div>
-          {form.materials.length === 0 && (
-            <span className="text-xs text-slate-400 mt-1 block">Ningún material seleccionado.</span>
+                      ? form.materials.filter((id) => id !== m._id)
+                      : [...form.materials, m._id]
+                  )
+                }
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                  selected
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'bg-white text-slate-700 border-slate-300 hover:border-brand-400'
+                }`}
+              >
+                {selected ? '✓ ' : ''}{m.name}
+              </button>
+            )
+          })}
+          {/* Botón para añadir nuevo material */}
+          {!addingMaterial && (
+            <button
+              type="button"
+              onClick={() => { setAddingMaterial(true); setMaterialError(''); setNewMaterialName('') }}
+              className="px-3 py-1.5 rounded-full text-sm font-medium border border-dashed border-slate-400 text-slate-500 hover:border-brand-500 hover:text-brand-600 transition"
+            >
+              ＋ Añadir material
+            </button>
           )}
         </div>
-      )}
+        {/* Input inline para nuevo material */}
+        {addingMaterial && (
+          <div className="mt-2 flex gap-2 items-center">
+            <input
+              autoFocus
+              type="text"
+              placeholder="Nombre del nuevo material"
+              value={newMaterialName}
+              onChange={(e) => setNewMaterialName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); createMaterial() } }}
+              className="flex-1 px-3 py-2 rounded-lg border border-brand-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none text-sm"
+            />
+            <button
+              type="button"
+              onClick={createMaterial}
+              disabled={materialSaving || !newMaterialName.trim()}
+              className="px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-semibold"
+            >
+              {materialSaving ? '…' : 'Crear'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAddingMaterial(false); setNewMaterialName('') }}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {materialError && <p className="text-xs text-rose-600 mt-1">{materialError}</p>}
+        {form.materials.length === 0 && (
+          <span className="text-xs text-slate-400 mt-1 block">Ningún material seleccionado.</span>
+        )}
+      </div>
 
       {/* Material en texto libre */}
       <div>

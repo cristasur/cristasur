@@ -343,12 +343,22 @@ export default async function ProductDetail({ params }) {
                   <div className="flex-1 px-4 py-3 text-slate-800">{product.weight} kg</div>
                 </div>
               )}
-              {(product.length || product.width || product.height) && (
+              {product.length && (
                 <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Dimensiones</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">
-                    {[product.length, product.width, product.height].filter(Boolean).join(' × ')} cm
-                  </div>
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Largo</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.length} cm</div>
+                </div>
+              )}
+              {product.width && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Ancho</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.width} cm</div>
+                </div>
+              )}
+              {product.height && (
+                <div className="flex border-b border-slate-100">
+                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Alto</div>
+                  <div className="flex-1 px-4 py-3 text-slate-800">{product.height} cm</div>
                 </div>
               )}
               {(product.boxLength || product.boxWidth || product.boxHeight) && (

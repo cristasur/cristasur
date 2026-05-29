@@ -1,10 +1,11 @@
-// Card de producto reutilizable (Server Component que delega la
-// interacción al cliente mediante AddToCartButton y FavoriteButton).
+// Card de producto reutilizable.
+// La sección de imagen usa CardCarousel (client) para el auto-slide.
 import Link from 'next/link'
 import Icon from './Icon'
 import AddToCartButton from './AddToCartButton'
 import FavoriteButton from './FavoriteButton'
 import CompareButton from './CompareButton'
+import CardCarousel from './CardCarousel'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('es-MX', {
@@ -23,18 +24,18 @@ export default function ProductCard({ product }) {
   const href = `/productos/${product._id}`
   // null = ilimitado (disponible). Solo stock === 0 es sin stock.
   const outOfStock = product.stock === 0
+  // Imágenes para el carrusel: portada + galería (sin duplicados)
+  const carouselImages = [
+    product.image,
+    ...((product.gallery || []).filter((g) => g && g !== product.image)),
+  ].filter(Boolean)
 
   return (
     <article className="card-hover group relative bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover border border-slate-100 flex flex-col">
       <Link href={href} className="block">
         <div className="relative aspect-square bg-slate-50 overflow-hidden">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
+          {carouselImages.length > 0 ? (
+            <CardCarousel images={carouselImages} alt={product.name} />
           ) : (
             <div className="w-full h-full grid place-items-center text-slate-300">
               <Icon name="box" className="w-16 h-16" strokeWidth={1.5} />

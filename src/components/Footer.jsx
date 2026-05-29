@@ -14,7 +14,6 @@ export default function Footer() {
               src="/logo.png"
               alt="CRISTASUR Mérida"
               className="h-16 w-auto object-contain"
-              style={{ filter: 'invert(1)' }}
             />
           </div>
           <p className="text-sm text-slate-400">

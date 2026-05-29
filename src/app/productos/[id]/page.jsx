@@ -267,7 +267,7 @@ export default async function ProductDetail({ params }) {
                   {product.categories.map((c) => c.name).join(', ')}
                 </div>
               )}
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mt-1.5">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mt-1.5 uppercase">
                 {product.name}
               </h1>
             </div>

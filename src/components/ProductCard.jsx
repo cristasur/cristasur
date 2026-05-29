@@ -66,7 +66,7 @@ export default function ProductCard({ product }) {
               {product.categories[0].name}
             </div>
           )}
-          <h3 className="font-semibold text-slate-900 line-clamp-2 text-[15px] leading-snug min-h-[2.6em]">
+          <h3 className="font-semibold text-slate-900 line-clamp-2 text-[15px] leading-snug min-h-[2.6em] uppercase">
             {product.name}
           </h3>
           {/* Marca */}

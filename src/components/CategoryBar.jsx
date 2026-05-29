@@ -1,9 +1,9 @@
 'use client'
 // ============================================================
 // Barra de chips de categoría.
-// Se oculta con opacity (NO con max-h) para evitar reflow del
-// header sticky que causaba el loop de scroll.
-// El espacio físico siempre está reservado → sin saltos de layout.
+// El wrapper siempre ocupa la misma altura → el header sticky
+// nunca cambia de tamaño → no hay reflow → no hay loop de scroll.
+// El contenido interno se desliza hacia arriba con translateY.
 // ============================================================
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -32,18 +32,12 @@ export default function CategoryBar({ categories }) {
         setVisible(false)
         lastY.current = y
         locked.current = true
-        setTimeout(() => {
-          lastY.current = window.scrollY   // re-anclar DESPUÉS del cooldown
-          locked.current = false
-        }, 600)
+        setTimeout(() => { lastY.current = window.scrollY; locked.current = false }, 600)
       } else if (delta < -50) {
         setVisible(true)
         lastY.current = y
         locked.current = true
-        setTimeout(() => {
-          lastY.current = window.scrollY
-          locked.current = false
-        }, 600)
+        setTimeout(() => { lastY.current = window.scrollY; locked.current = false }, 600)
       }
     }
 
@@ -54,11 +48,13 @@ export default function CategoryBar({ categories }) {
   if (!categories?.length) return null
 
   return (
-    <div className="relative border-t border-slate-100">
-      {/* Barra — siempre ocupa espacio (no colapsa), solo cambia visibilidad */}
+    // Wrapper: altura fija siempre → el header sticky nunca cambia de tamaño
+    <div className="relative border-t border-slate-100 h-12 overflow-hidden">
+
+      {/* Contenido: se desliza hacia arriba para "retractarse" */}
       <div
-        className={`flex items-center gap-2 py-3 overflow-x-auto scroll-chip transition-opacity duration-300 ${
-          visible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        className={`flex items-center gap-2 py-3 overflow-x-auto scroll-chip transition-transform duration-300 ease-in-out ${
+          visible ? 'translate-y-0' : '-translate-y-full'
         }`}
       >
         <Link
@@ -78,16 +74,13 @@ export default function CategoryBar({ categories }) {
         ))}
       </div>
 
-      {/* Tab toggle */}
+      {/* Tab toggle — asomado por debajo del wrapper */}
       <button
         type="button"
         onClick={() => {
           setVisible((v) => !v)
           locked.current = true
-          setTimeout(() => {
-            lastY.current = window.scrollY
-            locked.current = false
-          }, 600)
+          setTimeout(() => { lastY.current = window.scrollY; locked.current = false }, 600)
         }}
         aria-label={visible ? 'Ocultar categorías' : 'Mostrar categorías'}
         className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-10

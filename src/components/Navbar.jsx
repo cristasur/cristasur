@@ -35,7 +35,7 @@ export default async function Navbar() {
             <img
               src="/logo.png"
               alt="CRISTASUR Mérida"
-              className="h-10 md:h-20 w-auto object-contain"
+              className="h-14 md:h-16 w-auto object-contain"
             />
             <span className="sr-only">CRISTASUR</span>
           </Link>

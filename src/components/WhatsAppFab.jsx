@@ -61,8 +61,7 @@ export default function WhatsAppFab() {
       {/* Botón */}
       <span className="relative grid place-items-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg ring-4 ring-white overflow-hidden">
         {/* Anillo pulsante — clipped al botón para no causar overflow en iOS */}
-        <span className="absolute inset-0 rounded-full bg-emerald-300 animate-ping opacity-60 pointer-events-none" />
-        <Icon name="whatsapp" className="relative w-7 h-7 sm:w-8 sm:h-8" />
+<Icon name="whatsapp" className="relative w-7 h-7 sm:w-8 sm:h-8" />
       </span>
     </a>
   )

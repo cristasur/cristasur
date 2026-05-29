@@ -299,37 +299,6 @@ export default async function ProductDetail({ params }) {
             </div>
           )}
 
-          {/* Capacidad + Dimensiones y peso */}
-          {(product.capacity || product.weight || product.length || product.width || product.height) && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {product.capacity && (
-                <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm shrink-0">
-                  <span className="text-slate-400">🧴</span>
-                  <span className="text-slate-500">Capacidad:</span>
-                  <span className="font-semibold text-slate-800">
-                    {product.capacity} {product.capacityUnit || 'L'}
-                  </span>
-                </div>
-              )}
-              {product.weight && (
-                <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm shrink-0">
-                  <span className="text-slate-400">⚖️</span>
-                  <span className="text-slate-500">Peso:</span>
-                  <span className="font-semibold text-slate-800">{product.weight} kg</span>
-                </div>
-              )}
-              {product.length && product.width && product.height && (
-                <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs sm:text-sm shrink-0">
-                  <span className="text-slate-400">📐</span>
-                  <span className="text-slate-500">Medidas:</span>
-                  <span className="font-semibold text-slate-800">
-                    {product.length} × {product.width} × {product.height} cm
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Variantes + cantidad + añadir al carrito + WhatsApp + compartir */}
           <ProductDetailClient product={product} productUrl={productUrl} isVip={isVip} />
         </div>

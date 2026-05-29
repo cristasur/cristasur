@@ -24,11 +24,15 @@ export default function CategoryBar({ categories }) {
     return () => ro.disconnect()
   }, [])
 
-  // Auto-ocultar al bajar, mostrar al subir
+  // Auto-ocultar al bajar, mostrar al subir — solo en desktop (md: ≥768px)
   useEffect(() => {
+    const isDesktop = () => window.innerWidth >= 768
+
     lastY.current = window.scrollY
 
     const onScroll = () => {
+      // En móvil siempre visible
+      if (!isDesktop()) { setVisible(true); return }
       if (locked.current) return
       const y = window.scrollY
 
@@ -52,8 +56,15 @@ export default function CategoryBar({ categories }) {
       }
     }
 
+    // Al cambiar de desktop a móvil, restaurar visibilidad
+    const onResize = () => { if (!isDesktop()) setVisible(true) }
+
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+    }
   }, [])
 
   if (!categories?.length) return null
@@ -89,7 +100,7 @@ export default function CategoryBar({ categories }) {
           ))}
         </div>
 
-        {/* Tab toggle — centrado, asoma 20px abajo */}
+        {/* Tab toggle — solo en desktop */}
         <button
           type="button"
           onClick={() => {
@@ -98,8 +109,8 @@ export default function CategoryBar({ categories }) {
             setTimeout(() => { lastY.current = window.scrollY; locked.current = false }, 600)
           }}
           aria-label={visible ? 'Ocultar categorías' : 'Mostrar categorías'}
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full z-10
-            flex items-center justify-center w-10 h-5 rounded-b-full
+          className="hidden md:flex absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full z-10
+            items-center justify-center w-10 h-5 rounded-b-full
             bg-white border border-slate-200 border-t-0
             text-slate-400 hover:text-slate-700 shadow-sm transition-colors"
         >

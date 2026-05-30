@@ -5,6 +5,7 @@
 // PATCH  /api/products/:id   - acciones: restore, view, whatsapp-click
 // ============================================================
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
@@ -84,6 +85,13 @@ export async function PUT(request, { params }) {
       },
       { new: true, runValidators: true }
     ).populate('categories', 'name slug icon')
+
+    // Invalida páginas públicas para que reflejen el cambio al instante.
+    try {
+      revalidatePath('/')
+      revalidatePath('/productos')
+      revalidatePath(`/productos/${params.id}`)
+    } catch {}
 
     return NextResponse.json({ product })
   } catch (err) {
@@ -174,6 +182,13 @@ export async function PATCH(request, { params }) {
       if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
       const next = !product.featured
       await Product.updateOne({ _id: params.id }, { featured: next })
+      // Invalida home y catálogo: el destacado debe reflejarse al instante
+      // sin esperar al TTL de ISR.
+      try {
+        revalidatePath('/')
+        revalidatePath('/productos')
+        revalidatePath(`/productos/${params.id}`)
+      } catch {}
       return NextResponse.json({ ok: true, featured: next })
     }
 

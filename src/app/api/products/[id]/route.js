@@ -202,6 +202,19 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ ok: true, featured: next })
     }
 
+    if (action === 'active') {
+      const product = await Product.findById(params.id).select('active').lean()
+      if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      const next = !product.active
+      await Product.updateOne({ _id: params.id }, { active: next })
+      try {
+        revalidatePath('/')
+        revalidatePath('/productos')
+        revalidatePath(`/productos/${params.id}`)
+      } catch {}
+      return NextResponse.json({ ok: true, active: next })
+    }
+
     if (action === 'restore') {
       const product = await Product.findByIdAndUpdate(
         params.id,

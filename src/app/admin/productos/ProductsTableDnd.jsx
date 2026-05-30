@@ -8,6 +8,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import FeaturedButton from './FeaturedButton'
 import FlagButton from './FlagButton'
+import ActiveButton from './ActiveButton'
 import DeleteProductButton from './DeleteProductButton'
 import DuplicateButton from './DuplicateButton'
 import Icon from '@/components/Icon'
@@ -263,6 +264,17 @@ export default function ProductsTableDnd({ initialProducts, canReorder }) {
                   {/* Acciones */}
                   <td className="p-3 text-right">
                     <div className="inline-flex items-center gap-2 flex-wrap justify-end">
+                      <ActiveButton
+                        id={p._id}
+                        active={!!p.active}
+                        onToggle={(newActive) => {
+                          setProducts((prev) =>
+                            prev.map((item) =>
+                              item._id === p._id ? { ...item, active: newActive } : item
+                            )
+                          )
+                        }}
+                      />
                       <FeaturedButton id={p._id} featured={!!p.featured} />
                       <FlagButton id={p._id} flagged={!!p.flagged} />
                       <Link

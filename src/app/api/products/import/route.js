@@ -14,6 +14,7 @@
 // Devuelve un reporte detallado por fila: created/updated/skipped/error.
 // ============================================================
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
@@ -370,6 +371,11 @@ export async function POST(request) {
 
     // Ordenamos el detalle por número de línea para que el reporte sea legible
     report.details.sort((a, b) => (a.line || 0) - (b.line || 0))
+
+    try {
+      revalidatePath('/')
+      revalidatePath('/productos')
+    } catch {}
 
     return NextResponse.json(report)
   } catch (err) {

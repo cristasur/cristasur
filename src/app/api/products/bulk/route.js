@@ -19,6 +19,7 @@
 // Retorna { ok, matched, modified } y registra una entrada en editHistory.
 // ============================================================
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
@@ -160,6 +161,11 @@ export async function POST(request) {
     }
 
     const result = await Product.updateMany(filter, finalUpdate)
+
+    try {
+      revalidatePath('/')
+      revalidatePath('/productos')
+    } catch {}
 
     return NextResponse.json({
       ok: true,

@@ -16,6 +16,7 @@
 // POST /api/products   (protegido - admin)
 // ============================================================
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
@@ -185,6 +186,12 @@ export async function POST(request) {
       ],
     })
     await product.populate('categories', 'name slug icon')
+
+    try {
+      revalidatePath('/')
+      revalidatePath('/productos')
+    } catch {}
+
     return NextResponse.json({ product }, { status: 201 })
   } catch (err) {
     if (err?.code === 11000) {

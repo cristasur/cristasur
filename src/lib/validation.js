@@ -240,7 +240,10 @@ export function validateProductPayload(body) {
     errors.push('El alto de la caja no puede superar 999 cm')
 
   // Estado y publicación programada
-  const status = body?.status === 'draft' ? 'draft' : 'published'
+  let status = body?.status === 'draft' ? 'draft' : 'published'
+  if (!image) {
+    status = 'draft'
+  }
   const publishAt =
     body?.publishAt && !isNaN(new Date(body.publishAt).getTime())
       ? new Date(body.publishAt)

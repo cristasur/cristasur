@@ -116,6 +116,10 @@ export async function DELETE(request, { params }) {
     if (hard) {
       const res = await Product.findByIdAndDelete(params.id)
       if (!res) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      try {
+        revalidatePath('/')
+        revalidatePath('/productos')
+      } catch {}
       return NextResponse.json({ ok: true, mode: 'hard' })
     }
 
@@ -140,6 +144,12 @@ export async function DELETE(request, { params }) {
       { new: true }
     )
     if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+
+    try {
+      revalidatePath('/')
+      revalidatePath('/productos')
+    } catch {}
+
     return NextResponse.json({ ok: true, mode: 'soft' })
   } catch (err) {
     console.error(err)
@@ -214,6 +224,13 @@ export async function PATCH(request, { params }) {
         { new: true }
       )
       if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+
+      try {
+        revalidatePath('/')
+        revalidatePath('/productos')
+        revalidatePath(`/productos/${params.id}`)
+      } catch {}
+
       return NextResponse.json({ ok: true, product })
     }
 

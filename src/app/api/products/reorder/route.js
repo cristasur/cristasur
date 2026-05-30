@@ -6,6 +6,7 @@
 // Solo admins autenticados pueden llamar este endpoint.
 // ============================================================
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
@@ -40,6 +41,11 @@ export async function PATCH(request) {
     }))
 
     await Product.bulkWrite(bulkOps, { ordered: false })
+
+    try {
+      revalidatePath('/')
+      revalidatePath('/productos')
+    } catch {}
 
     return NextResponse.json({ ok: true, updated: order.length })
   } catch (err) {

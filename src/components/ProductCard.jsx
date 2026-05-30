@@ -97,11 +97,15 @@ export default function ProductCard({ product }) {
             )}
           </div>
           {product.wholesalePrice && product.wholesaleMinQty && (
-            <div className="mt-1.5">
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+            <div className="mt-1.5 space-y-1">
+              <span className="inline-block text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full leading-tight">
                 Mayoreo: {formatPrice(product.wholesalePrice)} · desde {product.wholesaleMinQty} pzs
-                <span className="text-emerald-700">· Ahorro</span>
-              </div>
+              </span>
+              {Number(product.price) > Number(product.wholesalePrice) && (
+                <div className="text-[11px] font-semibold text-emerald-700">
+                  Ahorras {formatPrice(product.price - product.wholesalePrice)} por pieza
+                </div>
+              )}
             </div>
           )}
         </div>

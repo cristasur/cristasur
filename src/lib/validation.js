@@ -284,23 +284,33 @@ export function validateProductPayload(body) {
     errors.push('El precio debe ser un número positivo')
   if (comparePrice !== null && (!Number.isFinite(comparePrice) || comparePrice < 0))
     errors.push('El precio comparativo debe ser un número positivo')
-  if (wholesalePrice !== null) {
-    if (!Number.isFinite(wholesalePrice) || wholesalePrice < 0)
-      errors.push('El precio de mayoreo debe ser un número positivo')
-    else if (Number.isFinite(price) && wholesalePrice >= price)
-      errors.push('El precio de mayoreo debe ser MENOR al precio normal')
-    if (!Number.isFinite(wholesaleMinQty) || wholesaleMinQty < 2)
-      errors.push('La cantidad mínima de mayoreo debe ser 2 o más')
-  } else if (wholesaleMinQty !== null && wholesaleMinQty > 0) {
-    errors.push('Definiste cantidad mínima de mayoreo pero falta el precio de mayoreo')
+  // Si wholesalePrice >= price (caso común en listas de proveedor donde el
+  // mismo precio aparece en Mayoreo 1 y Mayoreo 2), simplemente lo ignoramos
+  // en lugar de fallar. Eso protege el flujo de importación masiva.
+  let _wholesalePrice = wholesalePrice
+  let _wholesaleMinQty = wholesaleMinQty
+  if (_wholesalePrice !== null && Number.isFinite(price) && _wholesalePrice >= price) {
+    _wholesalePrice = null
+    _wholesaleMinQty = null
   }
-  if (bulkPrice !== null) {
-    if (!Number.isFinite(bulkPrice) || bulkPrice < 0)
+  if (_wholesalePrice !== null) {
+    if (!Number.isFinite(_wholesalePrice) || _wholesalePrice < 0)
+      errors.push('El precio de mayoreo debe ser un número positivo')
+    if (!Number.isFinite(_wholesaleMinQty) || _wholesaleMinQty < 2)
+      errors.push('La cantidad mínima de mayoreo debe ser 2 o más')
+  }
+  // Mismo criterio para bulk: si es >= price, lo ignoramos.
+  let _bulkPrice = bulkPrice
+  let _bulkMinQty = bulkMinQty
+  if (_bulkPrice !== null && Number.isFinite(price) && _bulkPrice >= price) {
+    _bulkPrice = null
+    _bulkMinQty = null
+  }
+  if (_bulkPrice !== null) {
+    if (!Number.isFinite(_bulkPrice) || _bulkPrice < 0)
       errors.push('El precio por ciento debe ser un número positivo')
-    if (!Number.isFinite(bulkMinQty) || bulkMinQty < 2)
+    if (!Number.isFinite(_bulkMinQty) || _bulkMinQty < 2)
       errors.push('La cantidad mínima para precio por ciento debe ser 2 o más')
-  } else if (bulkMinQty !== null && bulkMinQty > 0) {
-    errors.push('Definiste cantidad mínima para precio por ciento pero falta el precio')
   }
   // En drafts, la categoría es opcional. En productos publicados, es obligatoria.
   if (!isDraft) {
@@ -319,10 +329,10 @@ export function validateProductPayload(body) {
       description,
       price,
       comparePrice,
-      wholesalePrice,
-      wholesaleMinQty,
-      bulkPrice,
-      bulkMinQty,
+      wholesalePrice: _wholesalePrice,
+      wholesaleMinQty: _wholesaleMinQty,
+      bulkPrice: _bulkPrice,
+      bulkMinQty: _bulkMinQty,
       categories,
       image,
       gallery,

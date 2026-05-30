@@ -56,7 +56,10 @@ const EditLogSchema = new mongoose.Schema(
 const ProductSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, minlength: 2, maxlength: 120 },
-    description: { type: String, required: true, trim: true, minlength: 5, maxlength: 800 },
+    // description NO es required a nivel de schema: los drafts pueden
+    // arrancar sin descripción (se completa después). La validación de
+    // publicación se hace en validateProductPayload() para published.
+    description: { type: String, default: '', trim: true, maxlength: 800 },
     price: { type: Number, required: true, min: 0 },
     comparePrice: { type: Number, min: 0, default: null },
     // Precio mayoreo (opcional). Si se define, requiere wholesaleMinQty.
@@ -69,8 +72,11 @@ const ProductSchema = new mongoose.Schema(
     // Sin funcionalidad activa aún — solo se almacena para uso futuro.
     hundredPrice:    { type: Number, min: 0, default: null },
     hundredMinQty:   { type: Number, min: 1, default: null },
+    // Los borradores pueden no tener categorías (el admin las asigna al
+    // publicar). Validación de "al menos una categoría" se hace en
+    // validateProductPayload() sólo para productos publicados.
     categories: [
-      { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+      { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     ],
     image: { type: String, default: '', trim: true },
     gallery: { type: [String], default: [] },

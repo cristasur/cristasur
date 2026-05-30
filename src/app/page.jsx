@@ -12,7 +12,9 @@ import Icon from '@/components/Icon'
 import RepeatOrder from '@/components/RepeatOrder'
 import CategoryCarousel from '@/components/CategoryCarousel'
 
-export const dynamic = 'force-dynamic'
+// ISR: regenerar cada 60 segundos. El home no necesita datos en tiempo real;
+// los productos destacados y banners cambian raramente.
+export const revalidate = 60
 
 async function loadHome() {
   await dbConnect()
@@ -21,7 +23,7 @@ async function loadHome() {
     Product.find({ active: true, featured: true, deleted: { $ne: true } })
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
-      .sort({ createdAt: -1 })
+      .sort({ sortOrder: 1, createdAt: -1 })
       .limit(8)
       .lean(),
     Product.find({ active: true, deleted: { $ne: true } })

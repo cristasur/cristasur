@@ -10,7 +10,8 @@ import Material from '@/models/Material'
 import ProductGrid from '@/components/ProductGrid'
 import ProductFilters from '@/components/ProductFilters'
 
-export const dynamic = 'force-dynamic'
+// Next.js detecta automáticamente el uso de searchParams y hace la página dinámica.
+// No se necesita force-dynamic explícito; lo eliminamos para no anclar el comportamiento.
 
 async function loadData({ q, category, featured, minPrice, maxPrice, inStock, onSale, sort, brand, color, material }) {
   await dbConnect()
@@ -75,7 +76,9 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
     filter.$or = orClauses
   }
 
-  let sortSpec = { featured: -1, createdAt: -1 }
+  // 'newest' (default) respeta el orden manual que asigna el admin.
+  // Los destacados siguen al frente solo cuando no hay orden manual definido.
+  let sortSpec = { sortOrder: 1, featured: -1, createdAt: -1 }
   if (sort === 'priceAsc') sortSpec = { price: 1 }
   else if (sort === 'priceDesc') sortSpec = { price: -1 }
   else if (sort === 'popular')

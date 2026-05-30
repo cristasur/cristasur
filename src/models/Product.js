@@ -174,6 +174,12 @@ const ProductSchema = new mongoose.Schema(
     avgRating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0, min: 0 },
 
+    // ---- Orden manual en catálogo ----
+    // El admin puede arrastrar productos para reordenarlos en la lista.
+    // Los valores menores aparecen primero. Los productos nuevos
+    // arrancan en 0; el primer guardado del admin les asigna 0,1,2,3...
+    sortOrder: { type: Number, default: 0, index: true },
+
     // ---- Auditoría ----
     editHistory: { type: [EditLogSchema], default: [] },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

@@ -9,7 +9,9 @@ import Category from '@/models/Category'
 import Product from '@/models/Product'
 import ProductGrid from '@/components/ProductGrid'
 
-export const dynamic = 'force-dynamic'
+// ISR: cada slug de categoría se cachea 60 s. Los productos de cada categoría
+// cambian raramente y el hit de BD en cada pageview no es necesario.
+export const revalidate = 60
 
 async function loadCategory(slug) {
   await dbConnect()
@@ -27,7 +29,7 @@ async function loadCategory(slug) {
   })
     .populate('categories', 'name slug')
     .populate('brand', 'name slug')
-    .sort({ featured: -1, salesCount: -1, viewsCount: -1, createdAt: -1 })
+    .sort({ sortOrder: 1, featured: -1, salesCount: -1, createdAt: -1 })
     .limit(60)
     .lean()
 

@@ -6,7 +6,14 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Icon from './Icon'
 
-export default function ProductFilters({ categories = [], brands = [], materials = [], initialFilters = {} }) {
+export default function ProductFilters({
+  categories = [],
+  brands = [],
+  materials = [],
+  initialFilters = {},
+  hideCategory = false, // si true, oculta el dropdown de categoría (caso /categoria/[slug])
+  basePath = '/productos', // a dónde se envía el form al aplicar/limpiar
+}) {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -43,7 +50,9 @@ export default function ProductFilters({ categories = [], brands = [], materials
     e?.preventDefault?.()
     const params = new URLSearchParams()
     if (form.q)        params.set('q',        form.q)
-    if (form.category) params.set('category', form.category)
+    // Si estamos en una landing de categoría (hideCategory), no metemos
+    // el parámetro `category` — la página ya filtra por el slug del URL.
+    if (form.category && !hideCategory) params.set('category', form.category)
     if (form.minPrice) params.set('minPrice', form.minPrice)
     if (form.maxPrice) params.set('maxPrice', form.maxPrice)
     if (form.inStock)  params.set('inStock',  '1')
@@ -54,12 +63,12 @@ export default function ProductFilters({ categories = [], brands = [], materials
     if (form.color)    params.set('color',    form.color)
     if (form.material) params.set('material', form.material)
     const qs = params.toString()
-    router.push('/productos' + (qs ? `?${qs}` : ''))
+    router.push(basePath + (qs ? `?${qs}` : ''))
   }
 
   function reset() {
     setForm({ q:'', category:'', minPrice:'', maxPrice:'', inStock:false, onSale:false, featured:false, sort:'newest', brand:'', color:'', material:'' })
-    router.push('/productos')
+    router.push(basePath)
   }
 
   return (
@@ -128,19 +137,21 @@ export default function ProductFilters({ categories = [], brands = [], materials
           />
         </div>
 
-        <div>
-          <label className="text-xs font-semibold text-slate-600 block mb-1">Categoría</label>
-          <select
-            value={form.category}
-            onChange={(e) => set('category', e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-brand-500"
-          >
-            <option value="">Todas</option>
-            {categories.map((c) => (
-              <option key={c._id} value={c.slug || c._id}>{c.icon} {c.name}</option>
-            ))}
-          </select>
-        </div>
+        {!hideCategory && (
+          <div>
+            <label className="text-xs font-semibold text-slate-600 block mb-1">Categoría</label>
+            <select
+              value={form.category}
+              onChange={(e) => set('category', e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:border-brand-500"
+            >
+              <option value="">Todas</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c.slug || c._id}>{c.icon} {c.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {brands.length > 0 && (
           <div>

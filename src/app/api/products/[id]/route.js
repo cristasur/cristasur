@@ -203,16 +203,27 @@ export async function PATCH(request, { params }) {
     }
 
     if (action === 'active') {
-      const product = await Product.findById(params.id).select('active').lean()
+      const product = await Product.findById(params.id).select('active status image').lean()
       if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-      const next = !product.active
-      await Product.updateOne({ _id: params.id }, { active: next })
+      
+      const nextActive = !product.active
+      const updateData = { active: nextActive }
+      
+      // Si se activa (mostrar) y tiene imagen, asegurar que el estado sea 'published'
+      // para que aparezca inmediatamente en las páginas públicas.
+      if (nextActive && product.image) {
+        updateData.status = 'published'
+      }
+      
+      await Product.updateOne({ _id: params.id }, updateData)
+      
       try {
         revalidatePath('/')
         revalidatePath('/productos')
         revalidatePath(`/productos/${params.id}`)
       } catch {}
-      return NextResponse.json({ ok: true, active: next })
+      
+      return NextResponse.json({ ok: true, active: nextActive })
     }
 
     if (action === 'restore') {

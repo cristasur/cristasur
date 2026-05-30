@@ -51,7 +51,14 @@ export async function GET(request) {
     // 4. Eliminar de forma permanente
     const result = await Product.deleteMany(query)
 
-    // 5. Revalidar el caché de la web
+    // 5. CORRECCIÓN DE ESTADO: Forzar que todos los productos con imagen tengan status = 'published'
+    // Esto los saca de borradores y los muestra en la lista normal y en la web pública
+    const updateResult = await Product.updateMany(
+      { image: { $exists: true, $ne: null, $regex: /\S/ } },
+      { $set: { status: 'published' } }
+    )
+
+    // 6. Revalidar el caché de la web
     try {
       revalidatePath('/')
       revalidatePath('/productos')
@@ -59,8 +66,9 @@ export async function GET(request) {
 
     return NextResponse.json({
       ok: true,
-      message: `Limpieza exitosa. Se eliminaron permanentemente ${result.deletedCount} productos sin imagen principal de la base de datos.`,
+      message: `Limpieza exitosa. Se eliminaron permanentemente ${result.deletedCount} productos sin imagen principal. Se repararon y publicaron ${updateResult.modifiedCount} productos con imagen principal.`,
       deletedCount: result.deletedCount,
+      repairedCount: updateResult.modifiedCount,
       remainingCount: await Product.countDocuments({})
     })
   } catch (err) {

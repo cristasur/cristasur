@@ -29,8 +29,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     comparePrice: initial?.comparePrice ?? '',
     wholesalePrice: initial?.wholesalePrice ?? '',
     wholesaleMinQty: initial?.wholesaleMinQty ?? '',
-    hundredPrice: initial?.hundredPrice ?? '',
-    hundredMinQty: initial?.hundredMinQty ?? '',
+    bulkPrice: initial?.bulkPrice ?? initial?.hundredPrice ?? '',
+    bulkMinQty: initial?.bulkMinQty ?? initial?.hundredMinQty ?? '',
     categories: initial?.categories?.map((c) => c._id || c) || [],
     image: initial?.image || '',
     gallery: Array.isArray(initial?.gallery) ? initial.gallery : [],
@@ -49,8 +49,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             : v.image ? [v.image] : [],
           wholesalePrice:  v.wholesalePrice  ?? '',
           wholesaleMinQty: v.wholesaleMinQty ?? '',
-          hundredPrice:    v.hundredPrice    ?? '',
-          hundredMinQty:   v.hundredMinQty   ?? '',
+          bulkPrice:       v.bulkPrice       ?? v.hundredPrice    ?? '',
+          bulkMinQty:      v.bulkMinQty      ?? v.hundredMinQty   ?? '',
         }))
       : [],
     // Grupos de opciones para variantes multi-dim.
@@ -435,7 +435,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       ...f,
       variants: [
         ...f.variants,
-        { label: 'Color', value: '', price: '', comparePrice: '', wholesalePrice: '', wholesaleMinQty: '', hundredPrice: '', hundredMinQty: '', stock: null, sku: '', image: '', images: [] },
+        { label: 'Color', value: '', price: '', comparePrice: '', wholesalePrice: '', wholesaleMinQty: '', bulkPrice: '', bulkMinQty: '', stock: null, sku: '', image: '', images: [] },
       ],
     }))
   }
@@ -879,8 +879,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
               type="number"
               min="0"
               step="0.01"
-              value={form.hundredPrice}
-              onChange={(e) => update('hundredPrice', e.target.value)}
+              value={form.bulkPrice}
+              onChange={(e) => update('bulkPrice', e.target.value)}
               className={input}
               placeholder="Debe ser menor al precio normal"
             />
@@ -893,8 +893,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
               type="number"
               min="2"
               step="1"
-              value={form.hundredMinQty}
-              onChange={(e) => update('hundredMinQty', e.target.value)}
+              value={form.bulkMinQty}
+              onChange={(e) => update('bulkMinQty', e.target.value)}
               className={input}
               placeholder="Ej. 100"
             />
@@ -903,8 +903,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             </span>
           </label>
         </div>
-        {form.hundredPrice && form.price &&
-          Number(form.hundredPrice) >= Number(form.price) && (
+        {form.bulkPrice && form.price &&
+          Number(form.bulkPrice) >= Number(form.price) && (
           <p className="mt-2 text-xs text-rose-600">
             El precio por ciento debe ser menor al precio normal.
           </p>

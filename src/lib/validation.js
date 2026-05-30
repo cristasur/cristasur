@@ -109,13 +109,14 @@ export function validateProductPayload(body) {
   const hasMinQty =
     body?.wholesaleMinQty !== undefined && body?.wholesaleMinQty !== null && body?.wholesaleMinQty !== ''
   const wholesaleMinQty = hasMinQty ? Math.floor(Number(body.wholesaleMinQty)) : null
-  // Tercer precio (precio por ciento). Sin lógica activa aún — solo se almacena.
-  const hasHundred =
-    body?.hundredPrice !== undefined && body?.hundredPrice !== null && body?.hundredPrice !== ''
-  const hundredPrice = hasHundred ? Number(body.hundredPrice) : null
-  const hasHundredMin =
-    body?.hundredMinQty !== undefined && body?.hundredMinQty !== null && body?.hundredMinQty !== ''
-  const hundredMinQty = hasHundredMin ? Math.floor(Number(body.hundredMinQty)) : null
+  // Tercer precio (precio por ciento). Soportamos también el alias
+  // 'hundredPrice/hundredMinQty' que ya usa el ProductForm.
+  const rawBulkPrice = body?.bulkPrice ?? body?.hundredPrice
+  const rawBulkMin   = body?.bulkMinQty ?? body?.hundredMinQty
+  const hasBulk = rawBulkPrice !== undefined && rawBulkPrice !== null && rawBulkPrice !== ''
+  const bulkPrice = hasBulk ? Number(rawBulkPrice) : null
+  const hasBulkMin = rawBulkMin !== undefined && rawBulkMin !== null && rawBulkMin !== ''
+  const bulkMinQty = hasBulkMin ? Math.floor(Number(rawBulkMin)) : null
   const categories = Array.isArray(body?.categories)
     ? body.categories.map((c) => (typeof c === 'string' ? c.trim() : '')).filter(Boolean)
     : []
@@ -269,9 +270,16 @@ export function validateProductPayload(body) {
     )
   ).slice(0, 12)
 
+  // Drafts (status='draft') tienen requisitos relajados: pueden no tener
+  // categoría, descripción larga ni imagen. Sólo necesitan nombre + precio
+  // para existir como esqueleto en la BD; el admin los completa después.
+  const isDraft = status === 'draft'
+
   if (!name || name.length < 2) errors.push('El nombre es obligatorio (mín. 2 caracteres)')
-  if (!description || description.length < 5)
-    errors.push('La descripción es obligatoria (mín. 5 caracteres)')
+  if (!isDraft) {
+    if (!description || description.length < 5)
+      errors.push('La descripción es obligatoria (mín. 5 caracteres)')
+  }
   if (!Number.isFinite(price) || price < 0)
     errors.push('El precio debe ser un número positivo')
   if (comparePrice !== null && (!Number.isFinite(comparePrice) || comparePrice < 0))
@@ -286,16 +294,21 @@ export function validateProductPayload(body) {
   } else if (wholesaleMinQty !== null && wholesaleMinQty > 0) {
     errors.push('Definiste cantidad mínima de mayoreo pero falta el precio de mayoreo')
   }
-  if (hundredPrice !== null) {
-    if (!Number.isFinite(hundredPrice) || hundredPrice < 0)
+  if (bulkPrice !== null) {
+    if (!Number.isFinite(bulkPrice) || bulkPrice < 0)
       errors.push('El precio por ciento debe ser un número positivo')
-    if (!Number.isFinite(hundredMinQty) || hundredMinQty < 2)
+    if (!Number.isFinite(bulkMinQty) || bulkMinQty < 2)
       errors.push('La cantidad mínima para precio por ciento debe ser 2 o más')
-  } else if (hundredMinQty !== null && hundredMinQty > 0) {
+  } else if (bulkMinQty !== null && bulkMinQty > 0) {
     errors.push('Definiste cantidad mínima para precio por ciento pero falta el precio')
   }
-  if (!categories.length || !categories.every((c) => validator.isMongoId(c)))
-    errors.push('Debe seleccionar al menos una categoría válida')
+  // En drafts, la categoría es opcional. En productos publicados, es obligatoria.
+  if (!isDraft) {
+    if (!categories.length || !categories.every((c) => validator.isMongoId(c)))
+      errors.push('Debe seleccionar al menos una categoría válida')
+  } else if (categories.length && !categories.every((c) => validator.isMongoId(c))) {
+    errors.push('Hay IDs de categoría inválidos')
+  }
   if (stock !== null && (!Number.isFinite(stock) || stock < 0))
     errors.push('El stock debe ser un número positivo o dejarse vacío (ilimitado)')
 
@@ -308,8 +321,8 @@ export function validateProductPayload(body) {
       comparePrice,
       wholesalePrice,
       wholesaleMinQty,
-      hundredPrice,
-      hundredMinQty,
+      bulkPrice,
+      bulkMinQty,
       categories,
       image,
       gallery,

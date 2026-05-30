@@ -139,10 +139,22 @@ export function rowToProduct(row, categoryIdByName) {
   ).trim()
   const wholesaleMinQty =
     minQtyRaw === '' ? null : Math.floor(Number(minQtyRaw)) || null
+  // Tercer precio "por ciento" (mayoreo 3)
+  const bulkRaw = String(
+    get('bulkPrice', 'precioPorCiento', 'precio_por_ciento', 'porCiento', 'mayoreo3', 'mayoreo_3') || ''
+  ).trim()
+  const bulkPrice = bulkRaw === '' ? null : Number(bulkRaw) || null
+  const bulkMinRaw = String(
+    get('bulkMinQty', 'cantidadPorCiento', 'cantidad_por_ciento', 'minPorCiento', 'min_por_ciento') || ''
+  ).trim()
+  const bulkMinQty = bulkMinRaw === '' ? null : Math.floor(Number(bulkMinRaw)) || null
   const stock = Number(get('stock', 'inventario') || 0)
   const sku = String(get('sku') || '').trim().toUpperCase() || undefined
   const featured = truthy(get('featured', 'destacado'))
   const active = get('active', 'publicado', 'activo') === '' ? true : truthy(get('active', 'publicado', 'activo'))
+  // Estado: draft o published. Si no se especifica, queda 'published' (legado).
+  const statusRaw = String(get('status', 'estado') || '').toLowerCase().trim()
+  const status = statusRaw === 'draft' || statusRaw === 'borrador' ? 'draft' : 'published'
   const image = String(get('image', 'imagen') || '').trim()
   const galleryStr = String(get('gallery', 'galeria', 'galería') || '').trim()
   const gallery = galleryStr ? galleryStr.split('|').map((s) => s.trim()).filter(Boolean) : []
@@ -159,13 +171,18 @@ export function rowToProduct(row, categoryIdByName) {
   // Valida formato básico de ObjectId (24 hex). Si no lo cumple, ignoramos.
   const _id = /^[a-f0-9]{24}$/i.test(rawId) ? rawId : ''
 
+  // En drafts no exigimos descripción ni categorías (las completa luego el admin).
+  const isDraft = status === 'draft'
   return {
-    ok: Boolean(name && description && price >= 0 && categories.length),
+    ok: Boolean(
+      name && price >= 0 &&
+      (isDraft || (description && categories.length))
+    ),
     missing: [
       !name && 'name',
-      !description && 'description',
+      !isDraft && !description && 'description',
       !(price >= 0) && 'price',
-      !categories.length && 'categories',
+      !isDraft && !categories.length && 'categories',
     ].filter(Boolean),
     data: {
       _id,
@@ -175,6 +192,8 @@ export function rowToProduct(row, categoryIdByName) {
       comparePrice,
       wholesalePrice,
       wholesaleMinQty,
+      bulkPrice,
+      bulkMinQty,
       stock,
       sku,
       featured,
@@ -182,6 +201,7 @@ export function rowToProduct(row, categoryIdByName) {
       image,
       gallery,
       categories,
+      status,
     },
     rawCategoryNames: catNames,
   }
@@ -209,6 +229,9 @@ export const PRODUCT_EXPORT_COLUMNS = [
   'comparePrice',
   'wholesalePrice',
   'wholesaleMinQty',
+  'bulkPrice',
+  'bulkMinQty',
+  'status',
   'stock',
   'sku',
   'featured',

@@ -37,6 +37,9 @@ const UPDATABLE_FIELDS = [
   'comparePrice',
   'wholesalePrice',
   'wholesaleMinQty',
+  'bulkPrice',
+  'bulkMinQty',
+  'status',
   'stock',
   'sku',
   'featured',
@@ -305,7 +308,15 @@ export async function POST(request) {
     for (const step of toUpdate) {
       const $set = {}
       for (const k of UPDATABLE_FIELDS) {
-        if (step.value[k] !== undefined) $set[k] = step.value[k]
+        const v = step.value[k]
+        if (v === undefined) continue
+        // NO sobreescribir con vacíos. Si el CSV viene con string vacío,
+        // array vacío o null, dejamos el valor existente en BD intacto.
+        // (Esto protege fotos, descripciones, categorías que ya están en
+        // productos previamente cargados al importar listas-esqueleto.)
+        if (v === '' || v === null) continue
+        if (Array.isArray(v) && v.length === 0) continue
+        $set[k] = v
       }
       $set.updatedBy = user?.sub
       try {

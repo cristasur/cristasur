@@ -9,9 +9,11 @@ import Category from '@/models/Category'
 
 export const dynamic = 'force-dynamic'
 
-async function loadProducts(categoryId, q) {
+async function loadProducts(categoryId, q, status) {
   await dbConnect()
   const filter = { deleted: { $ne: true } }
+  if (status === 'draft') filter.status = 'draft'
+  else if (status === 'published') filter.status = { $ne: 'draft' }
   if (categoryId) filter.categories = categoryId
   if (q) {
     const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -22,11 +24,11 @@ async function loadProducts(categoryId, q) {
   }
   // Sin filtros activos: ordenar por sortOrder para reflejar el orden manual.
   // Con filtros: createdAt desc (el DnD se deshabilita de todas formas).
-  const sort = (categoryId || q) ? { createdAt: -1 } : { sortOrder: 1, createdAt: -1 }
+  const sort = (categoryId || q || status) ? { createdAt: -1 } : { sortOrder: 1, createdAt: -1 }
   const products = await Product.find(filter)
     .populate('categories', 'name')
     .sort(sort)
-    .limit(200)
+    .limit(300)
     .lean()
   return JSON.parse(JSON.stringify(products))
 }
@@ -34,6 +36,11 @@ async function loadProducts(categoryId, q) {
 async function countTrash() {
   await dbConnect()
   return Product.countDocuments({ deleted: true })
+}
+
+async function countDrafts() {
+  await dbConnect()
+  return Product.countDocuments({ deleted: { $ne: true }, status: 'draft' })
 }
 
 async function loadCategories() {
@@ -45,11 +52,13 @@ async function loadCategories() {
 export default async function AdminProductos({ searchParams }) {
   const categoryId = searchParams?.category || ''
   const q = (searchParams?.q || '').trim()
-  const hasFilter = !!(categoryId || q)
-  const [products, categories, trashCount] = await Promise.all([
-    loadProducts(categoryId, q),
+  const status = searchParams?.status || ''
+  const hasFilter = !!(categoryId || q || status)
+  const [products, categories, trashCount, draftsCount] = await Promise.all([
+    loadProducts(categoryId, q, status),
     loadCategories(),
     countTrash(),
+    countDrafts(),
   ])
 
   return (
@@ -68,6 +77,23 @@ export default async function AdminProductos({ searchParams }) {
             Importar CSV
           </Link>
           <ExportCsvButton categories={categories} />
+          <Link
+            href={status === 'draft' ? '/admin/productos' : '/admin/productos?status=draft'}
+            className={
+              'inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ' +
+              (status === 'draft'
+                ? 'bg-amber-500 text-white hover:bg-amber-600'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700')
+            }
+          >
+            <Icon name="edit" className="w-4 h-4" />
+            {status === 'draft' ? 'Ver publicados' : 'Borradores'}
+            {draftsCount > 0 && status !== 'draft' && (
+              <span className="ml-1 bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[11px] font-bold">
+                {draftsCount}
+              </span>
+            )}
+          </Link>
           <Link
             href="/admin/productos/papelera"
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold"

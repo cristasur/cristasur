@@ -27,6 +27,9 @@ const VariantSchema = new mongoose.Schema(
     // null = hereda del producto padre.
     wholesalePrice:  { type: Number, min: 0, default: null },
     wholesaleMinQty: { type: Number, min: 1, default: null },
+    // Tercer nivel ("precio por ciento") — típicamente desde 100 piezas.
+    bulkPrice:       { type: Number, min: 0, default: null },
+    bulkMinQty:      { type: Number, min: 1, default: null },
     hundredPrice:    { type: Number, min: 0, default: null },
     hundredMinQty:   { type: Number, min: 1, default: null },
     stock: { type: Number, min: 0, default: null }, // null = ilimitado, 0 = sin stock

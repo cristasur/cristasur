@@ -88,7 +88,7 @@ export default function Hero({ categories = [], banners = [] }) {
 
             {/* Grid de categorías */}
             <div className="grid grid-cols-2 gap-4">
-              {categories.slice(0, 4).map((c) => (
+              {categories.slice(0, 4).map((c, idx) => (
                 <Link
                   key={c._id}
                   href={`/categoria/${c.slug}`}
@@ -100,6 +100,11 @@ export default function Hero({ categories = [], banners = [] }) {
                         src={c.image}
                         alt={c.name}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        // Las primeras 2 cards del hero son LCP en móvil y desktop.
+                        // fetchpriority=high le dice al browser que las cargue antes
+                        // que cualquier imagen lazy de más abajo.
+                        fetchPriority={idx < 2 ? 'high' : 'auto'}
+                        loading={idx < 2 ? 'eager' : 'lazy'}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/85 via-slate-900/30 to-transparent" />
                     </>
@@ -129,6 +134,9 @@ export default function Hero({ categories = [], banners = [] }) {
               alt={slide.title || 'Banner CRISTASUR'}
               className="w-full h-full object-cover"
               style={{ minHeight: '420px', maxHeight: '600px' }}
+              // El primer banner es el LCP cuando está visible al cargar la página.
+              fetchPriority={i === 0 ? 'high' : 'low'}
+              loading={i === 0 ? 'eager' : 'lazy'}
             />
             {/* Overlay solo si hay texto encima */}
             {slide.title && (

@@ -1464,6 +1464,29 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       {/* Imagen principal */}
       <div>
         <span className="text-sm font-medium text-slate-700">Imagen principal</span>
+
+        {/* Tip de medidas ideales — aplica también a la galería */}
+        <div className="mt-2 mb-3 rounded-lg bg-sky-50 border border-sky-200 p-3 text-xs text-sky-900">
+          <p className="font-bold mb-1">💡 Medida recomendada para fotos de producto</p>
+          <ul className="list-disc pl-5 space-y-0.5 leading-relaxed">
+            <li>
+              <b>1200 × 1200 px (cuadrada 1:1)</b> es lo ideal — se ve nítida en cualquier pantalla.
+            </li>
+            <li>
+              Mínimo aceptable: 800 × 800 px. Máximo: 1600 × 1600 px
+              (se redimensiona automáticamente, no más grande).
+            </li>
+            <li>
+              Formato JPG, PNG o WebP. Peso máximo 8 MB (el server las comprime a WebP
+              ~150-300 KB).
+            </li>
+            <li>
+              Fondo blanco o neutro, producto centrado y con buena luz.
+              Sin marcas de agua ni texto pegado.
+            </li>
+          </ul>
+        </div>
+
         <div className="mt-2 flex items-center gap-4">
           <div className="w-32 h-32 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 grid place-items-center shrink-0">
             {form.image ? (
@@ -1555,7 +1578,10 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         </div>
         <p className="text-xs text-slate-500 mt-1">
           Imágenes adicionales que se muestran en el detalle del producto. Puedes
-          seleccionar varios archivos a la vez.
+          seleccionar varios archivos a la vez.{' '}
+          <span className="text-sky-700 font-semibold">
+            Misma medida ideal: 1200 × 1200 px cuadradas, fondo blanco.
+          </span>
         </p>
 
         <div className="mt-3 flex flex-wrap gap-3 items-center">

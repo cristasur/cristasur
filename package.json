@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "node scripts/seed.js",
-    "backup": "node scripts/backup.js"
+    "backup": "node scripts/backup.js",
+    "add-blog": "node scripts/add-blog.js",
+    "add-product": "node scripts/add-product.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.3",

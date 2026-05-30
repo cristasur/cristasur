@@ -31,3 +31,5 @@ yarn-error.log*
 # uploads de usuario (se conservan fuera del repo)
 public/uploads/*
 !public/uploads/.gitkeep
+
+.vercel

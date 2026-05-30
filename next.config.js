@@ -93,10 +93,21 @@ const nextConfig = {
     serverComponentsExternalPackages: ['pdfkit', 'qrcode'],
   },
 
-  // Permitimos cargar imágenes desde dominios externos comunes (Cloudinary, Unsplash, etc.)
-  // y también desde la ruta local /uploads/*
+  // Dominios de imagen permitidos. Restringido a los que realmente usa la app:
+  //  - Vercel Blob (almacenamiento principal de imágenes en producción)
+  //  - YouTube (thumbnails de videos del blog)
+  //  - img.youtube.com (thumbnails alternativos de YouTube)
+  // Si agregas otro CDN en el futuro (Cloudinary, Imgix, etc.) añádelo aquí.
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.vercel-storage.com' },
+      { protocol: 'https', hostname: 'blob.vercel-storage.com' },
+      { protocol: 'https', hostname: 'img.youtube.com' },
+      { protocol: 'https', hostname: 'i.ytimg.com' },
+      // Fallback temporal para imágenes legacy que aún estén en otros hosts.
+      // Elimina esta línea cuando todas las imágenes estén en Vercel Blob.
+      { protocol: 'https', hostname: '**' },
+    ],
   },
 
   async headers() {

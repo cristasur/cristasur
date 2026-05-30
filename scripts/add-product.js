@@ -1,17 +1,20 @@
 // ============================================================
 // CRISTASUR — Subir producto a MongoDB + Vercel Blob
-// Uso: node add-product.js
-// ============================================================
-// Este archivo es generado por el agente. Edita PRODUCT_DATA
-// y luego corre: node add-product.js
+// Uso: node scripts/add-product.js
+// Requiere que .env.local esté en la raíz del proyecto con:
+//   MONGODB_URI y BLOB_READ_WRITE_TOKEN
+// Edita PRODUCT_DATA más abajo y corre el script.
 // ============================================================
 
 const fs   = require('fs')
 const path = require('path')
 
-// ─── CONFIG ──────────────────────────────────────────────────
-const MONGODB_URI    = 'mongodb+srv://Amir:Amirhefa171819@cluster0.tz4uusc.mongodb.net/cristasur?retryWrites=true&w=majority&appName=Cluster0'
-const BLOB_TOKEN     = 'vercel_blob_rw_TleedtX96T6HhsSD_IUu8CX1HsZwKli4aDHbyRglMHeQ11K'
+// ─── CONFIG desde .env.local (no credenciales hardcodeadas) ──
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') })
+const MONGODB_URI = process.env.MONGODB_URI
+const BLOB_TOKEN  = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_WRITE_TOKEN
+if (!MONGODB_URI) throw new Error('Falta MONGODB_URI en .env.local')
+if (!BLOB_TOKEN)  throw new Error('Falta BLOB_READ_WRITE_TOKEN en .env.local')
 // ─────────────────────────────────────────────────────────────
 
 // ─── PRODUCTO (el agente llena esto por ti) ──────────────────
@@ -65,7 +68,7 @@ async function run() {
 
   // 3. Conectar a MongoDB
   console.log('🔌 Conectando a MongoDB...')
-  const mongoose = require('./node_modules/mongoose')
+  const mongoose = require('../node_modules/mongoose')
   await mongoose.connect(MONGODB_URI)
   console.log('✅ Conectado')
 

@@ -1,16 +1,25 @@
 // ============================================================
 // CRISTASUR — Crear post de blog con video
-// Uso: node add-blog.js
+// Uso: node scripts/add-blog.js
+// Requiere que .env.local esté en la raíz del proyecto con:
+//   MONGODB_URI y BLOB_WRITE_TOKEN (o BLOB_READ_WRITE_TOKEN)
 // ============================================================
 
 const fs   = require('fs')
 const path = require('path')
 
-const MONGODB_URI = 'mongodb+srv://Amir:Amirhefa171819@cluster0.tz4uusc.mongodb.net/cristasur?retryWrites=true&w=majority&appName=Cluster0'
-const BLOB_TOKEN  = 'vercel_blob_rw_TleedtX96T6HhsSD_IUu8CX1HsZwKli4aDHbyRglMHeQ11K'
+// Cargar variables de entorno desde .env.local (no exponer credenciales en código)
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') })
+
+const MONGODB_URI = process.env.MONGODB_URI
+const BLOB_TOKEN  = process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_WRITE_TOKEN
+
+if (!MONGODB_URI) throw new Error('Falta MONGODB_URI en .env.local')
+if (!BLOB_TOKEN)  throw new Error('Falta BLOB_READ_WRITE_TOKEN en .env.local')
 
 // ─── Ruta al video ────────────────────────────────────────────
-const VIDEO_PATH = 'C:\\Users\\Amirh\\Desktop\\CRISTASSUR\\cristasur\\WhatsApp Video 2026-05-19 at 11.47.26 AM.mp4'
+// Cambia esta ruta al video que quieras subir
+const VIDEO_PATH = process.argv[2] || ''
 // ─────────────────────────────────────────────────────────────
 
 function buildContent(videoUrl) {
@@ -51,6 +60,7 @@ function buildContent(videoUrl) {
 
 async function run() {
   // 1. Subir video a Vercel Blob
+  if (!VIDEO_PATH) throw new Error('Proporciona la ruta al video: node scripts/add-blog.js "ruta/al/video.mp4"')
   if (!fs.existsSync(VIDEO_PATH)) throw new Error(`Video no encontrado: ${VIDEO_PATH}`)
 
   console.log('📤 Subiendo video a Vercel Blob...')
@@ -75,7 +85,7 @@ async function run() {
 
   // 2. Conectar a MongoDB
   console.log('🔌 Conectando a MongoDB...')
-  const mongoose = require('./node_modules/mongoose')
+  const mongoose = require('../node_modules/mongoose')
   await mongoose.connect(MONGODB_URI)
   console.log('✅ Conectado')
 

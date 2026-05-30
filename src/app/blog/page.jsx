@@ -7,7 +7,9 @@ import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import BlogFilters from './BlogFilters'
 
-export const dynamic = 'force-dynamic'
+// searchParams hace la página dinámica automáticamente en Next.js App Router.
+// Sin force-dynamic explícito: Next.js filtrará si puede cachear la variante
+// sin parámetros (/blog sin ?tipo ni ?q). Con parámetros siempre es dinámico.
 
 export const metadata = {
   title: 'Blog — Consejos para tu hogar y negocio | CRISTASUR',

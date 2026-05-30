@@ -7,6 +7,7 @@
 //  - Reseñas pendientes
 // ============================================================
 import Link from 'next/link'
+import { unstable_cache } from 'next/cache'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Review from '@/models/Review'
@@ -19,7 +20,10 @@ function formatPrice(n) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(n || 0)
 }
 
-async function loadStats() {
+// Las 13 queries del dashboard se cachean 30 s para no machacar MongoDB en
+// cada recarga de pestaña. Con force-dynamic la página sigue siendo dinámica
+// (no se pre-renderiza en build), pero los datos dentro sí se cachean.
+async function _loadStats() {
   await dbConnect()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000)
 
@@ -97,6 +101,14 @@ async function loadStats() {
     recentOrders: JSON.parse(JSON.stringify(recentOrders)),
   }
 }
+
+// Versión cacheada: las métricas se actualizan cada 30 segundos.
+// Si el admin necesita datos al instante puede recargar la página pasados 30 s.
+const loadStats = unstable_cache(
+  _loadStats,
+  ['admin-dashboard-stats'],
+  { revalidate: 30, tags: ['dashboard'] }
+)
 
 function Stat({ label, value, icon, href, tint = 'brand', sub }) {
   const tints = {

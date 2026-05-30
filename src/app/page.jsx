@@ -12,21 +12,34 @@ import Icon from '@/components/Icon'
 import RepeatOrder from '@/components/RepeatOrder'
 import CategoryCarousel from '@/components/CategoryCarousel'
 
-// ISR: regenerar cada 60 segundos. El home no necesita datos en tiempo real;
-// los productos destacados y banners cambian raramente.
-export const revalidate = 60
+// El home es dinámico: cuando un admin cambia "destacado" o publica algo,
+// el siguiente visitante debe verlo ya. Si se necesita aliviar carga, cambiar
+// a `export const revalidate = 10` (10 segundos) — pero confirma probarlo
+// primero porque los cambios desde admin no se reflejan hasta el TTL.
+export const dynamic = 'force-dynamic'
 
 async function loadHome() {
   await dbConnect()
+  const now = new Date()
+  // Filtro común para producto visible al público:
+  // - activo, no eliminado, status != draft, publicado (publishAt vencido).
+  const publicMatch = {
+    active: true,
+    deleted: { $ne: true },
+    $and: [
+      { $or: [{ status: { $exists: false } }, { status: 'published' }] },
+      { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
+    ],
+  }
   const [categories, featured, newest, banners] = await Promise.all([
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
-    Product.find({ active: true, featured: true, deleted: { $ne: true } })
+    Product.find({ ...publicMatch, featured: true })
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
       .sort({ sortOrder: 1, createdAt: -1 })
       .limit(8)
       .lean(),
-    Product.find({ active: true, deleted: { $ne: true } })
+    Product.find(publicMatch)
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
       .sort({ createdAt: -1 })

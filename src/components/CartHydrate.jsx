@@ -2,7 +2,7 @@
 // Componente cliente que toma items codificados de la URL y los
 // reinsta en el carrito. Usado por /carrito?items=...
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useCart } from './CartProvider'
 
 function b64ToUtf8(b64) {
@@ -32,6 +32,7 @@ function decodeItems(encoded) {
 export default function CartHydrate({ encoded }) {
   const { reorderFromSnapshot, setOpen } = useCart()
   const router = useRouter()
+  const pathname = usePathname()
   const [status, setStatus] = useState('loading')
 
   useEffect(() => {
@@ -43,9 +44,9 @@ export default function CartHydrate({ encoded }) {
     reorderFromSnapshot({ items, at: new Date().toISOString() })
     setOpen(true)
     setStatus('ok')
-    // Limpia la URL para no dejar el blob expuesto
-    router.replace('/')
-  }, [encoded, reorderFromSnapshot, setOpen, router])
+    // Limpia el query param ?cart=... de la URL sin redirigir al usuario a otra página
+    router.replace(pathname)
+  }, [encoded, reorderFromSnapshot, setOpen, router, pathname])
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center">

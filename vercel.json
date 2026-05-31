@@ -9,6 +9,13 @@
     }
   },
 
+  "crons": [
+    {
+      "path": "/api/cron/abandoned-cart",
+      "schedule": "0 15 * * *"
+    }
+  ],
+
   "headers": [
     {
       "source": "/favicon.ico",
@@ -26,12 +33,6 @@
       "source": "/locations/:file",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }
-      ]
-    },
-    {
-      "source": "/uploads/:file",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=86400" }
       ]
     }
   ],

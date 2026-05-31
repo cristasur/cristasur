@@ -239,11 +239,8 @@ export function validateProductPayload(body) {
   if (pkgHeight !== null && pkgHeight > 999)
     errors.push('El alto de la caja no puede superar 999 cm')
 
-  // Estado y publicación programada
-  let status = body?.status === 'draft' ? 'draft' : 'published'
-  if (!image) {
-    status = 'draft'
-  }
+  // Estado y publicación programada — siempre published
+  const status = 'published'
   const publishAt =
     body?.publishAt && !isNaN(new Date(body.publishAt).getTime())
       ? new Date(body.publishAt)
@@ -273,16 +270,9 @@ export function validateProductPayload(body) {
     )
   ).slice(0, 12)
 
-  // Drafts (status='draft') tienen requisitos relajados: pueden no tener
-  // categoría, descripción larga ni imagen. Sólo necesitan nombre + precio
-  // para existir como esqueleto en la BD; el admin los completa después.
-  const isDraft = status === 'draft'
-
   if (!name || name.length < 2) errors.push('El nombre es obligatorio (mín. 2 caracteres)')
-  if (!isDraft) {
-    if (!description || description.length < 5)
-      errors.push('La descripción es obligatoria (mín. 5 caracteres)')
-  }
+  if (!description || description.length < 5)
+    errors.push('La descripción es obligatoria (mín. 5 caracteres)')
   if (!Number.isFinite(price) || price < 0)
     errors.push('El precio debe ser un número positivo')
   if (comparePrice !== null && (!Number.isFinite(comparePrice) || comparePrice < 0))
@@ -315,13 +305,9 @@ export function validateProductPayload(body) {
     if (!Number.isFinite(_bulkMinQty) || _bulkMinQty < 2)
       errors.push('La cantidad mínima para precio por ciento debe ser 2 o más')
   }
-  // En drafts, la categoría es opcional. En productos publicados, es obligatoria.
-  if (!isDraft) {
-    if (!categories.length || !categories.every((c) => validator.isMongoId(c)))
-      errors.push('Debe seleccionar al menos una categoría válida')
-  } else if (categories.length && !categories.every((c) => validator.isMongoId(c))) {
-    errors.push('Hay IDs de categoría inválidos')
-  }
+  // La categoría es obligatoria para todos los productos.
+  if (!categories.length || !categories.every((c) => validator.isMongoId(c)))
+    errors.push('Debe seleccionar al menos una categoría válida')
   if (stock !== null && (!Number.isFinite(stock) || stock < 0))
     errors.push('El stock debe ser un número positivo o dejarse vacío (ilimitado)')
 

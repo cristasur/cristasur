@@ -19,10 +19,7 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
   const filter = {
     active: true,
     deleted: { $ne: true },
-    $and: [
-      { $or: [{ status: { $exists: false } }, { status: 'published' }] },
-      { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
-    ],
+    $or: [{ publishAt: null }, { publishAt: { $lte: now } }],
   }
   if (featured === '1') filter.featured = true
   if (inStock === '1') filter.stock = { $gt: 0 }

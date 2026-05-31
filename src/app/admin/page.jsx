@@ -30,7 +30,6 @@ async function _loadStats() {
   const [
     totalProducts,
     active,
-    drafts,
     trashed,
     noImage,
     lowStock,
@@ -43,8 +42,7 @@ async function _loadStats() {
     interestSignals,
   ] = await Promise.all([
     Product.countDocuments({ deleted: { $ne: true } }),
-    Product.countDocuments({ active: true, status: { $ne: 'draft' }, deleted: { $ne: true } }),
-    Product.countDocuments({ status: 'draft', deleted: { $ne: true } }),
+    Product.countDocuments({ active: true, deleted: { $ne: true } }),
     Product.countDocuments({ deleted: true }),
     Product.countDocuments({
       deleted: { $ne: true },
@@ -92,7 +90,7 @@ async function _loadStats() {
   ])
 
   return {
-    totalProducts, active, drafts, trashed, noImage,
+    totalProducts, active, trashed, noImage,
     lowStock: JSON.parse(JSON.stringify(lowStock)),
     topViewed: JSON.parse(JSON.stringify(topViewed)),
     topWhatsappClicks: JSON.parse(JSON.stringify(topWhatsappClicks)),
@@ -164,7 +162,6 @@ export default async function AdminDashboard() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="Productos publicados" value={s.active}    icon="check" href="/admin/productos" tint="emerald" />
-        <Stat label="Borradores"           value={s.drafts}    icon="edit"  href="/admin/productos?status=draft" tint="amber" />
         <Stat label="En papelera"          value={s.trashed}   icon="trash" href="/admin/productos/papelera" tint="slate" />
         <Stat label="Sin foto"             value={s.noImage}   icon="box"   tint="rose" sub="Hay que subirles imagen" />
       </div>

@@ -61,7 +61,10 @@ export async function GET(request) {
     if (deletedOnly) filter.deleted = true
     else if (!includeDeleted) filter.deleted = { $ne: true }
 
-    if (!includeInactive) filter.active = true
+    if (!includeInactive) {
+      filter.active = true
+      filter.status = 'published'
+    }
     if (featured) filter.featured = true
     if (inStock) filter.stock = { $gt: 0 }
 

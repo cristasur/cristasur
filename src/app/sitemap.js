@@ -30,10 +30,7 @@ export default async function sitemap() {
       Product.find({
         active: true,
         deleted: { $ne: true },
-        $and: [
-          { $or: [{ status: { $exists: false } }, { status: 'published' }] },
-          { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
-        ],
+        $or: [{ publishAt: null }, { publishAt: { $lte: now } }],
       })
         .select('_id updatedAt')
         .sort({ updatedAt: -1 })

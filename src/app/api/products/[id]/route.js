@@ -26,6 +26,16 @@ export async function GET(_request, { params }) {
       .populate('brand', 'name slug')
       .lean()
     if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+
+    // Usuarios no autenticados solo pueden ver productos publicados y no borrados
+    const user = await getCurrentUser()
+    const isStaff = user && ['admin', 'editor'].includes(user.role)
+    if (!isStaff) {
+      if (product.deleted || product.status !== 'published') {
+        return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      }
+    }
+
     return NextResponse.json({ product })
   } catch (err) {
     console.error(err)

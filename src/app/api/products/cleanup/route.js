@@ -1,8 +1,13 @@
 // ============================================================
-// GET /api/products/cleanup
+// POST /api/products/cleanup
 // Endpoint de API protegido para eliminar de forma permanente
 // todos los productos que no tengan una imagen principal.
 // Solo accesible por administradores autenticados.
+//
+// Body JSON requerido: { "confirm": true }
+// NOTA: Cambiado de GET a POST para evitar que bots, crawlers
+// o recargas accidentales del navegador activen un borrado
+// permanente de datos.
 // ============================================================
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -13,7 +18,7 @@ import { getCurrentUser } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET(request) {
+export async function POST(request) {
   try {
     // 1. Verificar autenticación y rol de administrador
     const user = await getCurrentUser()
@@ -24,17 +29,26 @@ export async function GET(request) {
       )
     }
 
-    // 2. Conectar a la base de datos
+    // 2. Requerir confirmación explícita en el body para evitar ejecuciones accidentales
+    const body = await request.json().catch(() => ({}))
+    if (body?.confirm !== true) {
+      return NextResponse.json(
+        { error: 'Se requiere { "confirm": true } en el body para ejecutar esta operación destructiva.' },
+        { status: 400 }
+      )
+    }
+
+    // 3. Conectar a la base de datos
     await dbConnect()
 
-    // 3. Definir consulta para productos sin imagen
+    // 4. Definir consulta para productos sin imagen
     const query = {
       $or: [
         { image: { $exists: false } },
         { image: null },
         { image: '' },
-        { image: /^\s*$/ } // Solo espacios en blanco
-      ]
+        { image: /^\s*$/ }, // Solo espacios en blanco
+      ],
     }
 
     // Contar cuántos hay antes de borrar
@@ -44,19 +58,12 @@ export async function GET(request) {
       return NextResponse.json({
         ok: true,
         message: 'No se encontraron productos sin imagen principal para eliminar.',
-        deletedCount: 0
+        deletedCount: 0,
       })
     }
 
-    // 4. Eliminar de forma permanente
+    // 5. Eliminar de forma permanente solo los productos sin imagen
     const result = await Product.deleteMany(query)
-
-    // 5. CORRECCIÓN DE ESTADO: Forzar que todos los productos con imagen tengan status = 'published'
-    // Esto los saca de borradores y los muestra en la lista normal y en la web pública
-    const updateResult = await Product.updateMany(
-      { image: { $exists: true, $ne: null, $regex: /\S/ } },
-      { $set: { status: 'published' } }
-    )
 
     // 6. Revalidar el caché de la web
     try {
@@ -66,10 +73,9 @@ export async function GET(request) {
 
     return NextResponse.json({
       ok: true,
-      message: `Limpieza exitosa. Se eliminaron permanentemente ${result.deletedCount} productos sin imagen principal. Se repararon y publicaron ${updateResult.modifiedCount} productos con imagen principal.`,
+      message: `Limpieza exitosa. Se eliminaron permanentemente ${result.deletedCount} producto(s) sin imagen principal.`,
       deletedCount: result.deletedCount,
-      repairedCount: updateResult.modifiedCount,
-      remainingCount: await Product.countDocuments({})
+      remainingCount: await Product.countDocuments({}),
     })
   } catch (err) {
     console.error('Error en /api/products/cleanup:', err)

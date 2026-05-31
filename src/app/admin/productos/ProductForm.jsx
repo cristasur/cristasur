@@ -1154,14 +1154,9 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         <div className="grid md:grid-cols-3 gap-4">
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Estado</span>
-            <select
-              value={form.status || 'published'}
-              onChange={(e) => update('status', e.target.value)}
-              className={input}
-            >
-              <option value="published">Publicado</option>
-              <option value="draft">Borrador (oculto al público)</option>
-            </select>
+            <div className="mt-1 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 font-semibold">
+              ✓ Publicado
+            </div>
           </label>
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Publicar el</span>

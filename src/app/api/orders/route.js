@@ -13,6 +13,7 @@ import dbConnect from '@/lib/mongodb'
 import crypto from 'crypto'
 import Order from '@/models/Order'
 import Product from '@/models/Product'
+import Coupon from '@/models/Coupon'
 import { getCurrentUser } from '@/lib/auth'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
 
@@ -117,6 +118,18 @@ export async function POST(request) {
       cookieToken: String(body?.cookieToken || '').slice(0, 64),
       ipHash: hashIp(ip),
     })
+
+    // Incrementar usageCount del cupón si se usó uno
+    if (order.couponCode) {
+      try {
+        await Coupon.findOneAndUpdate(
+          { code: order.couponCode, active: true },
+          { $inc: { usageCount: 1 } }
+        )
+      } catch (e) {
+        console.warn('coupon usageCount update failed', e?.message)
+      }
+    }
 
     // Incrementar coOrders entre cada par de productos (para "también compraron").
     // Sólo cuando hay 2+ productos distintos en el carrito.

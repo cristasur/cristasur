@@ -152,9 +152,8 @@ export function rowToProduct(row, categoryIdByName) {
   const sku = String(get('sku') || '').trim().toUpperCase() || undefined
   const featured = truthy(get('featured', 'destacado'))
   const active = get('active', 'publicado', 'activo') === '' ? true : truthy(get('active', 'publicado', 'activo'))
-  // Estado: draft o published. Si no se especifica, queda 'published' (legado).
-  const statusRaw = String(get('status', 'estado') || '').toLowerCase().trim()
-  const status = statusRaw === 'draft' || statusRaw === 'borrador' ? 'draft' : 'published'
+  // Estado: siempre published al importar.
+  const status = 'published'
   const image = String(get('image', 'imagen') || '').trim()
   const galleryStr = String(get('gallery', 'galeria', 'galería') || '').trim()
   const gallery = galleryStr ? galleryStr.split('|').map((s) => s.trim()).filter(Boolean) : []
@@ -171,18 +170,13 @@ export function rowToProduct(row, categoryIdByName) {
   // Valida formato básico de ObjectId (24 hex). Si no lo cumple, ignoramos.
   const _id = /^[a-f0-9]{24}$/i.test(rawId) ? rawId : ''
 
-  // En drafts no exigimos descripción ni categorías (las completa luego el admin).
-  const isDraft = status === 'draft'
   return {
-    ok: Boolean(
-      name && price >= 0 &&
-      (isDraft || (description && categories.length))
-    ),
+    ok: Boolean(name && price >= 0 && description && categories.length),
     missing: [
       !name && 'name',
-      !isDraft && !description && 'description',
+      !description && 'description',
       !(price >= 0) && 'price',
-      !isDraft && !categories.length && 'categories',
+      !categories.length && 'categories',
     ].filter(Boolean),
     data: {
       _id,

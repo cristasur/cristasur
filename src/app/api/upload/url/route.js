@@ -1,13 +1,12 @@
 // ============================================================
 // POST /api/upload/url
-// Recibe { url } (cliente), descarga la imagen, la procesa con sharp
-// y la guarda en /public/uploads. Devuelve la URL local generada.
+// Recibe { url } (cliente), descarga la imagen, la procesa con
+// sharp y la sube a Vercel Blob. Devuelve la URL pública.
 // Mismas validaciones que /api/upload (magic number, MIME).
-// Sólo se permiten dominios HTTPS y se acota tamaño.
+// Solo URLs http/https, se bloquean hosts privados (SSRF).
 // ============================================================
 import { NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { put } from '@vercel/blob'
 import crypto from 'crypto'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
 import { getCurrentUser } from '@/lib/auth'
@@ -38,7 +37,6 @@ function isPrivateHost(host) {
   const h = host.toLowerCase()
   if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return true
   if (h.endsWith('.local') || h.endsWith('.internal')) return true
-  // bloqueo de rangos IP privados clásicos por prefijo string
   if (/^10\./.test(h)) return true
   if (/^192\.168\./.test(h)) return true
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true
@@ -77,16 +75,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Dominio no permitido' }, { status: 400 })
     }
 
+    // Descargar imagen con timeout y sin seguir redirecciones (anti-SSRF)
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT)
     let res
     try {
       res = await fetch(urlStr, { redirect: 'manual', signal: ctrl.signal })
-    } catch (e) {
+    } catch {
       clearTimeout(timer)
       return NextResponse.json({ error: 'No se pudo descargar la imagen' }, { status: 502 })
     }
     clearTimeout(timer)
+
     // Bloquear redirecciones para evitar SSRF a través de 3xx
     if (res.status >= 300 && res.status < 400) {
       return NextResponse.json({ error: 'Redirects no permitidos' }, { status: 400 })
@@ -94,67 +94,62 @@ export async function POST(request) {
     if (!res.ok) {
       return NextResponse.json({ error: `La URL devolvió ${res.status}` }, { status: 502 })
     }
-    const contentType = res.headers.get('content-type') || ''
-    if (!ALLOWED_MIME.has(contentType.split(';')[0])) {
-      // todavía dejamos que magic-number la confirme
-    }
+
     const lengthHeader = Number(res.headers.get('content-length') || 0)
     if (lengthHeader && lengthHeader > MAX_SIZE) {
-      return NextResponse.json({ error: 'Imagen demasiado grande' }, { status: 413 })
+      return NextResponse.json({ error: 'Imagen demasiado grande (máx 8MB)' }, { status: 413 })
     }
+
     const arrayBuf = await res.arrayBuffer()
     const bytes = Buffer.from(arrayBuf)
     if (bytes.length > MAX_SIZE) {
-      return NextResponse.json({ error: 'Imagen demasiado grande' }, { status: 413 })
+      return NextResponse.json({ error: 'Imagen demasiado grande (máx 8MB)' }, { status: 413 })
     }
 
+    // Validar tipo real por magic numbers
     const realType = detectImageType(bytes)
-    if (!realType) {
-      return NextResponse.json({ error: 'El recurso no parece una imagen' }, { status: 415 })
+    if (!realType || !ALLOWED_MIME.has(realType)) {
+      return NextResponse.json({ error: 'El recurso no parece una imagen válida' }, { status: 415 })
     }
 
+    // Comprimir con sharp (igual que /api/upload)
     let processed = bytes
-    let ext = '.webp'
-    try {
-      const sharp = (await import('sharp')).default
-      if (realType === 'image/gif') {
-        processed = bytes
-        ext = '.gif'
-      } else {
+    let ext = realType === 'image/gif' ? '.gif' : '.webp'
+    let contentType = realType
+
+    if (realType !== 'image/gif') {
+      try {
+        const sharp = (await import('sharp')).default
         processed = await sharp(bytes)
           .rotate()
           .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 80 })
+          .webp({ quality: 82 })
           .toBuffer()
+        ext = '.webp'
+        contentType = 'image/webp'
+      } catch (e) {
+        console.warn('[upload/url] sharp no disponible, subiendo original:', e?.message)
+        ext = realType === 'image/png' ? '.png' : realType === 'image/webp' ? '.webp' : '.jpg'
+        contentType = realType
       }
-    } catch (e) {
-      console.error('upload/url sharp', e?.message)
-      return NextResponse.json({ error: 'No se pudo procesar la imagen' }, { status: 500 })
     }
 
-    // NOTA: escritura a filesystem local no soportada en producción (Vercel serverless).
-    // El filesystem de Vercel es de solo lectura excepto /tmp, y los archivos no persisten
-    // entre invocaciones. Usa Vercel Blob o similar para almacenamiento persistente.
-    // El código original se preserva comentado para referencia:
-    //
-    // const fileName = `${Date.now()}-${crypto.randomBytes(16).toString('hex')}${ext}`
-    // const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-    // const fullPath = path.join(uploadDir, fileName)
-    // if (!fullPath.startsWith(uploadDir + path.sep)) {
-    //   return NextResponse.json({ error: 'Ruta inválida' }, { status: 400 })
-    // }
-    // await mkdir(uploadDir, { recursive: true })
-    // await writeFile(fullPath, processed)
-    // return NextResponse.json({
-    //   url: `/uploads/${fileName}`,
-    //   bytes: processed.length,
-    //   originalBytes: bytes.length,
-    // })
+    // Subir a Vercel Blob (igual que /api/upload)
+    const folder = (body?.folder || 'productos').replace(/[^a-z0-9-_]/gi, '')
+    const randomName = crypto.randomBytes(16).toString('hex')
+    const fileName = `${folder}/${Date.now()}-${randomName}${ext}`
 
-    return NextResponse.json(
-      { error: 'Almacenamiento local no soportado en producción. Configura Vercel Blob.' },
-      { status: 501 }
-    )
+    const blob = await put(fileName, processed, {
+      access: 'public',
+      contentType,
+    })
+
+    return NextResponse.json({
+      url: blob.url,
+      bytes: processed.length,
+      originalBytes: bytes.length,
+      savedPct: Math.round(((bytes.length - processed.length) / bytes.length) * 100),
+    })
   } catch (err) {
     console.error('POST /api/upload/url', err)
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })

@@ -41,16 +41,19 @@ export default function ProductCard({ product }) {
               <Icon name="box" className="w-16 h-16" strokeWidth={1.5} />
             </div>
           )}
-          {product.featured && (
-            <span className="absolute top-3 left-3 bg-accent-500 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full">
-              Destacado
-            </span>
-          )}
-          {hasDiscount && (
-            <span className="absolute top-3 left-3 mt-7 bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              -{discountPct}%
-            </span>
-          )}
+          {/* Contenedor de badges: flex column para evitar solapamiento */}
+          <div className="absolute top-3 left-3 flex flex-col gap-1">
+            {product.featured && (
+              <span className="bg-accent-500 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded-full">
+                Destacado
+              </span>
+            )}
+            {hasDiscount && (
+              <span className="bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                -{discountPct}%
+              </span>
+            )}
+          </div>
           {outOfStock && (
             <span className="absolute inset-0 bg-black/40 grid place-items-center">
               <span className="bg-white/95 text-slate-900 text-xs font-bold uppercase px-3 py-1 rounded-full">

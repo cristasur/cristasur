@@ -16,7 +16,6 @@ const OPS = [
   { value: 'stock.set',     label: 'Setear stock exacto', placeholder: 'Ej. 100' },
   { value: 'stock.add',     label: 'Sumar al stock', placeholder: 'Ej. 50' },
   { value: 'active.set',    label: 'Publicar/ocultar (active)' },
-  { value: 'status.set',    label: 'Cambiar status (draft/published)' },
   { value: 'featured.set',  label: 'Destacar/no destacar' },
   { value: 'tags.add',      label: 'Añadir tags', placeholder: 'navidad, eco' },
   { value: 'tags.remove',   label: 'Quitar tags', placeholder: 'navidad' },
@@ -217,14 +216,12 @@ export default function BulkEditClient({ products, categories }) {
                     <span
                       className={
                         'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ' +
-                        (!p.active
-                          ? 'bg-slate-200 text-slate-600'
-                          : p.status === 'draft'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-emerald-100 text-emerald-700')
+                        (p.active
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-slate-200 text-slate-600')
                       }
                     >
-                      {p.active ? (p.status === 'draft' ? 'draft' : 'public') : 'oculto'}
+                      {p.active ? 'publicado' : 'oculto'}
                     </span>
                   </td>
                 </tr>

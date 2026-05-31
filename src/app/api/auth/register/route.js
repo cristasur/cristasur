@@ -73,7 +73,8 @@ export async function POST(request) {
     // Send verification email (non-blocking)
     try {
       const verifyToken = crypto.randomBytes(32).toString('hex')
-      await User.findByIdAndUpdate(user._id || user.id, { verifyToken })
+      const verifyTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 horas
+      await User.findByIdAndUpdate(user._id || user.id, { verifyToken, verifyTokenExpiry })
       await sendVerificationEmail(user.email, verifyToken)
     } catch {}
 

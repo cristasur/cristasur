@@ -57,10 +57,17 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
     else filter.materials = null
   }
 
-  // Filtro por color
+  // Filtro por color — busca en color principal, variantes simples y variantes multi-dim
   if (color) {
     const safeColor = color.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    filter.color = { $regex: safeColor, $options: 'i' }
+    const colorReg = { $regex: safeColor, $options: 'i' }
+    filter.$and.push({
+      $or: [
+        { color: colorReg },
+        { 'variants.value': colorReg },
+        { 'variants.optionValues.Color': colorReg },
+      ],
+    })
   }
 
   if (q) {

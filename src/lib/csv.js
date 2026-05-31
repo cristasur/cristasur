@@ -171,13 +171,16 @@ export function rowToProduct(row, categoryIdByName) {
   // Valida formato básico de ObjectId (24 hex). Si no lo cumple, ignoramos.
   const _id = /^[a-f0-9]{24}$/i.test(rawId) ? rawId : ''
 
+  // Borradores: solo requerimos nombre y precio.
+  // Descripción y categorías pueden completarse en el admin antes de publicar.
+  const isDraft = status === 'draft'
   return {
-    ok: Boolean(name && price >= 0 && description && categories.length),
+    ok: Boolean(name && price >= 0 && (isDraft || (description && categories.length))),
     missing: [
       !name && 'name',
-      !description && 'description',
       !(price >= 0) && 'price',
-      !categories.length && 'categories',
+      !isDraft && !description && 'description',
+      !isDraft && !categories.length && 'categories',
     ].filter(Boolean),
     data: {
       _id,

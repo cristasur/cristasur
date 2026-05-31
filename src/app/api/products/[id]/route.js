@@ -236,9 +236,22 @@ export async function PATCH(request, { params }) {
 
     // Publicar un borrador: status published, active true.
     // No requiere imagen (diferencia clave vs action=active).
+    // Sí requiere descripción y al menos una categoría (mínimo para publicar).
     if (action === 'publish') {
-      const product = await Product.findById(params.id).select('status').lean()
+      const product = await Product.findById(params.id)
+        .select('status description categories')
+        .lean()
       if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      if (!product.description || product.description.length < 5)
+        return NextResponse.json(
+          { error: 'Agrega una descripción antes de publicar.' },
+          { status: 422 }
+        )
+      if (!product.categories?.length)
+        return NextResponse.json(
+          { error: 'Asigna al menos una categoría antes de publicar.' },
+          { status: 422 }
+        )
       await Product.updateOne(
         { _id: params.id },
         {

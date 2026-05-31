@@ -118,7 +118,9 @@ export function validateProductPayload(body) {
   const hasBulkMin = rawBulkMin !== undefined && rawBulkMin !== null && rawBulkMin !== ''
   const bulkMinQty = hasBulkMin ? Math.floor(Number(rawBulkMin)) : null
   const categories = Array.isArray(body?.categories)
-    ? body.categories.map((c) => (typeof c === 'string' ? c.trim() : '')).filter(Boolean)
+    ? body.categories
+        .map((c) => (typeof c === 'string' ? c.trim() : ''))
+        .filter((c) => c && validator.isMongoId(c))
     : []
   const image = cleanSoft(body?.image, { max: 500 })
   const galleryRaw = Array.isArray(body?.gallery) ? body.gallery : []
@@ -272,7 +274,8 @@ export function validateProductPayload(body) {
   ).slice(0, 12)
 
   if (!name || name.length < 2) errors.push('El nombre es obligatorio (mín. 2 caracteres)')
-  if (!description || description.length < 5)
+  // Descripción obligatoria solo al publicar; los borradores pueden quedar sin ella.
+  if (status === 'published' && (!description || description.length < 5))
     errors.push('La descripción es obligatoria (mín. 5 caracteres)')
   if (!Number.isFinite(price) || price < 0)
     errors.push('El precio debe ser un número positivo')
@@ -306,8 +309,8 @@ export function validateProductPayload(body) {
     if (!Number.isFinite(_bulkMinQty) || _bulkMinQty < 2)
       errors.push('La cantidad mínima para precio por ciento debe ser 2 o más')
   }
-  // La categoría es obligatoria para todos los productos.
-  if (!categories.length || !categories.every((c) => validator.isMongoId(c)))
+  // Categoría obligatoria solo al publicar; los borradores pueden quedar sin ella.
+  if (status === 'published' && !categories.length)
     errors.push('Debe seleccionar al menos una categoría válida')
   if (stock !== null && (!Number.isFinite(stock) || stock < 0))
     errors.push('El stock debe ser un número positivo o dejarse vacío (ilimitado)')

@@ -2,7 +2,7 @@
 import ProductCard from './ProductCard'
 import Icon from './Icon'
 
-export default function ProductGrid({ products }) {
+export default function ProductGrid({ products, colorFilter }) {
   if (!products?.length) {
     return (
       <div className="text-center py-20">
@@ -20,7 +20,7 @@ export default function ProductGrid({ products }) {
   return (
     <div className="stagger grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
       {products.map((p) => (
-        <ProductCard key={p._id} product={p} />
+        <ProductCard key={p._id} product={p} colorFilter={colorFilter} />
       ))}
     </div>
   )

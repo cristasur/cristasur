@@ -25,14 +25,20 @@ function formatPrice(n) {
   }).format(n || 0)
 }
 
-export default function ProductDetailClient({ product, productUrl, isVip = false }) {
+export default function ProductDetailClient({ product, productUrl, isVip = false, initialColor = '' }) {
   const variants = Array.isArray(product.variants) ? product.variants : []
   const optionGroups = Array.isArray(product.optionGroups) ? product.optionGroups : []
   const isMultiDim = optionGroups.length >= 2
 
-  // Siempre arrancamos con la base del producto (null = sin variante seleccionada).
-  // El usuario elige el color/tamaño que quiere; no pre-seleccionamos ninguno.
-  const initialVariant = useMemo(() => null, [])
+  // Si viene ?color=X en la URL (desde el filtro del catálogo), pre-seleccionar la variante.
+  const initialVariant = useMemo(() => {
+    if (!initialColor || !variants.length) return null
+    const safe = initialColor.toLowerCase().trim()
+    return variants.find((v) =>
+      v.value?.toLowerCase().includes(safe) ||
+      (v.optionValues?.Color || '').toLowerCase().includes(safe)
+    ) || null
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [selected, setSelected] = useState(initialVariant)
   const step = (Number.isFinite(Number(product.qtyStep)) && Number(product.qtyStep) > 1)
@@ -85,6 +91,19 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     window.dispatchEvent(new CustomEvent('cristasur:variant-image', {
       detail: { mode: 'all', images: all },
     }))
+
+    // Si hay una variante pre-seleccionada (viene de ?color=X en la URL),
+    // saltar a su imagen después de que la galería combinada esté lista.
+    if (initialVariant) {
+      const vImg = (Array.isArray(initialVariant.images) && initialVariant.images[0]) || initialVariant.image || null
+      if (vImg) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('cristasur:variant-image', {
+            detail: { mode: 'jump', images: [vImg] },
+          }))
+        }, 100)
+      }
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Escuchar clics en miniaturas de la galería para seleccionar la variante correspondiente

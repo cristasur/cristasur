@@ -15,19 +15,37 @@ function formatPrice(n) {
   }).format(n || 0)
 }
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, colorFilter }) {
   const hasDiscount =
     product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : 0
-  const href = `/productos/${product._id}`
+
+  // Cuando hay filtro de color activo, encontrar la variante que coincide
+  let matchedVariant = null
+  if (colorFilter && Array.isArray(product.variants) && product.variants.length > 0) {
+    const safe = colorFilter.toLowerCase().trim()
+    matchedVariant = product.variants.find((v) =>
+      v.value?.toLowerCase().includes(safe) ||
+      (v.optionValues?.Color || '').toLowerCase().includes(safe)
+    ) || null
+  }
+
+  // Si hay variante coincidente, agregar ?color=X para que el detalle la pre-seleccione
+  const href = colorFilter && matchedVariant
+    ? `/productos/${product._id}?color=${encodeURIComponent(colorFilter)}`
+    : `/productos/${product._id}`
+
   // null = ilimitado (disponible). Solo stock === 0 es sin stock.
   const outOfStock = product.stock === 0
-  // Imágenes para el carrusel: portada + galería (sin duplicados)
+
+  // Si la variante tiene imagen, mostrarla primero
+  const primaryImage = matchedVariant?.image || product.image
   const carouselImages = [
-    product.image,
-    ...((product.gallery || []).filter((g) => g && g !== product.image)),
+    primaryImage,
+    ...((matchedVariant?.images || []).filter((i) => i && i !== primaryImage)),
+    ...((product.gallery || []).filter((g) => g && g !== primaryImage)),
   ].filter(Boolean)
 
   return (

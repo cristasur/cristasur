@@ -181,7 +181,7 @@ export async function generateMetadata({ params }) {
   }
 }
 
-export default async function ProductDetail({ params }) {
+export default async function ProductDetail({ params, searchParams }) {
   const [data, session] = await Promise.all([loadProduct(params.id), getCurrentUser()])
   if (!data) notFound()
   const { product, sameFamily, related, alsoBought } = data
@@ -311,7 +311,7 @@ export default async function ProductDetail({ params }) {
           )}
 
           {/* Variantes + cantidad + añadir al carrito + WhatsApp + compartir */}
-          <ProductDetailClient product={product} productUrl={productUrl} isVip={isVip} />
+          <ProductDetailClient product={product} productUrl={productUrl} isVip={isVip} initialColor={(searchParams?.color || '').trim()} />
         </div>
       </div>
 

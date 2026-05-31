@@ -182,7 +182,7 @@ export default async function CatalogoPage({ searchParams }) {
           </Suspense>
         </aside>
         <div>
-          <ProductGrid products={products} />
+          <ProductGrid products={products} colorFilter={color} />
         </div>
       </div>
     </div>

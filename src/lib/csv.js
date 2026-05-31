@@ -152,8 +152,9 @@ export function rowToProduct(row, categoryIdByName) {
   const sku = String(get('sku') || '').trim().toUpperCase() || undefined
   const featured = truthy(get('featured', 'destacado'))
   const active = get('active', 'publicado', 'activo') === '' ? true : truthy(get('active', 'publicado', 'activo'))
-  // Estado: siempre published al importar.
-  const status = 'published'
+  // Estado: leer del CSV; si no viene o no es reconocido, published.
+  const rawStatus = String(get('status', 'estado') || '').trim().toLowerCase()
+  const status = rawStatus === 'draft' ? 'draft' : 'published'
   const image = String(get('image', 'imagen') || '').trim()
   const galleryStr = String(get('gallery', 'galeria', 'galería') || '').trim()
   const gallery = galleryStr ? galleryStr.split('|').map((s) => s.trim()).filter(Boolean) : []

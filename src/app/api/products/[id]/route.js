@@ -236,6 +236,38 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ ok: true, active: nextActive })
     }
 
+    if (action === 'publish') {
+      const product = await Product.findById(params.id).select('status').lean()
+      if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      await Product.updateOne(
+        { _id: params.id },
+        {
+          $set: {
+            status: 'published',
+            active: true,
+            updatedBy: user?.sub,
+          },
+          $push: {
+            editHistory: {
+              $each: [{
+                userId: user?.sub,
+                userEmail: user?.email,
+                action: 'publish',
+                changes: 'Publicado desde borradores',
+              }],
+              $slice: -50,
+            },
+          },
+        }
+      )
+      try {
+        revalidatePath('/')
+        revalidatePath('/productos')
+        revalidatePath(`/productos/${params.id}`)
+      } catch {}
+      return NextResponse.json({ ok: true })
+    }
+
     if (action === 'restore') {
       const product = await Product.findByIdAndUpdate(
         params.id,

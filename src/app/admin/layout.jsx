@@ -16,6 +16,7 @@ const links = [
   { href: '/admin/productos',           label: 'Productos',     icon: 'box' },
   { href: '/admin/productos/bulk',      label: 'Edición masiva', icon: 'edit' },
   { href: '/admin/productos/papelera',  label: 'Papelera',      icon: 'trash' },
+  { href: '/admin/borradores',          label: 'Borradores',    icon: 'edit' },
   { href: '/admin/productos/import',    label: 'Importar CSV',  icon: 'upload' },
   { href: '/admin/etiquetas',           label: 'Etiquetas PDF', icon: 'tag' },
   { href: '/admin/categorias',          label: 'Categorías',    icon: 'tag' },

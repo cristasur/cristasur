@@ -16,10 +16,14 @@ import ProductFilters from '@/components/ProductFilters'
 async function loadData({ q, category, featured, minPrice, maxPrice, inStock, onSale, sort, brand, color, material }) {
   await dbConnect()
   const now = new Date()
+  // Usamos $and para que el $or de publishAt no colisione con el $or de búsqueda
   const filter = {
     active: true,
     deleted: { $ne: true },
-    $or: [{ publishAt: null }, { publishAt: { $lte: now } }],
+    $and: [
+      { $or: [{ status: { $exists: false } }, { status: 'published' }] },
+      { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
+    ],
   }
   if (featured === '1') filter.featured = true
   if (inStock === '1') filter.stock = { $gt: 0 }
@@ -70,7 +74,8 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
       { color: { $regex: safe, $options: 'i' } },
     ]
     if (brandIds.length) orClauses.push({ brand: { $in: brandIds } })
-    filter.$or = orClauses
+    // Agregar al $and para no sobreescribir el $or de publishAt/status
+    filter.$and.push({ $or: orClauses })
   }
 
   // 'newest' (default) respeta el orden manual que asigna el admin.

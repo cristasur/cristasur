@@ -11,7 +11,8 @@ export const dynamic = 'force-dynamic'
 
 async function loadProducts(categoryId, q) {
   await dbConnect()
-  const filter = { deleted: { $ne: true } }
+  // Excluir borradores: van a /admin/borradores, no a esta lista.
+  const filter = { deleted: { $ne: true }, status: { $ne: 'draft' } }
   if (categoryId) filter.categories = categoryId
   if (q) {
     const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

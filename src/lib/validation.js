@@ -239,8 +239,9 @@ export function validateProductPayload(body) {
   if (pkgHeight !== null && pkgHeight > 999)
     errors.push('El alto de la caja no puede superar 999 cm')
 
-  // Estado y publicación programada — siempre published
-  const status = 'published'
+  // Estado: respetar el valor del body; default published.
+  // Esto permite importar borradores (status: 'draft') sin sobreescribir.
+  const status = body?.status === 'draft' ? 'draft' : 'published'
   const publishAt =
     body?.publishAt && !isNaN(new Date(body.publishAt).getTime())
       ? new Date(body.publishAt)
@@ -320,8 +321,8 @@ export function validateProductPayload(body) {
       comparePrice,
       wholesalePrice: _wholesalePrice,
       wholesaleMinQty: _wholesaleMinQty,
-      bulkPrice: _bulkPrice,
-      bulkMinQty: _bulkMinQty,
+      hundredPrice: _bulkPrice,
+      hundredMinQty: _bulkMinQty,
       categories,
       image,
       gallery,

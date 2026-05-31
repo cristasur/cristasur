@@ -2,7 +2,7 @@
 // GET    /api/products/:id   - detalle (público)
 // PUT    /api/products/:id   - editar (admin/editor) + historial
 // DELETE /api/products/:id   - soft delete (admin); ?hard=1 = borrado duro
-// PATCH  /api/products/:id   - acciones: restore, view, whatsapp-click
+// PATCH  /api/products/:id   - acciones: publish, restore, view, whatsapp-click
 // ============================================================
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -167,7 +167,7 @@ export async function DELETE(request, { params }) {
   }
 }
 
-// PATCH con ?action=restore | ?action=view | ?action=whatsapp
+// PATCH con ?action=publish | ?action=restore | ?action=view | ?action=whatsapp | ?action=flag | ?action=featured | ?action=active
 export async function PATCH(request, { params }) {
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
@@ -202,8 +202,6 @@ export async function PATCH(request, { params }) {
       if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
       const next = !product.featured
       await Product.updateOne({ _id: params.id }, { featured: next })
-      // Invalida home y catálogo: el destacado debe reflejarse al instante
-      // sin esperar al TTL de ISR.
       try {
         revalidatePath('/')
         revalidatePath('/productos')
@@ -215,27 +213,29 @@ export async function PATCH(request, { params }) {
     if (action === 'active') {
       const product = await Product.findById(params.id).select('active status image').lean()
       if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-      
+
       const nextActive = !product.active
       const updateData = { active: nextActive }
-      
+
       // Si se activa (mostrar) y tiene imagen, asegurar que el estado sea 'published'
-      // para que aparezca inmediatamente en las páginas públicas.
+      // para que aparezca inmediatamente en las paginas publicas.
       if (nextActive && product.image) {
         updateData.status = 'published'
       }
-      
+
       await Product.updateOne({ _id: params.id }, updateData)
-      
+
       try {
         revalidatePath('/')
         revalidatePath('/productos')
         revalidatePath(`/productos/${params.id}`)
       } catch {}
-      
+
       return NextResponse.json({ ok: true, active: nextActive })
     }
 
+    // Publicar un borrador: status published, active true.
+    // No requiere imagen (diferencia clave vs action=active).
     if (action === 'publish') {
       const product = await Product.findById(params.id).select('status').lean()
       if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
@@ -300,7 +300,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ ok: true, product })
     }
 
-    return NextResponse.json({ error: 'Acción no reconocida' }, { status: 400 })
+    return NextResponse.json({ error: 'Accion no reconocida' }, { status: 400 })
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 })

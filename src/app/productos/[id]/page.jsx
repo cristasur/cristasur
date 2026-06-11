@@ -233,12 +233,12 @@ export default async function ProductDetail({ params, searchParams }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 md:py-10">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 md:py-10 overflow-x-hidden">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
-      <nav className="text-xs sm:text-sm text-slate-500 mb-4 md:mb-6">
+      <nav className="text-xs sm:text-sm text-slate-500 mb-4 md:mb-6 truncate">
         <Link href="/" className="hover:text-brand-700">Inicio</Link>
         <span className="mx-2">/</span>
         <Link href="/productos" className="hover:text-brand-700">Productos</Link>
@@ -252,12 +252,14 @@ export default async function ProductDetail({ params, searchParams }) {
         )}
       </nav>
 
-      <div className="grid md:grid-cols-2 gap-4 md:gap-8 md:items-start">
-        <ProductGallery
-          images={[product.image, ...(product.gallery || [])].filter(Boolean)}
-          alt={product.name}
-          videoUrl={product.videoUrl || ''}
-        />
+      <div className="grid md:grid-cols-2 gap-4 md:gap-8 md:items-start min-w-0">
+        <div className="min-w-0 w-full">
+          <ProductGallery
+            images={[product.image, ...(product.gallery || [])].filter(Boolean)}
+            alt={product.name}
+            videoUrl={product.videoUrl || ''}
+          />
+        </div>
 
         <div className="flex flex-col min-w-0 overflow-x-hidden">
           <div className="flex items-start justify-between gap-3">

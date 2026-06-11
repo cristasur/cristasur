@@ -141,13 +141,20 @@ export default function CartProvider({ children }) {
     return () => clearTimeout(t)
   }, [items, hydrated, user])
 
-  const addItem = useCallback((item, qty = 1) => {
+  const addItem = useCallback((item, qty) => {
     setItems((xs) => {
       const key = lineKey(item.productId, item.variantValue)
       const idx = xs.findIndex((x) => lineKey(x.productId, x.variantValue) === key)
+      // Múltiplo de venta: si el producto se vende de N en N, qty siempre
+      // se redondea hacia arriba al múltiplo. qty=undefined → step.
+      const step = Number(item.qtyStep) >= 1 ? Math.floor(Number(item.qtyStep)) : 1
+      const requested = Number(qty)
+      const finalQty = Number.isFinite(requested) && requested > 0
+        ? Math.max(step, Math.ceil(requested / step) * step)
+        : step
       if (idx >= 0) {
         const next = [...xs]
-        next[idx] = { ...next[idx], qty: next[idx].qty + qty }
+        next[idx] = { ...next[idx], qty: next[idx].qty + finalQty }
         return next
       }
       return [
@@ -166,11 +173,13 @@ export default function CartProvider({ children }) {
             Number.isFinite(Number(item.wholesaleMinQty)) && Number(item.wholesaleMinQty) >= 2
               ? Number(item.wholesaleMinQty)
               : null,
+          // Múltiplo: persistido en la línea para respetarlo en +/− del drawer.
+          qtyStep: step > 1 ? step : null,
           image: item.image || '',
           variantLabel: item.variantLabel || '',
           variantValue: item.variantValue || '',
           categoryIds: Array.isArray(item.categoryIds) ? item.categoryIds : [],
-          qty,
+          qty: finalQty,
         },
       ]
     })
@@ -182,11 +191,20 @@ export default function CartProvider({ children }) {
     setItems((xs) => xs.filter((x) => lineKey(x.productId, x.variantValue) !== key))
   }, [])
 
+  // Cambia cantidad respetando el qtyStep del item. Si la nueva qty queda < step,
+  // se elimina la línea.
   const updateQty = useCallback((productId, variantValue, qty) => {
     const key = lineKey(productId, variantValue)
     setItems((xs) =>
       xs
-        .map((x) => (lineKey(x.productId, x.variantValue) === key ? { ...x, qty } : x))
+        .map((x) => {
+          if (lineKey(x.productId, x.variantValue) !== key) return x
+          const step = Number(x.qtyStep) >= 1 ? x.qtyStep : 1
+          if (qty < step) return { ...x, qty: 0 }
+          // Snap al múltiplo más cercano
+          const snapped = Math.max(step, Math.round(qty / step) * step)
+          return { ...x, qty: snapped }
+        })
         .filter((x) => x.qty > 0)
     )
   }, [])

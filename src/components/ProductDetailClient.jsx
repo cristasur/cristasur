@@ -190,12 +190,15 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
 
   // Mensaje de WhatsApp con variante + cantidad + subtotal.
   const subtotal = currentPrice * qty
+  // SKU normalizado: tolera espacios, valores nulos y números (a veces el CSV
+  // los importa como Number en lugar de String).
+  const skuStr = String(product.sku ?? '').trim()
   const waLines = [
     'Hola CRISTASUR, me interesa este producto:',
     '',
     `*Producto:* ${product.name}`,
   ]
-  if (product.sku) waLines.push(`*SKU:* ${product.sku}`)
+  if (skuStr) waLines.push(`*SKU:* ${skuStr}`)
   if (selected?.label && selected?.value) {
     waLines.push(`*${selected.label}:* ${selected.value}`)
   }

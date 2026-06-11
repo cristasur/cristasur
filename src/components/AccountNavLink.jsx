@@ -37,10 +37,13 @@ export default function AccountNavLink() {
     return (
       <Link
         href="/cuenta/login"
-        className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+        className="inline-flex items-center gap-1 px-2 sm:px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
+        title="Inicia sesión"
+        aria-label="Inicia sesión"
       >
-        <Icon name="user" className="w-4 h-4" />
-        Inicia sesión
+        <Icon name="user" className="w-5 h-5 sm:w-4 sm:h-4" />
+        {/* En mobile sólo se ve el ícono; texto desde sm en adelante */}
+        <span className="hidden sm:inline">Inicia sesión</span>
       </Link>
     )
   }

@@ -46,7 +46,7 @@ export default async function Navbar() {
               <SearchAutocomplete />
             </div>
 
-            <nav className="flex items-center gap-1">
+            <nav className="flex items-center gap-1 shrink-0">
               <Link
                 href="/productos"
                 className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"

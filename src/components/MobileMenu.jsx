@@ -160,7 +160,7 @@ export default function MobileMenu({ categories = [] }) {
       {/* Botón hamburguesa — dentro del navbar */}
       <button
         onClick={() => setOpen(true)}
-        className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700"
+        className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700 shrink-0"
         aria-label="Abrir menú"
       >
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none">

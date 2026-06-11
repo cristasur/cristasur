@@ -44,6 +44,9 @@ export default function AddToCartButton({
         ? Number(rawWq)
         : null
 
+    // Múltiplo de venta del producto (qtyStep). Si el cliente pulsó "Comprar"
+    // desde el home/card y `qty` es 1, ascendemos automáticamente al step.
+    const qtyStep = Number(product.qtyStep) >= 1 ? Math.floor(Number(product.qtyStep)) : 1
     addItem(
       {
         productId: String(product._id),
@@ -51,6 +54,7 @@ export default function AddToCartButton({
         price,
         wholesalePrice,
         wholesaleMinQty,
+        qtyStep,
         image,
         variantLabel: variant?.label || '',
         variantValue: variant?.value || '',

@@ -175,12 +175,13 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
           />
         )}
 
-        {/* Imagen normal */}
+        {/* Imagen normal — object-contain garantiza que NO se corte; el
+            fondo blanco rellena cualquier espacio. */}
         {current.type === 'image' && (
           <img
             src={current.url}
             alt={`${alt} — imagen ${idx + 1}`}
-            className="w-full h-full object-cover"
+            className="w-full h-full max-w-full object-contain bg-white"
             loading="eager"
             decoding="async"
           />

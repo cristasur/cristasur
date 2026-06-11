@@ -249,7 +249,8 @@ function buildParams(op, p) {
     case 'stock.set':     return { value: Number(p.value) }
     case 'stock.add':     return { value: Number(p.value) }
     case 'active.set':    return { active: !!p.active }
-    case 'status.set':    return { status: p.status === 'draft' ? 'draft' : 'published' }
+    // 'status.set' eliminado intencionalmente: era peligroso porque permitía
+    // publicar miles de borradores sin revisar (sin foto, descripción, etc.).
     case 'featured.set':  return { featured: !!p.featured }
     case 'tags.add':
     case 'tags.remove':   return { tags: String(p.tags || '').split(',').map((t) => t.trim()).filter(Boolean) }
@@ -293,21 +294,8 @@ function OpParams({ op, params, setParams, categories }) {
       </label>
     )
   }
-  if (op === 'status.set') {
-    return (
-      <label className="block">
-        <span className="text-sm font-medium text-slate-700">Estado</span>
-        <select
-          value={params.status || 'published'}
-          onChange={(e) => setParams({ ...params, status: e.target.value })}
-          className={cls}
-        >
-          <option value="published">Publicado</option>
-          <option value="draft">Borrador</option>
-        </select>
-      </label>
-    )
-  }
+  // 'status.set' eliminado intencionalmente del bulk: para publicar
+  // borradores, se hace producto por producto (más seguro).
   if (op === 'featured.set') {
     return (
       <label className="block">

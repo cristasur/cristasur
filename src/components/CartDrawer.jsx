@@ -198,21 +198,37 @@ export default function CartDrawer() {
                 )}
                 <div className="mt-1 flex items-center justify-between">
                   <div className="inline-flex items-center border border-slate-200 rounded-lg">
-                    <button
-                      onClick={() => updateQty(x.productId, x.variantValue, x.qty - 1)}
-                      className="w-7 h-7 grid place-items-center text-slate-600 hover:bg-slate-100"
-                      aria-label="Quitar uno"
-                    >
-                      −
-                    </button>
-                    <span className="w-8 text-center text-sm font-semibold">{x.qty}</span>
-                    <button
-                      onClick={() => updateQty(x.productId, x.variantValue, x.qty + 1)}
-                      className="w-7 h-7 grid place-items-center text-slate-600 hover:bg-slate-100"
-                      aria-label="Añadir uno"
-                    >
-                      +
-                    </button>
+                    {(() => {
+                      const step = Number(x.qtyStep) >= 1 ? x.qtyStep : 1
+                      return (
+                        <>
+                          <button
+                            onClick={() => updateQty(x.productId, x.variantValue, x.qty - step)}
+                            className="w-8 h-8 grid place-items-center text-slate-600 hover:bg-slate-100"
+                            aria-label={`Quitar ${step}`}
+                            title={step > 1 ? `Quita ${step} piezas` : 'Quitar uno'}
+                          >
+                            −
+                          </button>
+                          <span className="min-w-[2.5rem] px-1 text-center text-sm font-semibold">
+                            {x.qty}
+                            {step > 1 && (
+                              <span className="block text-[9px] text-slate-400 leading-none -mt-0.5">
+                                ×{step}
+                              </span>
+                            )}
+                          </span>
+                          <button
+                            onClick={() => updateQty(x.productId, x.variantValue, x.qty + step)}
+                            className="w-8 h-8 grid place-items-center text-slate-600 hover:bg-slate-100"
+                            aria-label={`Añadir ${step}`}
+                            title={step > 1 ? `Añade ${step} piezas` : 'Añadir uno'}
+                          >
+                            +
+                          </button>
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-bold text-slate-900">

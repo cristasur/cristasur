@@ -31,7 +31,9 @@ export const runtime = 'nodejs'
 const VALID_OPS = new Set([
   'price.percent', 'price.fixed', 'price.set',
   'stock.set', 'stock.add',
-  'active.set', 'status.set', 'featured.set',
+  'active.set', 'featured.set',
+  // 'status.set' eliminado: era peligroso porque permitía publicar borradores
+  // en masa. Para publicar un borrador, hay que ir uno por uno desde el form.
   'tags.add', 'tags.remove',
   'category.set',
   'wholesale.set', 'wholesale.clear',

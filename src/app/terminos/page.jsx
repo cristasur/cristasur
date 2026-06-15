@@ -18,7 +18,7 @@ export default function TermsPage() {
           <p>
             CRISTASUR es un negocio dedicado a la venta de plásticos y artículos para hogar
             y negocio, con sucursales físicas en <b>Mérida, Yucatán</b> y{' '}
-            <b>Bacalar, Quintana Roo</b>. El sitio web cristasur.mx funciona como catálogo
+            <b>Bacalar, Quintana Roo</b>. El sitio web cristasur.com funciona como catálogo
             digital. Las ventas se concretan vía WhatsApp, en sucursal o por arreglo directo.
           </p>
         </section>

@@ -4,7 +4,7 @@
 //
 // Cómo usar:
 //   1. Google Merchant Center → Productos → Feed → "Recuperación
-//      programada" → URL = https://cristasur.mx/feed/products.xml.
+//      programada" → URL = https://cristasur.com/feed/products.xml.
 //      Programá refresh diario.
 //   2. Meta Business Suite → Comercio → Catálogo → "Añadir
 //      productos" → "Cargar desde URL" → pega la misma URL.
@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 function siteUrl() {
-  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://cristasur.mx').replace(/\/$/, '')
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://cristasur.com').replace(/\/$/, '')
 }
 
 function escapeXml(str) {

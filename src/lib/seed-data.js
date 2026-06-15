@@ -131,7 +131,7 @@ export async function runSeed({ reset = false } = {}) {
   }
 
   // ---- Admin ----
-  const email = process.env.SEED_ADMIN_EMAIL || 'admin@cristasur.mx'
+  const email = process.env.SEED_ADMIN_EMAIL || 'admin@cristasur.com'
   const password = process.env.SEED_ADMIN_PASSWORD || 'Cristasur2026!'
   let admin = await User.findOne({ email })
   if (!admin) {

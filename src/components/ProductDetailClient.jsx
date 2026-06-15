@@ -30,14 +30,28 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   const optionGroups = Array.isArray(product.optionGroups) ? product.optionGroups : []
   const isMultiDim = optionGroups.length >= 2
 
-  // Si viene ?color=X en la URL (desde el filtro del catálogo), pre-seleccionar la variante.
+  // Pre-selección de variante:
+  // 1) si viene ?color=X en la URL → esa variante,
+  // 2) si no, la primera con stock (o la primera a secas).
+  // Asegurarse de tener SIEMPRE una variante seleccionada evita que se mezclen
+  // líneas distintas en el carrito por culpa de variantValue vacío.
   const initialVariant = useMemo(() => {
-    if (!initialColor || !variants.length) return null
-    const safe = initialColor.toLowerCase().trim()
-    return variants.find((v) =>
-      v.value?.toLowerCase().includes(safe) ||
-      (v.optionValues?.Color || '').toLowerCase().includes(safe)
-    ) || null
+    if (!variants.length) return null
+    if (initialColor) {
+      const safe = initialColor.toLowerCase().trim()
+      const fromUrl = variants.find((v) =>
+        v.value?.toLowerCase().includes(safe) ||
+        (v.optionValues?.Color || '').toLowerCase().includes(safe)
+      )
+      if (fromUrl) return fromUrl
+    }
+    // En modo multi-dimensional dejamos que el cliente elija (no preseleccionamos).
+    if (isMultiDim) return null
+    const firstWithStock = variants.find((v) => {
+      const s = Number(v?.stock)
+      return Number.isFinite(s) && s > 0
+    })
+    return firstWithStock || variants[0]
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [selected, setSelected] = useState(initialVariant)

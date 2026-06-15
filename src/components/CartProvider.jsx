@@ -31,8 +31,18 @@ export function useCart() {
   return ctx
 }
 
-function lineKey(productId, variantValue) {
-  return variantValue ? `${productId}::${variantValue}` : String(productId)
+// Clave de línea de carrito.
+// Distingue por (productId + variantLabel + variantValue). Si no hay variante
+// se cae a productId. Normalizamos a lowercase/trim para que "Rojo" y " rojo "
+// se traten igual y no se dupliquen.
+function norm(s) {
+  return String(s || '').toLowerCase().trim()
+}
+function lineKey(productId, variantValue, variantLabel) {
+  const v = norm(variantValue)
+  if (!v) return String(productId)
+  const l = norm(variantLabel) || 'var'
+  return `${productId}::${l}::${v}`
 }
 
 // Calcula el precio efectivo de una línea según si activa mayoreo o no.
@@ -58,8 +68,12 @@ function mergeCarts(local, server) {
   const serverList = (server || []).filter((x) => x?.productId)
   const localList  = (local  || []).filter((x) => x?.productId)
 
-  const serverKeys = new Set(serverList.map((x) => lineKey(x.productId, x.variantValue)))
-  const localOnly  = localList.filter((x) => !serverKeys.has(lineKey(x.productId, x.variantValue)))
+  const serverKeys = new Set(
+    serverList.map((x) => lineKey(x.productId, x.variantValue, x.variantLabel))
+  )
+  const localOnly  = localList.filter(
+    (x) => !serverKeys.has(lineKey(x.productId, x.variantValue, x.variantLabel))
+  )
 
   return [...serverList, ...localOnly]
 }
@@ -143,8 +157,10 @@ export default function CartProvider({ children }) {
 
   const addItem = useCallback((item, qty) => {
     setItems((xs) => {
-      const key = lineKey(item.productId, item.variantValue)
-      const idx = xs.findIndex((x) => lineKey(x.productId, x.variantValue) === key)
+      const key = lineKey(item.productId, item.variantValue, item.variantLabel)
+      const idx = xs.findIndex(
+        (x) => lineKey(x.productId, x.variantValue, x.variantLabel) === key
+      )
       // Múltiplo de venta: si el producto se vende de N en N, qty siempre
       // se redondea hacia arriba al múltiplo. qty=undefined → step.
       const step = Number(item.qtyStep) >= 1 ? Math.floor(Number(item.qtyStep)) : 1
@@ -188,19 +204,21 @@ export default function CartProvider({ children }) {
     setOpen(true)
   }, [])
 
-  const removeItem = useCallback((productId, variantValue) => {
-    const key = lineKey(productId, variantValue)
-    setItems((xs) => xs.filter((x) => lineKey(x.productId, x.variantValue) !== key))
+  const removeItem = useCallback((productId, variantValue, variantLabel) => {
+    const key = lineKey(productId, variantValue, variantLabel)
+    setItems((xs) =>
+      xs.filter((x) => lineKey(x.productId, x.variantValue, x.variantLabel) !== key)
+    )
   }, [])
 
   // Cambia cantidad respetando el qtyStep del item. Si la nueva qty queda < step,
   // se elimina la línea.
-  const updateQty = useCallback((productId, variantValue, qty) => {
-    const key = lineKey(productId, variantValue)
+  const updateQty = useCallback((productId, variantValue, qty, variantLabel) => {
+    const key = lineKey(productId, variantValue, variantLabel)
     setItems((xs) =>
       xs
         .map((x) => {
-          if (lineKey(x.productId, x.variantValue) !== key) return x
+          if (lineKey(x.productId, x.variantValue, x.variantLabel) !== key) return x
           const step = Number(x.qtyStep) >= 1 ? x.qtyStep : 1
           if (qty < step) return { ...x, qty: 0 }
           // Snap al múltiplo más cercano

@@ -203,7 +203,7 @@ export default function CartDrawer() {
                       return (
                         <>
                           <button
-                            onClick={() => updateQty(x.productId, x.variantValue, x.qty - step)}
+                            onClick={() => updateQty(x.productId, x.variantValue, x.qty - step, x.variantLabel)}
                             className="w-8 h-8 grid place-items-center text-slate-600 hover:bg-slate-100"
                             aria-label={`Quitar ${step}`}
                             title={step > 1 ? `Quita ${step} piezas` : 'Quitar uno'}
@@ -219,7 +219,7 @@ export default function CartDrawer() {
                             )}
                           </span>
                           <button
-                            onClick={() => updateQty(x.productId, x.variantValue, x.qty + step)}
+                            onClick={() => updateQty(x.productId, x.variantValue, x.qty + step, x.variantLabel)}
                             className="w-8 h-8 grid place-items-center text-slate-600 hover:bg-slate-100"
                             aria-label={`Añadir ${step}`}
                             title={step > 1 ? `Añade ${step} piezas` : 'Añadir uno'}
@@ -243,7 +243,7 @@ export default function CartDrawer() {
                 </div>
               </div>
               <button
-                onClick={() => removeItem(x.productId, x.variantValue)}
+                onClick={() => removeItem(x.productId, x.variantValue, x.variantLabel)}
                 className="w-8 h-8 grid place-items-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600 shrink-0"
                 aria-label="Eliminar del carrito"
               >

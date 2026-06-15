@@ -20,9 +20,12 @@ function sanitizeItems(arr) {
       productId: String(x?.productId || '').slice(0, 30),
       name: String(x?.name || '').slice(0, 200).trim(),
       image: String(x?.image || '').slice(0, 500),
+      sku: String(x?.sku || '').slice(0, 60).trim(),
       variantLabel: String(x?.variantLabel || '').slice(0, 60),
       variantValue: String(x?.variantValue || '').slice(0, 60),
       qty: Math.max(1, Math.floor(Number(x?.qty) || 1)),
+      qtyStep:
+        x?.qtyStep == null ? null : Math.max(1, Math.floor(Number(x.qtyStep)) || 1),
       price: Math.max(0, Number(x?.price) || 0),
       wholesalePrice:
         x?.wholesalePrice == null ? null : Number(x.wholesalePrice),

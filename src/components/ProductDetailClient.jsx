@@ -32,9 +32,11 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
 
   // Pre-selección de variante:
   // 1) si viene ?color=X en la URL → esa variante,
-  // 2) si no, la primera con stock (o la primera a secas).
-  // Asegurarse de tener SIEMPRE una variante seleccionada evita que se mezclen
-  // líneas distintas en el carrito por culpa de variantValue vacío.
+  // 2) si el producto tiene `color` base → null (el swatch base queda activo, no se
+  //    pre-selecciona ninguna variante; el AddToCartButton usará el color base como
+  //    la variante "default").
+  // 3) si no hay color base pero hay variantes → primera con stock (no hay un base
+  //    real que vender, así que asumimos la primera variante).
   const initialVariant = useMemo(() => {
     if (!variants.length) return null
     if (initialColor) {
@@ -45,7 +47,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
       )
       if (fromUrl) return fromUrl
     }
-    // En modo multi-dimensional dejamos que el cliente elija (no preseleccionamos).
+    if (product.color) return null // base activo
     if (isMultiDim) return null
     const firstWithStock = variants.find((v) => {
       const s = Number(v?.stock)

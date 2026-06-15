@@ -5,6 +5,18 @@ import { useState } from 'react'
 import { useCart } from './CartProvider'
 import Icon from './Icon'
 
+// Si el producto tiene variantes y el cliente no eligió una, elegimos por
+// defecto la primera variante con stock (o la primera a secas). Para cambiar
+// el color/talla el cliente entra al detalle del producto.
+function pickDefaultVariant(p) {
+  if (!Array.isArray(p?.variants) || p.variants.length === 0) return null
+  const withStock = p.variants.find((v) => {
+    const s = Number(v?.stock)
+    return Number.isFinite(s) && s > 0
+  })
+  return withStock || p.variants[0]
+}
+
 export default function AddToCartButton({
   product,
   variant,
@@ -17,35 +29,30 @@ export default function AddToCartButton({
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
 
-  // ¿El producto tiene variantes pero el cliente no eligió ninguna?
-  const productHasVariants = Array.isArray(product?.variants) && product.variants.length > 0
-  const needsVariant = productHasVariants && !variant
-
   function onClick(e) {
     e?.preventDefault?.()
     e?.stopPropagation?.()
     if (disabled) return
-    // Si el producto tiene variantes y no hay una seleccionada, lo mandamos
-    // al detalle para que elija. Esto evita que se añadan al carrito items
-    // ambiguos (sin color/talla) cuando el producto realmente requiere uno.
-    if (needsVariant) {
-      window.location.href = `/productos/${product._id}#variantes`
-      return
-    }
+    // Variante efectiva: la que pasaron por prop o, si no, la default del producto.
+    const effectiveVariant = variant || pickDefaultVariant(product)
     // Usar el precio de la variante SOLO si tiene un valor propio positivo.
     // Number(null) === 0 es finito — hay que excluir null/vacío explícitamente.
-    const vp = variant?.price
+    const vp = effectiveVariant?.price
     const variantHasPrice =
       vp !== null && vp !== undefined && vp !== '' &&
       Number.isFinite(Number(vp)) && Number(vp) > 0
     const price = variantHasPrice ? Number(vp) : Number(product.price) || 0
-    const image = variant?.image || (Array.isArray(variant?.images) && variant.images[0]) || product.image || ''
+    const image =
+      effectiveVariant?.image ||
+      (Array.isArray(effectiveVariant?.images) && effectiveVariant.images[0]) ||
+      product.image ||
+      ''
     const categoryIds = Array.isArray(product.categories)
       ? product.categories.map((c) => String(c?._id || c))
       : []
     // Mayoreo: usar de la variante si tiene, si no heredar del producto.
-    const rawWp = variant?.wholesalePrice ?? product.wholesalePrice
-    const rawWq = variant?.wholesaleMinQty ?? product.wholesaleMinQty
+    const rawWp = effectiveVariant?.wholesalePrice ?? product.wholesalePrice
+    const rawWq = effectiveVariant?.wholesaleMinQty ?? product.wholesaleMinQty
     const wholesalePrice =
       Number.isFinite(Number(rawWp)) && Number(rawWp) > 0
         ? Number(rawWp)
@@ -59,7 +66,7 @@ export default function AddToCartButton({
     // desde el home/card y `qty` es 1, ascendemos automáticamente al step.
     const qtyStep = Number(product.qtyStep) >= 1 ? Math.floor(Number(product.qtyStep)) : 1
     // SKU efectivo: si la variante tiene SKU propio, lo usamos; si no, el del padre.
-    const sku = String(variant?.sku || product?.sku || '').trim()
+    const sku = String(effectiveVariant?.sku || product?.sku || '').trim()
     addItem(
       {
         productId: String(product._id),
@@ -70,8 +77,8 @@ export default function AddToCartButton({
         qtyStep,
         sku,
         image,
-        variantLabel: variant?.label || '',
-        variantValue: variant?.value || '',
+        variantLabel: effectiveVariant?.label || '',
+        variantValue: effectiveVariant?.value || '',
         categoryIds,
       },
       qty
@@ -80,12 +87,10 @@ export default function AddToCartButton({
     setTimeout(() => setAdded(false), 1200)
   }
 
-  // Etiqueta dinámica según contexto
-  const visibleLabel = needsVariant
-    ? 'Elige color'
-    : added
-      ? (compact ? '¡Añadido!' : '¡Añadido al carrito!')
-      : label
+  // Etiqueta: la del prop, o "¡Añadido!" justo después de añadirse.
+  const visibleLabel = added
+    ? (compact ? '¡Añadido!' : '¡Añadido al carrito!')
+    : label
 
   if (compact) {
     return (
@@ -96,9 +101,7 @@ export default function AddToCartButton({
           'inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ' +
           (disabled
             ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-            : needsVariant
-              ? 'bg-amber-500 hover:bg-amber-600 text-white'
-              : 'bg-slate-900 hover:bg-black text-white') +
+            : 'bg-slate-900 hover:bg-black text-white') +
           ' ' +
           className
         }
@@ -118,9 +121,7 @@ export default function AddToCartButton({
         'inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold ' +
         (disabled
           ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-          : needsVariant
-            ? 'bg-amber-500 hover:bg-amber-600 text-white'
-            : 'bg-slate-900 hover:bg-black text-white') +
+          : 'bg-slate-900 hover:bg-black text-white') +
         ' ' +
         className
       }

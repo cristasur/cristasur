@@ -17,10 +17,21 @@ export default function AddToCartButton({
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
 
+  // ¿El producto tiene variantes pero el cliente no eligió ninguna?
+  const productHasVariants = Array.isArray(product?.variants) && product.variants.length > 0
+  const needsVariant = productHasVariants && !variant
+
   function onClick(e) {
     e?.preventDefault?.()
     e?.stopPropagation?.()
     if (disabled) return
+    // Si el producto tiene variantes y no hay una seleccionada, lo mandamos
+    // al detalle para que elija. Esto evita que se añadan al carrito items
+    // ambiguos (sin color/talla) cuando el producto realmente requiere uno.
+    if (needsVariant) {
+      window.location.href = `/productos/${product._id}#variantes`
+      return
+    }
     // Usar el precio de la variante SOLO si tiene un valor propio positivo.
     // Number(null) === 0 es finito — hay que excluir null/vacío explícitamente.
     const vp = variant?.price
@@ -47,6 +58,8 @@ export default function AddToCartButton({
     // Múltiplo de venta del producto (qtyStep). Si el cliente pulsó "Comprar"
     // desde el home/card y `qty` es 1, ascendemos automáticamente al step.
     const qtyStep = Number(product.qtyStep) >= 1 ? Math.floor(Number(product.qtyStep)) : 1
+    // SKU efectivo: si la variante tiene SKU propio, lo usamos; si no, el del padre.
+    const sku = String(variant?.sku || product?.sku || '').trim()
     addItem(
       {
         productId: String(product._id),
@@ -55,6 +68,7 @@ export default function AddToCartButton({
         wholesalePrice,
         wholesaleMinQty,
         qtyStep,
+        sku,
         image,
         variantLabel: variant?.label || '',
         variantValue: variant?.value || '',
@@ -66,6 +80,13 @@ export default function AddToCartButton({
     setTimeout(() => setAdded(false), 1200)
   }
 
+  // Etiqueta dinámica según contexto
+  const visibleLabel = needsVariant
+    ? 'Elige color'
+    : added
+      ? (compact ? '¡Añadido!' : '¡Añadido al carrito!')
+      : label
+
   if (compact) {
     return (
       <button
@@ -75,14 +96,16 @@ export default function AddToCartButton({
           'inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ' +
           (disabled
             ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-            : 'bg-slate-900 hover:bg-black text-white') +
+            : needsVariant
+              ? 'bg-amber-500 hover:bg-amber-600 text-white'
+              : 'bg-slate-900 hover:bg-black text-white') +
           ' ' +
           className
         }
-        aria-label={label}
+        aria-label={visibleLabel}
       >
         <Icon name="cart" className="w-4 h-4" />
-        {added ? '¡Añadido!' : label}
+        {visibleLabel}
       </button>
     )
   }
@@ -95,13 +118,15 @@ export default function AddToCartButton({
         'inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold ' +
         (disabled
           ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-          : 'bg-slate-900 hover:bg-black text-white') +
+          : needsVariant
+            ? 'bg-amber-500 hover:bg-amber-600 text-white'
+            : 'bg-slate-900 hover:bg-black text-white') +
         ' ' +
         className
       }
     >
       <Icon name="cart" className="w-5 h-5" />
-      {added ? '¡Añadido al carrito!' : label}
+      {visibleLabel}
     </button>
   )
 }

@@ -175,6 +175,8 @@ export default function CartProvider({ children }) {
               : null,
           // Múltiplo: persistido en la línea para respetarlo en +/− del drawer.
           qtyStep: step > 1 ? step : null,
+          // SKU efectivo (variante o producto base). Útil para WhatsApp y pedidos.
+          sku: String(item.sku || '').trim(),
           image: item.image || '',
           variantLabel: item.variantLabel || '',
           variantValue: item.variantValue || '',
@@ -243,7 +245,9 @@ export default function CartProvider({ children }) {
         const eff = effectiveUnitPrice(x)
         const lineTotal = eff * x.qty
         const wholesale = isWholesaleActive(x) ? ' ⭐ Mayoreo' : ''
-        return `▸ *${x.name}*${variant}\n  Cant: ${x.qty} × $${eff.toFixed(2)}${wholesale}\n  Subtotal: $${lineTotal.toFixed(2)}`
+        const skuStr = String(x.sku || '').trim()
+        const skuPart = skuStr ? `\n  SKU: ${skuStr}` : ''
+        return `▸ *${x.name}*${variant}${skuPart}\n  Cant: ${x.qty} × $${eff.toFixed(2)}${wholesale}\n  Subtotal: $${lineTotal.toFixed(2)}`
       })
       let summary = ''
       if (savings > 0) summary += `💚 Ahorro mayoreo: -$${savings.toFixed(2)}\n`
@@ -278,6 +282,7 @@ export default function CartProvider({ children }) {
               productId: x.productId,
               name: x.name,
               image: x.image,
+              sku: x.sku || '',
               variantLabel: x.variantLabel,
               variantValue: x.variantValue,
               qty: x.qty,

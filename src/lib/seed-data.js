@@ -131,8 +131,18 @@ export async function runSeed({ reset = false } = {}) {
   }
 
   // ---- Admin ----
-  const email = process.env.SEED_ADMIN_EMAIL || 'admin@cristasur.com'
-  const password = process.env.SEED_ADMIN_PASSWORD || 'Cristasur2026!'
+  // No usar defaults aquí: si falta la env var, fallamos en vez de crear un admin
+  // con credenciales predecibles (el código es público en GitHub).
+  const email = process.env.SEED_ADMIN_EMAIL
+  const password = process.env.SEED_ADMIN_PASSWORD
+  if (!email || !password) {
+    throw new Error(
+      'Faltan SEED_ADMIN_EMAIL y/o SEED_ADMIN_PASSWORD en el entorno. Definilos antes de correr el seed.'
+    )
+  }
+  if (password.length < 10) {
+    throw new Error('SEED_ADMIN_PASSWORD debe tener al menos 10 caracteres.')
+  }
   let admin = await User.findOne({ email })
   if (!admin) {
     admin = await User.createWithPassword({ email, password, name: 'Admin CRISTASUR' })

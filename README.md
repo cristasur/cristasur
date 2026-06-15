@@ -32,29 +32,28 @@ Cuando arranque correctamente verás:
 
 ### Variables de entorno (`.env.local`)
 
+Mirá `.env.example` para la lista completa. **Nunca subas tu `.env.local` a git.** Variables obligatorias mínimas:
+
 ```env
-MONGODB_URI=mongodb+srv://USUARIO:PASSWORD@cluster.mongodb.net/cristasur?retryWrites=true&w=majority
-JWT_SECRET=cadena-larga-y-aleatoria-de-al-menos-32-caracteres
-SEED_ADMIN_EMAIL=admin@cristasur.mx
-SEED_ADMIN_PASSWORD=Cristasur2026!
+MONGODB_URI=...                  # URI de tu cluster Mongo Atlas
+JWT_SECRET=...                   # string aleatorio largo (mín. 32 chars)
+SEED_ADMIN_EMAIL=...             # email del admin inicial
+SEED_ADMIN_PASSWORD=...          # contraseña FUERTE y única (no reuses una de otro lado)
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
+
+> ⚠️ **Importante:** `SEED_ADMIN_PASSWORD` se usa una sola vez para crear el usuario admin en Mongo.
+> Después del primer arranque, cambiala desde el panel y rotá la variable en producción.
+> No la dejes con el valor por defecto en código — el script `seed` exige un valor explícito.
 
 Si cambias cualquiera de éstas, **reinicia** el servidor (`Ctrl+C` y de nuevo `npm run dev`).
 Next.js no recarga `.env` en caliente.
 
 ### Acceso al admin
 
-El admin **NO está enlazado desde ninguna página pública**. Para entrar usa:
-
-```
-http://localhost:3000/admincr
-```
-
-con las credenciales que pusiste en `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`.
-Esta URL no aparece en el HTML del sitio, no aparece en `robots.txt`, y todas las páginas administrativas envían `noindex/nofollow/noarchive` para no quedar en buscadores.
-
-Si ya hay sesión iniciada, `/admincr` te lleva directo al dashboard. Si no, te lleva al login.
+El admin **NO está enlazado desde ninguna página pública**. La ruta de acceso se documenta
+internamente y no se publica aquí — pregúntale al owner del repo o consultá el archivo
+`docs/INTERNAL.md` (no versionado).
 
 ---
 

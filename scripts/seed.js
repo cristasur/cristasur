@@ -140,13 +140,21 @@ async function main() {
   }
   console.log(`✓ ${created} productos nuevos`)
 
-  const email = process.env.SEED_ADMIN_EMAIL || 'admin@cristasur.mx'
-  const password = process.env.SEED_ADMIN_PASSWORD || 'Cristasur2026!'
+  // Sin defaults: fallar fuerte si la env var no está definida.
+  // Las credenciales por defecto vivirían en código público (GitHub) y serían un riesgo.
+  const email = process.env.SEED_ADMIN_EMAIL
+  const password = process.env.SEED_ADMIN_PASSWORD
+  if (!email || !password) {
+    throw new Error('Faltan SEED_ADMIN_EMAIL y/o SEED_ADMIN_PASSWORD en .env.local')
+  }
+  if (password.length < 10) {
+    throw new Error('SEED_ADMIN_PASSWORD debe tener al menos 10 caracteres.')
+  }
   let admin = await User.findOne({ email })
   if (!admin) {
     const passwordHash = await bcrypt.hash(password, 12)
     admin = await User.create({ email, passwordHash, name: 'Admin CRISTASUR', role: 'admin' })
-    console.log(`✓ Admin creado: ${email} / ${password}`)
+    console.log(`✓ Admin creado: ${email}`)
   } else {
     console.log(`✓ Admin ya existía: ${email}`)
   }

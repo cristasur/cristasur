@@ -179,7 +179,7 @@ export default function CartDrawer() {
           )}
           {items.map((x) => (
             <div
-              key={`${x.productId}-${x.variantValue || 'base'}`}
+              key={`${x.productId}-${x.variantLabel || ''}-${x.variantValue || 'base'}`}
               className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl"
             >
               <div className="w-16 h-16 rounded-lg bg-white overflow-hidden shrink-0 grid place-items-center text-slate-300">

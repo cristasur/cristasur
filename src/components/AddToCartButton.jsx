@@ -35,13 +35,9 @@ export default function AddToCartButton({
     if (disabled) return
     // Variante efectiva: la que pasaron por prop o, si no, la default del producto.
     const effectiveVariant = variant || pickDefaultVariant(product)
-    // Usar el precio de la variante SOLO si tiene un valor propio positivo.
-    // Number(null) === 0 es finito — hay que excluir null/vacío explícitamente.
-    const vp = effectiveVariant?.price
-    const variantHasPrice =
-      vp !== null && vp !== undefined && vp !== '' &&
-      Number.isFinite(Number(vp)) && Number(vp) > 0
-    const price = variantHasPrice ? Number(vp) : Number(product.price) || 0
+    // Precio: SIEMPRE del producto padre. La variante solo aporta su valor
+    // identificador (color/talla) — no debe cambiar precios.
+    const price = Number(product.price) || 0
     const image =
       effectiveVariant?.image ||
       (Array.isArray(effectiveVariant?.images) && effectiveVariant.images[0]) ||
@@ -50,9 +46,9 @@ export default function AddToCartButton({
     const categoryIds = Array.isArray(product.categories)
       ? product.categories.map((c) => String(c?._id || c))
       : []
-    // Mayoreo: usar de la variante si tiene, si no heredar del producto.
-    const rawWp = effectiveVariant?.wholesalePrice ?? product.wholesalePrice
-    const rawWq = effectiveVariant?.wholesaleMinQty ?? product.wholesaleMinQty
+    // Mayoreo: SIEMPRE del producto padre.
+    const rawWp = product.wholesalePrice
+    const rawWq = product.wholesaleMinQty
     const wholesalePrice =
       Number.isFinite(Number(rawWp)) && Number(rawWp) > 0
         ? Number(rawWp)

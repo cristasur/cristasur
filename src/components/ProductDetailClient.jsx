@@ -151,29 +151,22 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     return () => window.removeEventListener('cristasur:gallery-thumb-click', onGalleryThumbClick)
   }, [variants, product.image, product.gallery, step]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Precio base: variante sobreescribe solo si tiene precio propio (no null/vacío/0).
-  // Si la variante no tiene precio definido, hereda el precio del producto.
-  const basePrice = useMemo(() => {
-    const vp = selected?.price
-    if (vp !== null && vp !== undefined && vp !== '' && Number.isFinite(Number(vp)) && Number(vp) > 0) {
-      return Number(vp)
-    }
-    return Number(product.price) || 0
-  }, [selected, product.price])
-
-  // Mayoreo: usa el precio de la variante si tiene uno, si no hereda del producto padre.
+  // Precio base, precio mayoreo y cantidad mínima de mayoreo: SIEMPRE del producto padre.
+  // Las variantes (color/talla) solo cambian su valor identificador, no su precio.
+  // Esto evita que el cliente vea "a partir de 6 piezas" en Azul y "a partir de 2"
+  // en Rojo del mismo producto.
+  const basePrice = useMemo(
+    () => Number(product.price) || 0,
+    [product.price]
+  )
   const wholesalePrice = useMemo(() => {
-    const vp = selected?.wholesalePrice
-    if (Number.isFinite(Number(vp)) && Number(vp) > 0) return Number(vp)
     const pp = product.wholesalePrice
     return Number.isFinite(Number(pp)) && Number(pp) > 0 ? Number(pp) : null
-  }, [selected, product.wholesalePrice])
+  }, [product.wholesalePrice])
   const wholesaleMinQty = useMemo(() => {
-    const vq = selected?.wholesaleMinQty
-    if (Number.isFinite(Number(vq)) && Number(vq) >= 2) return Number(vq)
     const pq = product.wholesaleMinQty
     return Number.isFinite(Number(pq)) && Number(pq) >= 2 ? Number(pq) : null
-  }, [selected, product.wholesaleMinQty])
+  }, [product.wholesaleMinQty])
   // VIP: mayoreo activo siempre sin importar la cantidad pedida
   const wholesaleActive =
     wholesalePrice !== null &&

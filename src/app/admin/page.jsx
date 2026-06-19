@@ -13,6 +13,7 @@ import Product from '@/models/Product'
 import Review from '@/models/Review'
 import Order from '@/models/Order'
 import Icon from '@/components/Icon'
+import LiveUsersWidget from '@/components/admin/LiveUsersWidget'
 
 export const dynamic = 'force-dynamic'
 
@@ -159,6 +160,10 @@ export default async function AdminDashboard() {
     <div>
       <h1 className="text-2xl font-black text-slate-900 mb-1">Dashboard</h1>
       <p className="text-slate-500 mb-6">Tus productos y pedidos en números reales.</p>
+
+      <div className="mb-6">
+        <LiveUsersWidget />
+      </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="Productos publicados" value={s.active}    icon="check" href="/admin/productos" tint="emerald" />

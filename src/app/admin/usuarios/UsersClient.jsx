@@ -230,6 +230,7 @@ export default function UsersClient({ initialUsers, meId }) {
                 <th className="p-3">Rol</th>
                 <th className="p-3">Verificado</th>
                 <th className="p-3">Mayoreo VIP</th>
+                <th className="p-3">Registrado</th>
                 <th className="p-3">Último acceso</th>
                 <th className="p-3 text-right">Acciones</th>
               </tr>
@@ -272,6 +273,9 @@ export default function UsersClient({ initialUsers, meId }) {
                         state={savingWholesale[u._id]}
                         onToggle={() => toggleWholesale(u._id, !u.wholesaleAccess)}
                       />
+                    </td>
+                    <td className="p-3 text-xs text-slate-500">
+                      {formatDate(u.createdAt)}
                     </td>
                     <td className="p-3 text-xs text-slate-500">
                       {formatDate(u.lastLoginAt)}

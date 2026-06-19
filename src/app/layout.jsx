@@ -15,6 +15,7 @@ import NewsletterPopup from '@/components/NewsletterPopup'
 import CompareProvider from '@/components/CompareProvider'
 import CompareBar from '@/components/CompareBar'
 import PageViewTracker from '@/components/PageViewTracker'
+import PresenceHeartbeat from '@/components/PresenceHeartbeat'
 import { LOCATIONS } from '@/lib/locations'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -150,6 +151,9 @@ gtag('config', 'G-CG871WYQHV', { page_path: window.location.pathname });`}
             <StickyCartMobile />
             <Suspense fallback={null}>
               <PageViewTracker />
+            </Suspense>
+            <Suspense fallback={null}>
+              <PresenceHeartbeat />
             </Suspense>
             <NewsletterPopup />
             <CompareBar />

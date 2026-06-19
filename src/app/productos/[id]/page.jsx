@@ -95,11 +95,26 @@ async function loadProduct(id) {
     alsoBought = alsoBought.slice(0, 4)
   }
 
-  // "También disponible en" — fusión de:
-  //   1. Productos vinculados manualmente (relatedProducts)
-  //   2. Productos con la misma etiqueta (tag) — complementa la selección manual
-  // Los manuales van primero; los de etiqueta se deduplicanSame.
-  const tagFamily = product.tags?.length > 0
+  // "Productos relacionados" — hasta 4, al azar, con esta prioridad:
+  //   1) Productos que compartan al menos UNA etiqueta (tag) con el actual.
+  //   2) Si NO hay coincidencias por etiqueta, se cae a productos que
+  //      compartan la MISMA MARCA (brand).
+  //   3) Si tampoco hay por marca, la sección no se muestra.
+  // Los productos vinculados manualmente (relatedProducts) se respetan
+  // siempre como primeros, pero el total final siempre es 4.
+  const RELATED_LIMIT = 4
+
+  function pickRandom(arr, n) {
+    if (arr.length <= n) return arr
+    return arr
+      .map((p) => ({ p, r: Math.random() }))
+      .sort((a, b) => a.r - b.r)
+      .slice(0, n)
+      .map(({ p }) => p)
+  }
+
+  // 1) Coincidencias por etiqueta (tag)
+  const tagMatches = product.tags?.length > 0
     ? await Product.find({
         _id: { $ne: product._id },
         tags: { $in: product.tags },
@@ -107,43 +122,37 @@ async function loadProduct(id) {
         deleted: { $ne: true },
       })
         .select('_id name image price slug')
-        .sort({ createdAt: -1 })
-        .limit(12)
+        .limit(50)
         .lean()
     : []
 
-  const manualIds = new Set(manualRelated.map((p) => String(p._id)))
-  const sameFamilyAll = [
-    ...manualRelated,
-    ...tagFamily.filter((p) => !manualIds.has(String(p._id))),
-  ]
-  // Mostrar hasta 6 al azar para que cada visita sea fresca cuando hay muchos
-  const sameFamily = sameFamilyAll.length <= 6
-    ? sameFamilyAll
-    : sameFamilyAll
-        .map((p) => ({ p, r: Math.random() }))
-        .sort((a, b) => a.r - b.r)
-        .slice(0, 6)
-        .map(({ p }) => p)
-
-  // Related clásico (misma categoría) — excluye alsoBought y sameFamily para no repetir.
-  const excludeIds = [product._id, ...alsoBought.map((x) => x._id), ...sameFamily.map((x) => x._id)]
-  const related = await Product.find({
-    _id: { $nin: excludeIds },
-    categories: product.categories?.[0]?._id,
-    active: true,
-    deleted: { $ne: true },
-  })
-    .populate('categories', 'name slug')
-    .populate('brand', 'name slug')
-    .sort({ viewsCount: -1, salesCount: -1, createdAt: -1 })
-    .limit(4)
-    .lean()
+  let sameFamily = []
+  if (tagMatches.length > 0) {
+    // Mezcla: primero los manualmente vinculados, luego aleatorios de tag.
+    const manualIds = new Set(manualRelated.map((p) => String(p._id)))
+    const pool = [
+      ...manualRelated,
+      ...tagMatches.filter((p) => !manualIds.has(String(p._id))),
+    ]
+    sameFamily = pickRandom(pool, RELATED_LIMIT)
+  } else if (product.brand) {
+    // 2) Fallback: misma marca, al azar.
+    const brandMatches = await Product.find({
+      _id: { $ne: product._id },
+      brand: product.brand?._id || product.brand,
+      active: true,
+      deleted: { $ne: true },
+    })
+      .select('_id name image price slug')
+      .limit(50)
+      .lean()
+    sameFamily = pickRandom(brandMatches, RELATED_LIMIT)
+  }
 
   return {
     product: JSON.parse(JSON.stringify(product)),
     sameFamily: JSON.parse(JSON.stringify(sameFamily)),
-    related: JSON.parse(JSON.stringify(related)),
+    related: [],
     alsoBought: JSON.parse(JSON.stringify(alsoBought)),
   }
 }
@@ -423,14 +432,10 @@ export default async function ProductDetail({ params, searchParams }) {
         </section>
       )}
 
-      {/* Productos relacionados — etiquetas (random) + categoría como fallback */}
+      {/* Productos relacionados — máximo 4, por etiqueta (random) o marca como fallback. */}
       {(() => {
         const seenIds = new Set(alsoBought.map((p) => String(p._id)))
-        // sameFamily ya viene aleatorio; completar con related si hacen falta
-        const pool = [
-          ...sameFamily.filter((p) => !seenIds.has(String(p._id))),
-          ...related.filter((p) => !seenIds.has(String(p._id)) && !sameFamily.find((s) => String(s._id) === String(p._id))),
-        ].slice(0, 8)
+        const pool = sameFamily.filter((p) => !seenIds.has(String(p._id))).slice(0, 4)
         if (!pool.length) return null
         return (
           <section className="mt-16">

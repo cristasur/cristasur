@@ -10,15 +10,18 @@ import { usePathname } from 'next/navigation'
 const SESSION_KEY = 'cristasur:presenceSession:v1'
 const PING_EVERY_MS = 30_000 // 30 segundos
 
+// localStorage para que múltiples pestañas del mismo navegador compartan el
+// mismo sessionId — así una persona con 3 pestañas abiertas cuenta como UNA,
+// no como 3.
 function getOrCreateSessionId() {
   try {
-    let s = sessionStorage.getItem(SESSION_KEY)
+    let s = localStorage.getItem(SESSION_KEY)
     if (!s) {
       s =
         typeof crypto !== 'undefined' && crypto.randomUUID
           ? crypto.randomUUID()
           : Math.random().toString(36).slice(2) + Date.now().toString(36)
-      sessionStorage.setItem(SESSION_KEY, s)
+      localStorage.setItem(SESSION_KEY, s)
     }
     return s
   } catch {

@@ -281,6 +281,45 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ ok: true })
     }
 
+    // Actualizar tags del producto desde la lista del admin (inline edit).
+    // Body: { tags: string[] }. Acepta hasta 20, recorta a 40 chars, deduplica.
+    if (action === 'tags') {
+      const body = await request.json().catch(() => ({}))
+      const raw = Array.isArray(body?.tags) ? body.tags : []
+      const cleaned = Array.from(
+        new Set(
+          raw
+            .map((t) => String(t || '').trim().slice(0, 40))
+            .filter((t) => t.length > 0)
+        )
+      ).slice(0, 20)
+      const before = await Product.findById(params.id).select('tags').lean()
+      if (!before) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+      await Product.updateOne(
+        { _id: params.id },
+        {
+          $set: { tags: cleaned, updatedBy: user?.sub },
+          $push: {
+            editHistory: {
+              $each: [{
+                userId: user?.sub,
+                userEmail: user?.email,
+                action: 'tags',
+                changes: `Etiquetas: ${(before.tags || []).join(', ') || '∅'} → ${cleaned.join(', ') || '∅'}`,
+              }],
+              $slice: -50,
+            },
+          },
+        }
+      )
+      try {
+        revalidatePath('/')
+        revalidatePath('/productos')
+        revalidatePath(`/productos/${params.id}`)
+      } catch {}
+      return NextResponse.json({ ok: true, tags: cleaned })
+    }
+
     if (action === 'restore') {
       const product = await Product.findByIdAndUpdate(
         params.id,

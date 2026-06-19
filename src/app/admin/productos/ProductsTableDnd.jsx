@@ -11,6 +11,7 @@ import FlagButton from './FlagButton'
 import ActiveButton from './ActiveButton'
 import DeleteProductButton from './DeleteProductButton'
 import DuplicateButton from './DuplicateButton'
+import TagsCell from './TagsCell'
 import Icon from '@/components/Icon'
 
 function formatPrice(n) {
@@ -160,6 +161,7 @@ export default function ProductsTableDnd({ initialProducts, canReorder }) {
               {canReorder && <th className="w-8 p-3" />}
               <th className="p-3">Producto</th>
               <th className="p-3">Categoría</th>
+              <th className="p-3">Etiquetas</th>
               <th className="p-3">Precio</th>
               <th className="p-3">Stock</th>
               <th className="p-3">Estado</th>
@@ -244,6 +246,11 @@ export default function ProductsTableDnd({ initialProducts, canReorder }) {
                     </div>
                   </td>
 
+                  {/* Etiquetas (editables inline) */}
+                  <td className="p-3 align-top">
+                    <TagsCell productId={p._id} initialTags={p.tags || []} />
+                  </td>
+
                   {/* Precio */}
                   <td className="p-3 font-semibold">{formatPrice(p.price)}</td>
 
@@ -294,7 +301,7 @@ export default function ProductsTableDnd({ initialProducts, canReorder }) {
 
             {products.length === 0 && (
               <tr>
-                <td colSpan={canReorder ? 7 : 6} className="p-10 text-center text-slate-500">
+                <td colSpan={canReorder ? 8 : 7} className="p-10 text-center text-slate-500">
                   No hay productos aún.{' '}
                   <Link href="/admin/productos/nuevo" className="text-brand-700 font-semibold hover:underline">
                     Crea el primero

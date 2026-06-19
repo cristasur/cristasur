@@ -948,16 +948,29 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             />
             <span className="text-sm text-slate-700">🔥 Destacado</span>
           </label>
-          <label className="inline-flex items-center gap-2">
+          <label className="inline-flex items-center gap-2" title="Si lo desactivas, el producto se oculta del catálogo aunque esté publicado.">
             <input
               type="checkbox"
               checked={form.active}
-              onChange={(e) => update('active', e.target.checked)}
+              onChange={(e) => {
+                const next = e.target.checked
+                setForm((f) => ({
+                  ...f,
+                  active: next,
+                  // Si activas Visible y todavía está en borrador, lo pasamos a publicado
+                  // automáticamente para que no quede en limbo (publicar=visible al cliente).
+                  status: next && f.status === 'draft' ? 'published' : f.status,
+                }))
+              }}
               className="w-4 h-4"
             />
-            <span className="text-sm text-slate-700">Publicado</span>
+            <span className="text-sm text-slate-700">Visible en el catálogo</span>
           </label>
         </div>
+        <p className="text-xs text-slate-500 mt-2">
+          Para sacar un producto de <b>Borradores</b>, cambia el <b>Estado</b> a “Publicado” en la
+          sección <i>Visibilidad y etiquetas</i> más abajo.
+        </p>
       </div>
 
       {/* Marca y color */}

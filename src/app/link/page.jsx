@@ -84,44 +84,44 @@ export const metadata = {
 export default function LinkPage() {
   return (
     <main
-      className="min-h-screen flex flex-col items-center px-6 pt-14 pb-12"
+      className="min-h-screen flex flex-col items-center px-6 pt-6 pb-8"
       style={{ backgroundColor: '#faf6f1' }}
     >
       {/* Logo */}
       <div
-        className="w-20 h-20 rounded-full bg-white overflow-hidden flex items-center justify-center"
-        style={{ boxShadow: '0 6px 24px rgba(15,23,42,0.08)' }}
+        className="w-16 h-16 rounded-full bg-white overflow-hidden flex items-center justify-center"
+        style={{ boxShadow: '0 6px 20px rgba(15,23,42,0.08)' }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/icon-symbol.png"
           alt="CRISTASUR"
-          className="w-14 h-14 object-contain"
+          className="w-11 h-11 object-contain"
         />
       </div>
 
       {/* Nombre */}
       <h1
-        className="mt-6 text-[26px] font-semibold tracking-[0.14em] text-slate-900 uppercase"
+        className="mt-4 text-[22px] font-semibold tracking-[0.14em] text-slate-900 uppercase"
         style={{ fontFamily: 'ui-serif, Georgia, "Times New Roman", serif' }}
       >
         Cristasur
       </h1>
 
       {/* Ubicación */}
-      <div className="mt-2 text-[11px] tracking-[0.25em] uppercase text-slate-400">
+      <div className="mt-1.5 text-[10px] tracking-[0.25em] uppercase text-slate-400">
         México
       </div>
 
       {/* Línea decorativa */}
-      <div className="mt-6 w-8 h-px bg-slate-300" />
+      <div className="mt-4 w-8 h-px bg-slate-300" />
 
-      <p className="mt-6 text-[13px] text-slate-500 text-center max-w-[260px] leading-relaxed">
+      <p className="mt-3 text-[12px] text-slate-500 text-center max-w-[260px] leading-relaxed">
         Gracias por visitarnos. Síguenos o déjanos tu reseña.
       </p>
 
       {/* Botones */}
-      <div className="mt-10 w-full max-w-[380px] space-y-3">
+      <div className="mt-5 w-full max-w-[380px] space-y-2.5">
         {LINKS.map((link) => (
           <a
             key={link.id}
@@ -129,7 +129,7 @@ export default function LinkPage() {
             {...(link.external === false
               ? {}
               : { target: '_blank', rel: 'noopener noreferrer' })}
-            className="group flex items-center gap-4 px-5 py-4 rounded-xl bg-white border border-slate-200/70 hover:border-slate-300 hover:-translate-y-[1px] active:scale-[0.99] transition-all duration-200"
+            className="group flex items-center gap-3.5 px-4 py-3 rounded-xl bg-white border border-slate-200/70 hover:border-slate-300 hover:-translate-y-[1px] active:scale-[0.99] transition-all duration-200"
             style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}
           >
             <span
@@ -159,7 +159,7 @@ export default function LinkPage() {
       </div>
 
       {/* Firma discreta */}
-      <div className="mt-12 text-[10px] tracking-[0.2em] uppercase text-slate-300">
+      <div className="mt-6 text-[9px] tracking-[0.2em] uppercase text-slate-300">
         cristasur.com
       </div>
     </main>

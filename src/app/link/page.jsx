@@ -4,7 +4,6 @@
 // Instagram, Facebook, TikTok, Reseña Google.
 // Sin navbar, sin footer, sin distracciones.
 // ============================================================
-import Link from 'next/link'
 
 const LINKS = [
   {
@@ -58,6 +57,21 @@ const LINKS = [
       </svg>
     ),
   },
+  {
+    id: 'website',
+    label: 'Ir a nuestra página web',
+    handle: 'cristasur.com',
+    href: 'https://cristasur.com',
+    accent: '#0f172a',
+    external: false, // abrir en la misma pestaña, es sitio propio
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="w-5 h-5">
+        <circle cx="12" cy="12" r="9" strokeLinecap="round" />
+        <path d="M3.5 12h17" strokeLinecap="round" />
+        <path d="M12 3c2.5 2.7 3.9 5.9 3.9 9s-1.4 6.3-3.9 9c-2.5-2.7-3.9-5.9-3.9-9S9.5 5.7 12 3z" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 ]
 
 export const metadata = {
@@ -94,11 +108,9 @@ export default function LinkPage() {
         Cristasur
       </h1>
 
-      {/* Subtítulo con separadores */}
-      <div className="mt-2 flex items-center gap-2 text-[11px] tracking-[0.25em] uppercase text-slate-400">
-        <span>Mérida</span>
-        <span className="w-1 h-1 rounded-full bg-slate-300" />
-        <span>Bacalar</span>
+      {/* Ubicación */}
+      <div className="mt-2 text-[11px] tracking-[0.25em] uppercase text-slate-400">
+        México
       </div>
 
       {/* Línea decorativa */}
@@ -114,8 +126,9 @@ export default function LinkPage() {
           <a
             key={link.id}
             href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
+            {...(link.external === false
+              ? {}
+              : { target: '_blank', rel: 'noopener noreferrer' })}
             className="group flex items-center gap-4 px-5 py-4 rounded-xl bg-white border border-slate-200/70 hover:border-slate-300 hover:-translate-y-[1px] active:scale-[0.99] transition-all duration-200"
             style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}
           >
@@ -145,16 +158,8 @@ export default function LinkPage() {
         ))}
       </div>
 
-      {/* Enlace suave al catálogo */}
-      <Link
-        href="/"
-        className="mt-12 text-[11px] tracking-[0.2em] uppercase text-slate-400 hover:text-slate-700 transition-colors"
-      >
-        Ver catálogo
-      </Link>
-
       {/* Firma discreta */}
-      <div className="mt-10 text-[10px] tracking-[0.2em] uppercase text-slate-300">
+      <div className="mt-12 text-[10px] tracking-[0.2em] uppercase text-slate-300">
         cristasur.com
       </div>
     </main>

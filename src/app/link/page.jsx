@@ -46,7 +46,7 @@ const LINKS = [
     id: 'google-review',
     label: 'Déjanos una reseña',
     handle: 'Google',
-    href: 'https://www.google.com/search?q=CRISTASUR+M%C3%A9rida#lrd=0x0:0x0,3',
+    href: 'https://g.page/r/CVuA-1drZCfqEAE/review',
     accent: '#EA4335',
     icon: (
       <svg viewBox="0 0 24 24" className="w-5 h-5">

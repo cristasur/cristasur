@@ -16,6 +16,7 @@ import CompareProvider from '@/components/CompareProvider'
 import CompareBar from '@/components/CompareBar'
 import PageViewTracker from '@/components/PageViewTracker'
 import PresenceHeartbeat from '@/components/PresenceHeartbeat'
+import LayoutChrome from '@/components/LayoutChrome'
 import { LOCATIONS } from '@/lib/locations'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -143,20 +144,24 @@ gtag('config', 'G-CG871WYQHV', { page_path: window.location.pathname });`}
         />
         <CartProvider>
           <CompareProvider>
-            <Navbar />
+            <LayoutChrome>
+              <Navbar />
+            </LayoutChrome>
             <main className="flex-1 overflow-x-hidden">{children}</main>
-            <Footer />
-            <CartDrawer />
-            <WhatsAppFab />
-            <StickyCartMobile />
+            <LayoutChrome>
+              <Footer />
+              <CartDrawer />
+              <WhatsAppFab />
+              <StickyCartMobile />
+              <NewsletterPopup />
+              <CompareBar />
+            </LayoutChrome>
             <Suspense fallback={null}>
               <PageViewTracker />
             </Suspense>
             <Suspense fallback={null}>
               <PresenceHeartbeat />
             </Suspense>
-            <NewsletterPopup />
-            <CompareBar />
           </CompareProvider>
         </CartProvider>
       </body>

@@ -91,6 +91,9 @@ const nextConfig = {
   // empaquetarlos rompe la generación de PDFs. Los dejamos externos.
   experimental: {
     serverComponentsExternalPackages: ['pdfkit', 'qrcode'],
+    // Requerido en Next.js 14 para que instrumentation.js se ejecute
+    // (donde inicializamos Sentry). En Next.js 15+ esto ya es default.
+    instrumentationHook: true,
   },
 
   // Dominios de imagen permitidos. Restringido a los que realmente usa la app:

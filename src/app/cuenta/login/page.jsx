@@ -37,7 +37,12 @@ function LoginForm() {
       // Si necesita 2FA, mostramos el paso siguiente
       if (data?.needsTotp) {
         setNeedsTotp(true)
-        setErr(res.ok ? '' : (data?.error || ''))
+        setErr(res.ok ? '' : (data?.error || 'Código inválido'))
+        // Si falló el código, lo limpiamos para reintentar
+        if (!res.ok) {
+          setTotpCode('')
+          setBackupCode('')
+        }
         return
       }
       if (!res.ok) {

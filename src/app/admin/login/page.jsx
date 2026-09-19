@@ -32,12 +32,20 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
-      // Si necesita 2FA, mostramos el paso siguiente sin cambiar de página
+      // Necesita 2FA:
+      //  - Si res.ok (200) → mostramos la pantalla de código sin error.
+      //  - Si !res.ok (ej. 401 código inválido) → mantenemos la pantalla de código
+      //    pero mostramos el error para que sepa qué pasó.
       if (data?.needsTotp) {
         setNeedsTotp(true)
-        setError('')
+        setError(res.ok ? '' : (data?.error || 'Código inválido'))
+        // Si falló el código, lo limpiamos para que reintente
+        if (!res.ok) {
+          setTotpCode('')
+          setBackupCode('')
+        }
         return
       }
       if (!res.ok) {
@@ -45,9 +53,10 @@ export default function LoginPage() {
         return
       }
 
+      // Login OK → navegación completa (no router.push, para que la cookie
+      // se aplique y el middleware vea la sesión al cargar la ruta destino).
       const safeNext = next?.startsWith('/') ? next : '/admin'
-      router.push(safeNext)
-      router.refresh()
+      window.location.href = safeNext
     } catch (err) {
       setError('No se pudo conectar al servidor')
     } finally {

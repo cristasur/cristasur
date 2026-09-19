@@ -27,7 +27,7 @@ const cspDirectives = {
   'script-src-elem': isProd
     ? ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com']
     : ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
-  'connect-src': ["'self'", 'https:', 'wss:', 'https://www.google-analytics.com', 'https://analytics.google.com', 'https://stats.g.doubleclick.net'],
+  'connect-src': ["'self'", 'https:', 'wss:', 'https://www.google-analytics.com', 'https://analytics.google.com', 'https://stats.g.doubleclick.net', 'https://*.sentry.io', 'https://*.ingest.sentry.io', 'https://*.ingest.us.sentry.io'],
   'media-src': ["'self'", 'data:', 'blob:'],
   'worker-src': ["'self'", 'blob:'],
   'manifest-src': ["'self'"],
@@ -123,4 +123,30 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+// ============================================================
+// Sentry — envolvemos la config con el plugin. Sube source maps
+// automáticamente para que los stack traces sean legibles.
+// Si NEXT_PUBLIC_SENTRY_DSN no está definida (dev local sin Sentry),
+// exportamos la config sin envolver para no romper el build.
+// ============================================================
+const { withSentryConfig } = process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? require('@sentry/nextjs')
+  : { withSentryConfig: (cfg) => cfg }
+
+module.exports = withSentryConfig(nextConfig, {
+  // Organización y proyecto — se leen de env vars en Vercel.
+  org: process.env.SENTRY_ORG || 'cristasur',
+  project: process.env.SENTRY_PROJECT || 'cristasur-web',
+
+  // Solo subir source maps y crear releases en producción (Vercel).
+  silent: !process.env.CI,
+
+  // Oculta los source maps del cliente final (Sentry sí los ve).
+  hideSourceMaps: true,
+
+  // No inyectar tunnel: nuestro CSP ya permite conectar directo a Sentry.
+  disableLogger: true,
+
+  // Reintenta al fallar (Vercel a veces tiene glitches de red).
+  automaticVercelMonitors: true,
+})

@@ -2,9 +2,17 @@
 // ============================================================
 // Error boundary de último recurso (si falla incluso el layout).
 // Next.js lo renderiza sin el layout raíz, así que debe ser
-// autosuficiente (incluir html/body).
+// autosuficiente (incluir html/body). Reporta a Sentry.
 // ============================================================
+import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
+
 export default function GlobalError({ error, reset }) {
+  useEffect(() => {
+    // Reporta el error a Sentry apenas se renderiza este boundary.
+    Sentry.captureException(error)
+  }, [error])
+
   return (
     <html lang="es">
       <body

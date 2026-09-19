@@ -72,6 +72,21 @@ const UserSchema = new mongoose.Schema(
 
     lastLoginAt: Date,
 
+    // ── 2FA (TOTP) ────────────────────────────────────────────
+    // Secret en base32 (Google Authenticator, Authy, etc.).
+    // Se guarda tal cual — no lo mostramos al cliente después del enrolamiento.
+    totpSecret: { type: String, default: null, select: false },
+    // Flag: true solo cuando el usuario ya escaneó el QR y verificó un código.
+    totpEnabled: { type: Boolean, default: false },
+    // Códigos de respaldo hasheados (bcrypt). El usuario los usa 1 vez cada uno
+    // cuando pierde el celular. Solo se guardan hashes; el hash correspondiente
+    // se remueve cuando se consume.
+    backupCodes: { type: [String], default: [], select: false },
+
+    // ── Lockout por intentos fallidos de login ────────────────
+    failedLoginAttempts: { type: Number, default: 0 },
+    lockedUntil: { type: Date, default: null },
+
     // Recuperación de contraseña
     resetToken: { type: String, default: null },
     resetTokenExpiry: { type: Date, default: null },

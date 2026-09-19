@@ -29,6 +29,7 @@ const links = [
   { href: '/admin/pedidos',             label: 'Pedidos',       icon: 'cart' },
   { href: '/admin/usuarios',            label: 'Usuarios',      icon: 'user', adminOnly: true },
   { href: '/admin/historial',           label: 'Historial',     icon: 'edit', adminOnly: true },
+  { href: '/admin/seguridad',           label: 'Seguridad',     icon: 'user' },
 ]
 
 export default async function AdminLayout({ children }) {

@@ -292,7 +292,15 @@ export default function ProductsTableDnd({ initialProducts, canReorder }) {
                         Editar
                       </Link>
                       <DuplicateButton id={p._id} />
-                      <DeleteProductButton id={p._id} name={p.name} />
+                      <DeleteProductButton
+                        id={p._id}
+                        name={p.name}
+                        onDeleted={(deletedId) => {
+                          setProducts((prev) =>
+                            prev.filter((item) => item._id !== deletedId)
+                          )
+                        }}
+                      />
                     </div>
                   </td>
                 </tr>

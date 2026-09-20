@@ -2,7 +2,10 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-export default function DeleteProductButton({ id, hard = false, label }) {
+// `onDeleted`: callback opcional que dispara el padre cuando la eliminación
+// fue exitosa. Sirve para que la lista pueda remover el item del estado local
+// sin esperar a que router.refresh() vuelva a hidratar el árbol.
+export default function DeleteProductButton({ id, hard = false, label, onDeleted }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
@@ -20,6 +23,9 @@ export default function DeleteProductButton({ id, hard = false, label }) {
         alert(d.error || 'Error al eliminar')
         return
       }
+      // Notifica al padre para que quite el item de la lista al instante,
+      // y adicionalmente re-hidratamos por si hay más piezas que dependen del server.
+      onDeleted?.(id)
       router.refresh()
     } finally {
       setLoading(false)

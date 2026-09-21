@@ -106,28 +106,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Banner promo */}
-      <section className="max-w-7xl mx-auto px-4 py-8">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-accent-500 to-accent-700 text-white p-8 md:p-12">
-          <div className="absolute inset-0 bg-dots opacity-40" />
-          <div className="relative md:flex items-center justify-between gap-6">
-            <div>
-              <h3 className="text-2xl md:text-3xl font-black">¿Tienes un negocio?</h3>
-              <p className="mt-2 text-accent-100 max-w-xl">
-                Atendemos a restaurantes, escuelas y comercios con precios especiales por mayoreo.
-              </p>
-            </div>
-            <Link
-              href="/contacto"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-accent-700 font-bold hover:bg-accent-50 mt-4 md:mt-0 whitespace-nowrap"
-            >
-              Cotizar por mayoreo
-              <Icon name="arrow" className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Nuevos */}
       {newest.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 py-16">

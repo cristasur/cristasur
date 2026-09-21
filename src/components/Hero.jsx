@@ -94,7 +94,9 @@ export default function Hero({ banners = [] }) {
             return (
               <div
                 key={slide._id || i}
-                className="min-w-full aspect-[4/3] sm:aspect-[16/7] lg:aspect-[1000/340]"
+                // Proporción fija 2000×720 en todos los tamaños: así el banner
+                // se ve completo en celular y no se recorta el texto lateral.
+                className="min-w-full aspect-[2000/720]"
                 aria-hidden={i !== current}
               >
                 {slide.href ? (

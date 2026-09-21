@@ -7,8 +7,20 @@
 // y el total real de la compra. Ese es el modelo de negocio de
 // CRISTASUR, así que debe verse desde la cuadrícula.
 //
-// Es client component porque el selector de cantidad, las
-// miniaturas y el desplegable de descuentos tienen estado.
+// ── ALINEACIÓN ──────────────────────────────────────────────
+// Todas las tarjetas deben verse parejas aunque un producto no
+// tenga mayoreo, ni varias fotos, ni formato de caja. Para eso:
+//
+//   1. Cada zona tiene ALTURA RESERVADA fija (constantes ROW_*).
+//      Si el dato no existe, el hueco se queda vacío pero ocupa
+//      lo mismo, así las filas de abajo nunca se desplazan.
+//   2. Las miniaturas van SUPERPUESTAS sobre la imagen, no debajo,
+//      para que no empujen nada.
+//   3. El desplegable de descuentos es un panel flotante, no
+//      inline: al abrirlo la tarjeta no cambia de alto.
+//
+// Es client component por el selector de cantidad, las miniaturas
+// y el desplegable de descuentos.
 // ============================================================
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
@@ -19,6 +31,11 @@ import {
   priceTiers, unitPriceFor, activeTier, maxTierDiscount,
   saleStep, snapToStep, formatMXN, formatMXNShort,
 } from '@/lib/pricing'
+
+// Alturas reservadas. Tocar aquí si cambian los tamaños de fuente.
+const ROW_META  = 18  // estrellas + SKU
+const ROW_LABEL = 15  // etiqueta "MAYOREO"
+const ROW_TIERS = 34  // botón de descuento por cantidad
 
 export default function ProductCard({ product, colorFilter }) {
   const step = saleStep(product)
@@ -63,10 +80,7 @@ export default function ProductCard({ product, colorFilter }) {
   const safeIdx = Math.min(imgIdx, Math.max(0, images.length - 1))
 
   function bump(dir) {
-    setQty((q) => {
-      const next = dir > 0 ? q + step : q - step
-      return snapToStep(Math.max(step, next), step)
-    })
+    setQty((q) => snapToStep(Math.max(step, dir > 0 ? q + step : q - step), step))
   }
 
   function onQtyInput(e) {
@@ -86,12 +100,12 @@ export default function ProductCard({ product, colorFilter }) {
   }
 
   return (
-    <article className="group relative bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover border border-slate-100 flex flex-col transition-shadow">
+    <article className="group relative bg-white rounded-2xl shadow-card hover:shadow-card-hover border border-slate-100 flex flex-col transition-shadow">
 
-      {/* ── Imagen ── */}
-      <div className="relative">
+      {/* ── Imagen ─────────────────────────────────────────── */}
+      <div className="relative rounded-t-2xl overflow-hidden">
         <Link href={href} className="block">
-          <div className="relative aspect-square bg-slate-50 overflow-hidden">
+          <div className="relative aspect-square bg-slate-50">
             {images.length > 0 ? (
               <img
                 src={images[safeIdx]}
@@ -132,64 +146,57 @@ export default function ProductCard({ product, colorFilter }) {
         <div className="absolute top-3 right-3">
           <FavoriteButton productId={product._id} />
         </div>
-      </div>
 
-      {/* ── Miniaturas ── */}
-      {images.length > 1 && (
-        <div className="flex items-center gap-1.5 px-3 py-2 border-b border-slate-100">
-          <button
-            type="button"
-            onClick={() => setImgIdx((i) => Math.max(0, i - 1))}
-            disabled={safeIdx === 0}
-            aria-label="Imagen anterior"
-            className="shrink-0 w-6 h-6 grid place-items-center rounded-full border border-slate-200 text-slate-400 hover:text-slate-700 disabled:opacity-30"
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
+        {/* Miniaturas superpuestas: no ocupan alto, así todas las
+            tarjetas empiezan la info a la misma altura. */}
+        {images.length > 1 && (
+          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-white via-white/85 to-transparent opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <div className="flex items-center justify-center gap-1.5">
+              {images.slice(0, 5).map((src, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setImgIdx(i)}
+                  aria-label={`Ver imagen ${i + 1}`}
+                  className={`w-8 h-8 rounded-md overflow-hidden border-2 bg-white transition-colors ${
+                    i === safeIdx ? 'border-brand-600' : 'border-white/80 hover:border-slate-300'
+                  }`}
+                >
+                  <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-          <div className="flex-1 flex items-center gap-1.5 overflow-x-auto scroll-chip">
-            {images.slice(0, 5).map((src, i) => (
-              <button
+        {/* Puntitos: señal permanente de que hay más fotos */}
+        {images.length > 1 && (
+          <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1 group-hover:opacity-0 transition-opacity pointer-events-none">
+            {images.slice(0, 5).map((_, i) => (
+              <span
                 key={i}
-                type="button"
-                onClick={() => setImgIdx(i)}
-                aria-label={`Ver imagen ${i + 1}`}
-                className={`shrink-0 w-9 h-9 rounded-md overflow-hidden border-2 transition-colors ${
-                  i === safeIdx ? 'border-brand-600' : 'border-transparent hover:border-slate-200'
-                }`}
-              >
-                <img src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
-              </button>
+                className={`w-1.5 h-1.5 rounded-full ${i === safeIdx ? 'bg-brand-600' : 'bg-white ring-1 ring-slate-300'}`}
+              />
             ))}
           </div>
+        )}
+      </div>
 
-          <button
-            type="button"
-            onClick={() => setImgIdx((i) => Math.min(images.length - 1, i + 1))}
-            disabled={safeIdx >= images.length - 1}
-            aria-label="Imagen siguiente"
-            className="shrink-0 w-6 h-6 grid place-items-center rounded-full border border-slate-200 text-slate-400 hover:text-slate-700 disabled:opacity-30"
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* ── Información ── */}
+      {/* ── Información ────────────────────────────────────── */}
       <div className="p-3.5 flex flex-col flex-1">
 
+        {/* Nombre: siempre 2 líneas de alto */}
         <Link href={href} className="block">
-          <h3 className="font-semibold text-slate-900 text-[13.5px] leading-snug line-clamp-2 min-h-[2.6em] hover:text-brand-700 transition-colors">
+          <h3 className="font-semibold text-slate-900 text-[13.5px] leading-snug line-clamp-2 h-[2.6em] hover:text-brand-700 transition-colors">
             {product.name}
           </h3>
         </Link>
 
-        {/* Estrellas + SKU */}
-        <div className="flex items-center justify-between gap-2 mt-1.5 min-h-[18px]">
+        {/* Estrellas + SKU — altura fija aunque falte alguno */}
+        <div
+          className="flex items-center justify-between gap-2 mt-1.5"
+          style={{ height: ROW_META }}
+        >
           {product.avgRating > 0 ? (
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map((s) => (
@@ -201,7 +208,7 @@ export default function ProductCard({ product, colorFilter }) {
             </div>
           ) : <span />}
 
-          {product.sku && (
+          {product.sku ? (
             <button
               type="button"
               onClick={copySku}
@@ -216,92 +223,94 @@ export default function ProductCard({ product, colorFilter }) {
                 </svg>
               )}
             </button>
-          )}
+          ) : <span />}
+        </div>
+
+        {/* Etiqueta del nivel — reservada siempre */}
+        <div
+          className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 leading-none"
+          style={{ height: ROW_LABEL }}
+        >
+          {isWholesale ? tier.label : ''}
         </div>
 
         {/* Precio */}
-        <div className="mt-2.5">
-          {isWholesale && (
-            <div className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">
-              {tier.label}
-            </div>
-          )}
-          <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className={`text-[21px] font-black leading-none ${isWholesale ? 'text-rose-600' : 'text-slate-900'}`}>
-              {formatMXNShort(unit)}
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className={`text-[21px] font-black leading-none ${isWholesale ? 'text-rose-600' : 'text-slate-900'}`}>
+            {formatMXNShort(unit)}
+          </span>
+          <span className="text-[11px] text-slate-400">/ pieza</span>
+          {isWholesale ? (
+            <span className="text-[11.5px] text-slate-400 line-through">
+              {formatMXNShort(tiers[0].price)}
             </span>
-            <span className="text-[11px] text-slate-400">/ pieza</span>
-            {isWholesale && (
-              <span className="text-[11.5px] text-slate-400 line-through">
-                {formatMXNShort(tiers[0].price)}
-              </span>
-            )}
-            {!isWholesale && hasDiscount && (
-              <span className="text-[11.5px] text-slate-400 line-through">
-                {formatMXNShort(product.comparePrice)}
-              </span>
-            )}
-          </div>
+          ) : hasDiscount ? (
+            <span className="text-[11.5px] text-slate-400 line-through">
+              {formatMXNShort(product.comparePrice)}
+            </span>
+          ) : null}
         </div>
 
-        {/* Descuentos por cantidad */}
-        {tiers.length > 1 && (
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={() => setShowTiers((v) => !v)}
-              aria-expanded={showTiers}
-              className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border border-brand-200 bg-brand-50/60 hover:bg-brand-50 transition-colors"
-            >
-              <span className="flex items-center gap-1.5 text-[11.5px] font-semibold text-brand-800">
-                <Icon name="tag" className="w-3 h-3" />
-                Descuento por cantidad
-              </span>
-              <span className="flex items-center gap-1 shrink-0">
-                {tierDiscount > 0 && (
-                  <span className="text-[10px] font-bold text-white bg-brand-600 px-1.5 py-0.5 rounded">
-                    -{tierDiscount}%
-                  </span>
-                )}
-                <svg
-                  width="11" height="11" viewBox="0 0 20 20" fill="currentColor"
-                  className="text-brand-600"
-                  style={{ transition: 'transform .2s', transform: showTiers ? 'rotate(180deg)' : 'none' }}
-                >
-                  <path fillRule="evenodd" clipRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" />
-                </svg>
-              </span>
-            </button>
+        {/* Descuento por cantidad — altura reservada aunque el
+            producto no tenga niveles. El panel es flotante para
+            que abrirlo no estire la tarjeta. */}
+        <div className="relative mt-2" style={{ height: ROW_TIERS }}>
+          {tiers.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowTiers((v) => !v)}
+                aria-expanded={showTiers}
+                className="w-full h-full flex items-center justify-between gap-2 px-2.5 rounded-lg border border-brand-200 bg-brand-50/60 hover:bg-brand-50 transition-colors"
+              >
+                <span className="flex items-center gap-1.5 text-[11.5px] font-semibold text-brand-800 truncate">
+                  <Icon name="tag" className="w-3 h-3 shrink-0" />
+                  Descuento por cantidad
+                </span>
+                <span className="flex items-center gap-1 shrink-0">
+                  {tierDiscount > 0 && (
+                    <span className="text-[10px] font-bold text-white bg-brand-600 px-1.5 py-0.5 rounded">
+                      -{tierDiscount}%
+                    </span>
+                  )}
+                  <svg
+                    width="11" height="11" viewBox="0 0 20 20" fill="currentColor"
+                    className="text-brand-600"
+                    style={{ transition: 'transform .2s', transform: showTiers ? 'rotate(180deg)' : 'none' }}
+                  >
+                    <path fillRule="evenodd" clipRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" />
+                  </svg>
+                </span>
+              </button>
 
-            {showTiers && (
-              <div className="mt-1.5 rounded-lg border border-slate-100 overflow-hidden">
-                {tiers.map((t) => {
-                  const isActive = t.minQty === tier.minQty
-                  return (
-                    <button
-                      key={t.minQty}
-                      type="button"
-                      onClick={() => setQty(snapToStep(t.minQty, step))}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 text-[11.5px] transition-colors ${
-                        isActive ? 'bg-brand-50 text-brand-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span>{t.minQty === 1 ? 'Desde 1 pieza' : `Desde ${t.minQty} piezas`}</span>
-                      <span className="font-bold">{formatMXNShort(t.price)}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
+              {showTiers && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-lg border border-slate-200 bg-white shadow-card-hover overflow-hidden">
+                  {tiers.map((t) => {
+                    const isActive = t.minQty === tier.minQty
+                    return (
+                      <button
+                        key={t.minQty}
+                        type="button"
+                        onClick={() => { setQty(snapToStep(t.minQty, step)); setShowTiers(false) }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 text-[11.5px] transition-colors ${
+                          isActive ? 'bg-brand-50 text-brand-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>{t.minQty === 1 ? 'Desde 1 pieza' : `Desde ${t.minQty} pzs`}</span>
+                        <span className="font-bold">{formatMXNShort(t.price)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
-        {/* Disponibilidad y formato de venta */}
+        {/* Tres filas siempre presentes: disponibilidad, formato y total */}
         <div className="mt-2.5 space-y-1 text-[11.5px]">
-          <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-              outOfStock ? 'bg-rose-500' : 'bg-emerald-500'
-            }`} />
+          <div className="flex items-center gap-1.5 h-[17px]">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${outOfStock ? 'bg-rose-500' : 'bg-emerald-500'}`} />
             <span className={outOfStock ? 'text-rose-600 font-semibold' : 'text-slate-600'}>
               {outOfStock
                 ? 'Sin stock'
@@ -311,20 +320,22 @@ export default function ProductCard({ product, colorFilter }) {
             </span>
           </div>
 
-          {step > 1 && (
-            <div className="flex items-center gap-1.5 text-slate-500">
-              <Icon name="box" className="w-3 h-3 shrink-0" strokeWidth={2} />
-              <span>Formato de venta: <strong className="text-slate-700">{step} piezas</strong></span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 text-slate-500 h-[17px]">
+            <Icon name="box" className="w-3 h-3 shrink-0" strokeWidth={2} />
+            <span className="truncate">
+              {step > 1
+                ? <>Formato: <strong className="text-slate-700">{step} piezas</strong></>
+                : <>Formato: <strong className="text-slate-700">por pieza</strong></>}
+            </span>
+          </div>
 
-          <div className="text-slate-500">
+          <div className="text-slate-500 h-[17px] truncate">
             Total ({qty}) pz:{' '}
             <strong className="text-rose-600 text-[13px]">{formatMXN(total)}</strong>
           </div>
         </div>
 
-        {/* Cantidad + carrito */}
+        {/* Cantidad + carrito — pegado al fondo */}
         <div className="mt-auto pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="flex items-center justify-between sm:justify-start rounded-lg border border-slate-200 shrink-0">
             <button

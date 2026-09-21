@@ -24,6 +24,7 @@ const PUBLIC_API_WRITE_PATHS = new Set([
   '/api/reviews', // crear reseña pública (POST); el GET también es público
   '/api/coupons/apply', // preview de cupón (no mutación de BD)
   '/api/presence/ping', // heartbeat de "personas en línea" (público)
+  '/api/shipping/quote', // cotizar envío desde el carrito (público, solo lectura)
   // /api/seed requiere una clave aparte (ver route.js) y está bloqueado en prod
 ])
 

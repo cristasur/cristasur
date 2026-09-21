@@ -48,6 +48,9 @@ export async function GET(request) {
     const brandParam    = (url.searchParams.get('brand')    || '').trim()
     const colorParam    = (url.searchParams.get('color')    || '').trim()
     const materialParam = (url.searchParams.get('material') || '').trim()
+    // ?fields=mini → solo lo que necesita una tarjeta. Evita mandar
+    // variantes, editHistory y textos SEO en menús y vistas previas.
+    const miniFields = url.searchParams.get('fields') === 'mini'
 
     const needsAdmin = includeInactive || includeDeleted || deletedOnly
     if (needsAdmin) {
@@ -79,13 +82,18 @@ export async function GET(request) {
     }
 
     if (categoryParam) {
+      let catId = null
       if (mongoose.Types.ObjectId.isValid(categoryParam)) {
-        filter.categories = categoryParam
+        catId = categoryParam
       } else {
         const cat = await Category.findOne({ slug: categoryParam }).select('_id').lean()
         if (!cat) return NextResponse.json({ products: [], total: 0 })
-        filter.categories = cat._id
+        catId = cat._id
       }
+      // Incluimos las subcategorías: pedir "Cocina" trae también lo que esté
+      // en "Platos", "Cubiertos", etc.
+      const kids = await Category.find({ parent: catId }).select('_id').lean()
+      filter.categories = { $in: [catId, ...kids.map((k) => k._id)] }
     }
 
     // Filtro por marca (slug)
@@ -140,15 +148,18 @@ export async function GET(request) {
     else if (sortParam === 'priceDesc') sort = { price: -1 }
     else if (sortParam === 'popular') sort = { salesCount: -1, whatsappClicks: -1, viewsCount: -1 }
 
-    const [products, total] = await Promise.all([
-      Product.find(filter)
+    const baseQuery = Product.find(filter)
+    if (miniFields) {
+      baseQuery.select('name slug image price comparePrice stock qtyStep')
+    } else {
+      baseQuery
         .populate('categories', 'name slug icon')
         .populate('brand', 'name slug')
         .populate('materials', 'name slug')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    }
+
+    const [products, total] = await Promise.all([
+      baseQuery.sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
     ])
 

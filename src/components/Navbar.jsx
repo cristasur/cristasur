@@ -8,6 +8,7 @@ import CartButton from './CartButton'
 import AccountNavLink from './AccountNavLink'
 import MobileMenu from './MobileMenu'
 import CategoryBar from './CategoryBar'
+import CategoriesDropdown from './CategoriesDropdown'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
 
@@ -43,17 +44,16 @@ export default async function Navbar() {
               <span className="sr-only">CRISTASUR</span>
             </Link>
 
-            <div className="flex-1 max-w-xl hidden md:block">
-              <SearchAutocomplete />
+            {/* Categorías + buscador. El botón queda siempre accesible
+                porque el header es sticky y la barra de abajo no lo es. */}
+            <div className="flex-1 max-w-2xl hidden md:flex items-center gap-2">
+              <CategoriesDropdown categories={categories} />
+              <div className="flex-1 min-w-0">
+                <SearchAutocomplete />
+              </div>
             </div>
 
             <nav className="flex items-center gap-1 shrink-0">
-              <Link
-                href="/productos"
-                className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
-              >
-                Catálogo
-              </Link>
               <Link
                 href="/quienes-somos"
                 className="hidden md:inline-flex items-center px-3 py-2 text-sm font-medium text-slate-700 hover:text-brand-700 rounded-lg"
@@ -86,7 +86,8 @@ export default async function Navbar() {
         </div>
       </header>
 
-      {/* Barra de categorías — FUERA del header para no afectar su altura */}
+      {/* Barra de categorías — fuera del header y NO sticky: se queda en su
+          lugar y desaparece al bajar. El botón "Categorías" toma el relevo. */}
       <CategoryBar categories={categories} />
     </>
   )

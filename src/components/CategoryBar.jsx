@@ -1,92 +1,37 @@
 'use client'
 // ============================================================
-// Barra de categorías — sticky, debajo del header.
+// Barra de categorías — fila de enlaces debajo del header.
 //
-// Desktop: enlaces de texto en fila. Las que tienen subcategorías
-//          muestran un chevron y despliegan un panel al pasar el
-//          mouse (o con Enter desde teclado).
-// Mobile:  scroll horizontal. Al tocar una categoría con hijas se
-//          abre una hoja inferior con sus subcategorías.
+// NO es sticky: se queda en su lugar y desaparece al bajar, como
+// en MAHA. Cuando ya no se ve, el botón "Categorías" del header
+// (CategoriesDropdown) toma el relevo.
 //
-// La jerarquía viene del campo `parent` de Category.
+// Al pasar el mouse sobre una categoría con subcategorías se abre
+// un panel ancho: subcategorías a la izquierda y una vista previa
+// de productos a la derecha, cargada bajo demanda y cacheada.
 // ============================================================
 import { useEffect, useRef, useState, useMemo } from 'react'
 import Link from 'next/link'
+import { buildCategoryTree } from '@/lib/categoryTree'
 
-const BAR_H = 46
-const CLOSE_DELAY_MS = 140
+const CLOSE_DELAY_MS = 160
+const PREVIEW_LIMIT = 4
+
+function money(n) {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency', currency: 'MXN', minimumFractionDigits: 0,
+  }).format(Number(n) || 0)
+}
 
 export default function CategoryBar({ categories }) {
-  const [visible, setVisible] = useState(true)
-  const [headerH, setHeaderH] = useState(96)
-  const [openId, setOpenId] = useState(null)   // desplegable desktop
+  const [openId, setOpenId] = useState(null)   // panel desktop
   const [sheetId, setSheetId] = useState(null) // hoja inferior móvil
+  const [preview, setPreview] = useState({})   // { [slug]: producto[] }
 
-  const lastY = useRef(0)
-  const locked = useRef(false)
   const closeTimer = useRef(null)
+  const fetched = useRef(new Set())
 
-  // ── Construir el árbol: principales + sus hijas ──────────
-  const tree = useMemo(() => {
-    const list = Array.isArray(categories) ? categories : []
-    const roots = list.filter((c) => !c.parent)
-    const byParent = new Map()
-    for (const c of list) {
-      if (!c.parent) continue
-      const k = String(c.parent)
-      if (!byParent.has(k)) byParent.set(k, [])
-      byParent.get(k).push(c)
-    }
-    return roots.map((r) => ({ ...r, children: byParent.get(String(r._id)) || [] }))
-  }, [categories])
-
-  // Medir altura real del header (cambia entre móvil y desktop)
-  useEffect(() => {
-    const header = document.querySelector('header')
-    if (!header) return
-    const update = () => setHeaderH(header.offsetHeight)
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(header)
-    return () => ro.disconnect()
-  }, [])
-
-  // Auto-ocultar al bajar / mostrar al subir — solo desktop (≥768px)
-  useEffect(() => {
-    const isDesktop = () => window.innerWidth >= 768
-    lastY.current = window.scrollY
-
-    const onScroll = () => {
-      if (!isDesktop()) { setVisible(true); return }
-      if (locked.current) return
-      const y = window.scrollY
-
-      if (y < 80) { setVisible(true); lastY.current = y; return }
-
-      const delta = y - lastY.current
-      if (delta > 60) {
-        setVisible(false)
-        setOpenId(null)
-        lastY.current = y
-        locked.current = true
-        setTimeout(() => { lastY.current = window.scrollY; locked.current = false }, 600)
-      } else if (delta < -50) {
-        setVisible(true)
-        lastY.current = y
-        locked.current = true
-        setTimeout(() => { lastY.current = window.scrollY; locked.current = false }, 600)
-      }
-    }
-
-    const onResize = () => { if (!isDesktop()) setVisible(true) }
-
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onResize)
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onResize)
-    }
-  }, [])
+  const tree = useMemo(() => buildCategoryTree(categories), [categories])
 
   // Cerrar con Escape
   useEffect(() => {
@@ -109,18 +54,28 @@ export default function CategoryBar({ categories }) {
 
   if (!tree.length) return null
 
-  // Cierre con retardo para poder mover el mouse del enlace al panel
-  const openNow = (id) => { clearTimeout(closeTimer.current); setOpenId(id) }
+  // Trae hasta 4 productos de la categoría. Una sola vez por slug.
+  async function loadPreview(slug) {
+    if (fetched.current.has(slug)) return
+    fetched.current.add(slug)
+    try {
+      const res = await fetch(`/api/products?category=${encodeURIComponent(slug)}&limit=${PREVIEW_LIMIT}&fields=mini`)
+      if (!res.ok) return
+      const data = await res.json()
+      setPreview((p) => ({ ...p, [slug]: data.products || [] }))
+    } catch {
+      // Sin vista previa el panel sigue siendo útil: quedan las subcategorías.
+    }
+  }
+
+  const openNow = (cat) => {
+    clearTimeout(closeTimer.current)
+    setOpenId(cat._id)
+    loadPreview(cat.slug)
+  }
   const closeSoon = () => {
     clearTimeout(closeTimer.current)
     closeTimer.current = setTimeout(() => setOpenId(null), CLOSE_DELAY_MS)
-  }
-
-  const toggleBar = () => {
-    setVisible((v) => !v)
-    setOpenId(null)
-    locked.current = true
-    setTimeout(() => { lastY.current = window.scrollY; locked.current = false }, 600)
   }
 
   const sheetCat = tree.find((c) => c._id === sheetId)
@@ -128,23 +83,12 @@ export default function CategoryBar({ categories }) {
   return (
     <>
       <div
-        style={{
-          position: 'sticky',
-          top: headerH,
-          zIndex: 30,
-          height: visible ? BAR_H : 0,
-          transition: 'height 0.3s ease-in-out',
-          overflowAnchor: 'none',
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          borderBottom: visible ? '1px solid #e8edf3' : 'none',
-        }}
+        className="relative bg-white border-b border-slate-200"
         onMouseLeave={closeSoon}
       >
-        <div className="max-w-7xl mx-auto px-4 h-full">
+        <div className="max-w-7xl mx-auto px-4">
           <nav
-            className="flex items-center gap-1 md:gap-0.5 h-full overflow-x-auto md:overflow-visible scroll-chip"
+            className="flex items-center gap-1 md:gap-0.5 h-12 overflow-x-auto md:overflow-visible scroll-chip"
             aria-label="Categorías"
           >
             <Link
@@ -161,8 +105,8 @@ export default function CategoryBar({ categories }) {
               return (
                 <div
                   key={cat._id}
-                  className="relative shrink-0"
-                  onMouseEnter={() => hasKids && openNow(cat._id)}
+                  className="shrink-0"
+                  onMouseEnter={() => hasKids && openNow(cat)}
                 >
                   <div className="flex items-center">
                     <Link
@@ -181,11 +125,11 @@ export default function CategoryBar({ categories }) {
                         aria-expanded={isOpen}
                         onClick={(e) => {
                           e.preventDefault()
-                          // Desktop alterna el panel; móvil abre la hoja inferior.
                           if (window.innerWidth >= 768) {
-                            setOpenId(isOpen ? null : cat._id)
+                            isOpen ? setOpenId(null) : openNow(cat)
                           } else {
                             setSheetId(cat._id)
+                            loadPreview(cat.slug)
                           }
                         }}
                         className={`-ml-1.5 pr-2 py-1.5 transition-colors ${
@@ -194,10 +138,7 @@ export default function CategoryBar({ categories }) {
                       >
                         <svg
                           width="13" height="13" viewBox="0 0 20 20" fill="currentColor"
-                          style={{
-                            transition: 'transform 0.2s ease',
-                            transform: isOpen ? 'rotate(180deg)' : 'none',
-                          }}
+                          style={{ transition: 'transform 0.2s ease', transform: isOpen ? 'rotate(180deg)' : 'none' }}
                         >
                           <path
                             fillRule="evenodd" clipRule="evenodd"
@@ -207,50 +148,112 @@ export default function CategoryBar({ categories }) {
                       </button>
                     )}
                   </div>
-
-                  {/* ── Desplegable desktop ── */}
-                  {hasKids && isOpen && (
-                    <div
-                      className="hidden md:block absolute left-0 top-full pt-2 z-40"
-                      onMouseEnter={() => openNow(cat._id)}
-                      onMouseLeave={closeSoon}
-                    >
-                      <div className="min-w-[232px] max-w-[320px] bg-white rounded-xl border border-slate-100 shadow-card-hover py-2 animate-fade-in-up">
-                        <Link
-                          href={`/categoria/${cat.slug}`}
-                          onClick={() => setOpenId(null)}
-                          className="block px-4 py-2 text-[13px] font-bold text-brand-700 hover:bg-brand-50"
-                        >
-                          Ver todo en {cat.name}
-                        </Link>
-                        <div className="my-1 border-t border-slate-100" />
-                        {cat.children.map((sub) => (
-                          <Link
-                            key={sub._id}
-                            href={`/categoria/${sub.slug}`}
-                            onClick={() => setOpenId(null)}
-                            className="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )
             })}
           </nav>
         </div>
+
+        {/* ── Panel ancho (desktop) ── */}
+        {openId && (() => {
+          const cat = tree.find((c) => c._id === openId)
+          if (!cat || !cat.children.length) return null
+          const items = preview[cat.slug]
+
+          return (
+            <div
+              className="hidden md:block absolute left-0 right-0 top-full z-40"
+              onMouseEnter={() => clearTimeout(closeTimer.current)}
+              onMouseLeave={closeSoon}
+            >
+              <div className="bg-white border-b border-slate-200 shadow-card-hover">
+                <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-[280px_1fr] gap-8">
+
+                  {/* Subcategorías */}
+                  <div className="border-r border-slate-100 pr-6">
+                    <Link
+                      href={`/categoria/${cat.slug}`}
+                      onClick={() => setOpenId(null)}
+                      className="block px-3 py-2 rounded-lg text-sm font-bold text-brand-700 hover:bg-brand-50"
+                    >
+                      Ver todo en {cat.name}
+                    </Link>
+                    <div className="mt-1 max-h-[300px] overflow-y-auto">
+                      {cat.children.map((sub) => (
+                        <Link
+                          key={sub._id}
+                          href={`/categoria/${sub.slug}`}
+                          onClick={() => setOpenId(null)}
+                          className="block px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Vista previa de productos */}
+                  <div>
+                    {items === undefined ? (
+                      <div className="grid grid-cols-4 gap-4">
+                        {Array.from({ length: PREVIEW_LIMIT }).map((_, i) => (
+                          <div key={i} className="animate-pulse">
+                            <div className="aspect-square rounded-xl bg-slate-100" />
+                            <div className="h-3 bg-slate-100 rounded mt-2.5 w-4/5" />
+                            <div className="h-3 bg-slate-100 rounded mt-1.5 w-2/5" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : items.length === 0 ? (
+                      <div className="h-full grid place-items-center text-sm text-slate-400">
+                        Explora las subcategorías de {cat.name}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-[11px] uppercase tracking-widest text-slate-400 font-bold mb-3">
+                          Destacados en {cat.name}
+                        </div>
+                        <div className="grid grid-cols-4 gap-4">
+                          {items.map((p) => (
+                            <Link
+                              key={p._id}
+                              href={`/productos/${p._id}`}
+                              onClick={() => setOpenId(null)}
+                              className="group"
+                            >
+                              <div className="aspect-square rounded-xl bg-slate-50 overflow-hidden border border-slate-100">
+                                {p.image ? (
+                                  <img
+                                    src={p.image}
+                                    alt={p.name}
+                                    loading="lazy"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                ) : null}
+                              </div>
+                              <div className="mt-2 text-[13px] text-slate-700 line-clamp-2 leading-snug group-hover:text-brand-700">
+                                {p.name}
+                              </div>
+                              <div className="text-[13px] font-bold text-slate-900 mt-0.5">
+                                {money(p.price)}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* ── Hoja inferior móvil ── */}
       {sheetCat && (
         <div className="md:hidden fixed inset-0 z-50 flex items-end">
-          <div
-            className="absolute inset-0 bg-slate-900/40"
-            onClick={() => setSheetId(null)}
-          />
+          <div className="absolute inset-0 bg-slate-900/40" onClick={() => setSheetId(null)} />
           <div className="relative w-full bg-white rounded-t-2xl max-h-[72vh] overflow-y-auto pb-6 shadow-2xl">
             <div className="sticky top-0 bg-white px-5 pt-3 pb-3 border-b border-slate-100">
               <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-3" />
@@ -288,35 +291,6 @@ export default function CategoryBar({ categories }) {
           </div>
         </div>
       )}
-
-      {/* Botón para recuperar la barra cuando se retrae (solo desktop) */}
-      <button
-        type="button"
-        onClick={toggleBar}
-        aria-label={visible ? 'Ocultar categorías' : 'Mostrar categorías'}
-        style={{
-          position: 'fixed',
-          top: headerH + (visible ? BAR_H : 0),
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 29,
-          transition: 'top 0.3s ease-in-out',
-        }}
-        className="hidden md:flex items-center justify-center w-10 h-5 rounded-b-full
-          bg-white border border-slate-200 border-t-0
-          text-slate-400 hover:text-slate-700 shadow-sm transition-colors"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
-          style={{ transition: 'transform 0.3s ease-in-out', transform: visible ? 'rotate(0deg)' : 'rotate(180deg)' }}
-          className="w-3.5 h-3.5"
-        >
-          <path
-            fillRule="evenodd" clipRule="evenodd"
-            d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-          />
-        </svg>
-      </button>
     </>
   )
 }

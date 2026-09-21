@@ -10,7 +10,7 @@ import Hero from '@/components/Hero'
 import ProductGrid from '@/components/ProductGrid'
 import Icon from '@/components/Icon'
 import RepeatOrder from '@/components/RepeatOrder'
-import CategoryCarousel from '@/components/CategoryCarousel'
+import CategoryGrid from '@/components/CategoryGrid'
 
 // El home es dinámico: cuando un admin cambia "destacado" o publica algo,
 // el siguiente visitante debe verlo ya. Si se necesita aliviar carga, cambiar
@@ -73,17 +73,16 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 py-16">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <div className="text-xs uppercase tracking-widest text-brand-600 font-bold">Explora</div>
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mt-1">Nuestras categorías</h2>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900">Comprar por categoría</h2>
           </div>
-          <Link href="/productos" className="text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1">
-            Ver todo
+          <Link href="/productos" className="text-sm font-bold text-slate-900 hover:text-brand-700 inline-flex items-center gap-1.5 shrink-0">
+            Ver todos
             <Icon name="arrow" className="w-4 h-4" />
           </Link>
         </div>
-        {/* Tarjetas: solo principales. `allCategories` lleva la lista completa
+        {/* Celdas: solo principales. `allCategories` lleva la lista completa
             para poder armar el desplegable de subcategorías al pasar el mouse. */}
-        <CategoryCarousel
+        <CategoryGrid
           categories={categories.filter((c) => !c.parent)}
           allCategories={categories}
         />

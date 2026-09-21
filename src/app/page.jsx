@@ -80,12 +80,9 @@ export default async function HomePage() {
             <Icon name="arrow" className="w-4 h-4" />
           </Link>
         </div>
-        {/* Celdas: solo principales. `allCategories` lleva la lista completa
-            para poder armar el desplegable de subcategorías al pasar el mouse. */}
-        <CategoryGrid
-          categories={categories.filter((c) => !c.parent)}
-          allCategories={categories}
-        />
+        {/* Solo categorías principales. Al hacer clic lleva a la categoría;
+            las subcategorías se ven al entrar o desde la barra de navegación. */}
+        <CategoryGrid categories={categories.filter((c) => !c.parent)} />
       </section>
 
       {/* Destacados */}

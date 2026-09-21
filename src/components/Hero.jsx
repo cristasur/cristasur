@@ -9,7 +9,7 @@
 // Si no hay banners activos, el componente no renderiza nada
 // (la home arranca directo con las categorías).
 //
-// Medida recomendada de imagen: 2000 × 720 px (relación ~2.8:1).
+// Medida recomendada de imagen: 2000 × 800 px (relación 2.5:1).
 // Se recorta con object-cover, así que lo importante debe ir
 // centrado para que no se pierda en móvil.
 // ============================================================
@@ -94,9 +94,9 @@ export default function Hero({ banners = [] }) {
             return (
               <div
                 key={slide._id || i}
-                // Proporción fija 2000×720 en todos los tamaños: así el banner
+                // Proporción fija 2000×800 en todos los tamaños: así el banner
                 // se ve completo en celular y no se recorta el texto lateral.
-                className="min-w-full aspect-[2000/720]"
+                className="min-w-full aspect-[2000/800]"
                 aria-hidden={i !== current}
               >
                 {slide.href ? (

@@ -83,9 +83,11 @@ export async function fetchAvailableCarriers({ country = 'MX' } = {}) {
     if (!res.ok) return []
     const json = await res.json()
     const rows = Array.isArray(json?.data) ? json.data : []
+    // Se conserva la capitalización original: hay identificadores como
+    // "amPm" que no funcionan en minúsculas.
     const names = rows
       .filter((c) => c?.active !== false)
-      .map((c) => String(c?.name || '').toLowerCase())
+      .map((c) => String(c?.name || '').trim())
       .filter(Boolean)
 
     carrierCache = { at: Date.now(), list: names }
@@ -104,7 +106,10 @@ export async function resolveCarriers() {
   if (!available.length) return PREFERRED_MX.slice(0, MAX_CARRIERS)
 
   // Primero las preferidas que existan; si faltan, se rellena con el resto.
-  const preferred = PREFERRED_MX.filter((c) => available.includes(c))
+  // La comparación es sin distinguir mayúsculas, pero se devuelve el
+  // identificador tal cual lo reporta Envia.
+  const byLower = new Map(available.map((c) => [c.toLowerCase(), c]))
+  const preferred = PREFERRED_MX.map((c) => byLower.get(c)).filter(Boolean)
   const rest = available.filter((c) => !preferred.includes(c))
   return [...preferred, ...rest].slice(0, MAX_CARRIERS)
 }
@@ -162,6 +167,16 @@ async function quoteOne({ carrier, origin, destination, packages, baseUrl, token
     }
 
     const json = await res.json()
+
+    // OJO: Envia responde HTTP 200 aunque haya fallado; el error va en
+    // el cuerpo como { meta: "error", error: { message } }. Sin esta
+    // comprobación los fallos se ven como "sin tarifas" y no hay forma
+    // de saber qué pasó.
+    if (json?.meta === 'error' || json?.error) {
+      const msg = json?.error?.message || json?.error?.description || 'error desconocido'
+      return { carrier, ok: false, rates: [], error: msg }
+    }
+
     const rows = Array.isArray(json?.data) ? json.data : []
 
     const rates = rows

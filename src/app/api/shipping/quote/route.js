@@ -24,6 +24,7 @@ import Product from '@/models/Product'
 import { planPackages } from '@/lib/packing'
 import { quoteAllCarriers, enviaConfig, originIsComplete } from '@/lib/envia'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
+import { stateFromPostalCode } from '@/lib/mexico'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -88,6 +89,16 @@ export async function POST(request) {
     if (postalCode.length !== 5) {
       return NextResponse.json(
         { ok: false, reason: 'bad_postal_code', error: 'Escribe un código postal de 5 dígitos.' },
+        { status: 400 }
+      )
+    }
+
+    // Las paqueterías exigen el estado del destino y el cliente solo
+    // escribe el CP. Se deduce de los dos primeros dígitos.
+    const estado = stateFromPostalCode(postalCode)
+    if (!estado) {
+      return NextResponse.json(
+        { ok: false, reason: 'bad_postal_code', error: 'Ese código postal no parece de México.' },
         { status: 400 }
       )
     }
@@ -167,8 +178,10 @@ export async function POST(request) {
       // en el carrito todavía no la pedimos, se manda un marcador y
       // se aceptan las que sí cotizan solo con CP.
       street: String(body?.street || 'Por confirmar'),
-      city: String(body?.city || ''),
-      state: String(body?.state || ''),
+      number: 'S/N',
+      // Ciudad y estado no pueden ir vacíos: Envia rechaza la petición.
+      city: String(body?.city || estado.name),
+      state: estado.code,
       country: 'MX',
       postalCode,
       phone: process.env.ENVIA_ORIGIN_PHONE || '',
@@ -200,6 +213,7 @@ export async function POST(request) {
     const payload = {
       ok: true,
       postalCode,
+      estado: estado.name,
       options,
       totals,
       test: !cfg.isProd,

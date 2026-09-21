@@ -19,6 +19,7 @@ import {
   enviaConfig, originAddress, originIsComplete,
   fetchAvailableCarriers, resolveCarriers,
 } from '@/lib/envia'
+import { stateFromPostalCode } from '@/lib/mexico'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -91,11 +92,15 @@ export async function GET(request) {
   out.carriersQueSeVanACotizar = await resolveCarriers()
 
   // ── 2. Cotización cruda con cada paquetería ──
+  const estado = stateFromPostalCode(cp)
+  out.estadoDetectado = estado
+
   const destination = {
     name: 'Cliente',
     street: 'Por confirmar',
-    city: '',
-    state: '',
+    number: 'S/N',
+    city: estado?.name || '',
+    state: estado?.code || '',
     country: 'MX',
     postalCode: cp,
     phone: origin.phone,

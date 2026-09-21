@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useCart, effectiveUnitPrice, isWholesaleActive } from './CartProvider'
 import Icon from './Icon'
+import ShippingQuote from './ShippingQuote'
 
 // Codifica los items del carrito a una URL compartible. La URL queda
 // /carrito?items=<base64url(JSON)>. Comparte por WhatsApp / copiar.
@@ -139,7 +140,12 @@ export default function CartDrawer() {
     }
   }
 
-  const total = coupon ? coupon.total : subtotal
+  // Opción de paquetería elegida en el cotizador. null = aún no cotiza.
+  const [shipping, setShipping] = useState(null)
+
+  const productsTotal = coupon ? coupon.total : subtotal
+  const shippingCost = Number(shipping?.price) || 0
+  const total = productsTotal + shippingCost
 
   return (
     <>
@@ -307,12 +313,28 @@ export default function CartDrawer() {
                 <span>−{formatMXN(coupon.discount)}</span>
               </div>
             )}
+            {/* Cotizador de envío: el cliente ve el costo antes de escribir */}
+            <ShippingQuote
+              items={items}
+              selected={shipping}
+              onSelect={setShipping}
+            />
+
+            {shipping && (
+              <div className="flex justify-between text-sm text-slate-600">
+                <span className="capitalize truncate pr-2">
+                  Envío · {shipping.carrier}
+                </span>
+                <span className="shrink-0">{formatMXN(shippingCost)}</span>
+              </div>
+            )}
+
             <div className="flex justify-between text-lg font-black text-slate-900 pt-2 border-t border-slate-100">
               <span>Total</span>
               <span>{formatMXN(total)}</span>
             </div>
             <button
-              onClick={() => checkoutViaWhatsApp(coupon)}
+              onClick={() => checkoutViaWhatsApp(coupon, shipping)}
               className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold inline-flex items-center justify-center gap-2"
             >
               <Icon name="whatsapp" className="w-5 h-5" />

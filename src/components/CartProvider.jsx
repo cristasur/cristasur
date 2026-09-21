@@ -275,8 +275,10 @@ export default function CartProvider({ children }) {
     } catch {}
   }, [hydrated])
 
+  // `shipping` es la opción de paquetería que el cliente eligió en el
+  // cotizador del carrito. Opcional: si no cotizó, el flujo es el de antes.
   const checkoutViaWhatsApp = useCallback(
-    async (couponInfo) => {
+    async (couponInfo, shipping) => {
       if (!items.length) return
       const lines = items.map((x) => {
         const variant = x.variantValue ? ` (${x.variantLabel || 'Variante'}: ${x.variantValue})` : ''
@@ -292,9 +294,21 @@ export default function CartProvider({ children }) {
       if (couponInfo?.code) {
         summary += `🏷️ Cupón ${couponInfo.code}: -$${Number(couponInfo.discount || 0).toFixed(2)}\n`
       }
-      const finalTotal = couponInfo?.total ?? subtotal
+      const productsTotal = couponInfo?.total ?? subtotal
+      const shipCost = Number(shipping?.price) || 0
+      const finalTotal = productsTotal + shipCost
+
+      if (shipping) {
+        summary += `📦 Envío (${shipping.carrier} ${shipping.serviceName || shipping.service}`
+        summary += shipping.postalCode ? `, CP ${shipping.postalCode}` : ''
+        summary += `): $${shipCost.toFixed(2)}\n`
+      }
       summary += `💰 *TOTAL: $${finalTotal.toFixed(2)}*\n`
-      const msg = `¡Hola CRISTASUR! 👋 Quisiera hacer el siguiente pedido:\n\n🛒 *DETALLE DEL PEDIDO*\n──────────────────────\n${lines.join('\n')}\n──────────────────────\n${summary}¿Me pueden confirmar disponibilidad y datos de envío? 🙏`
+
+      const cierre = shipping
+        ? '¿Me confirman disponibilidad para cerrar el pedido? 🙏'
+        : '¿Me pueden confirmar disponibilidad y datos de envío? 🙏'
+      const msg = `¡Hola CRISTASUR! 👋 Quisiera hacer el siguiente pedido:\n\n🛒 *DETALLE DEL PEDIDO*\n──────────────────────\n${lines.join('\n')}\n──────────────────────\n${summary}${cierre}`
       const url = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`
 
       // Cookie token persistente (no-auth) para enlazar este pedido al cliente.
@@ -309,7 +323,7 @@ export default function CartProvider({ children }) {
 
       // Registra el intent del lado del servidor (no bloquea el salto a wa.me).
       try {
-        const total = couponInfo?.total ?? subtotal
+        const total = (couponInfo?.total ?? subtotal) + (Number(shipping?.price) || 0)
         const discount = Number(couponInfo?.discount) || 0
         // No await — fire & forget. WhatsApp se abre de inmediato.
         fetch('/api/orders', {

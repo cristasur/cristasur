@@ -283,7 +283,7 @@ export default function CategoryManager({ initialCategories }) {
                   aria-label={c.label}
                   aria-pressed={active}
                   className={`w-9 h-9 rounded-lg border-2 transition ${
-                    active ? 'border-brand-600 ring-2 ring-brand-100' : 'border-slate-200 hover:border-slate-300'
+                    active ? 'border-brand-600 ring-2 ring-brand-100' : 'border-slate-200 hover:border-slate-400'
                   }`}
                   style={{ backgroundColor: c.bg }}
                 />
@@ -291,7 +291,7 @@ export default function CategoryManager({ initialCategories }) {
             })}
           </div>
           <span className="block text-[11px] text-slate-400 mt-1.5">
-            Va en el bloque de la izquierda del banner, detrás del nombre de la categoría.
+            Fondo del panel diagonal del banner. El texto siempre va en blanco.
           </span>
         </div>
 

@@ -203,7 +203,7 @@ export default async function CategoryLanding({ params, searchParams }) {
       </nav>
 
       {/* Banner de la categoría */}
-      <CategoryHero category={category} subtitle={category.description} />
+      <CategoryHero category={category} parentCat={parentCat} total={total} />
 
       {/* Filtro activo de marca o material, si viene por URL */}
       {(brandDoc || materialDoc) && (
@@ -217,10 +217,6 @@ export default async function CategoryLanding({ params, searchParams }) {
 
       {/* Subcategorías en círculos, como MAHA */}
       <SubcategoryStrip subcategories={children} />
-
-      <p className="text-sm text-slate-500">
-        {total} {total === 1 ? 'producto' : 'productos'} disponibles
-      </p>
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">
         <aside className="lg:sticky lg:top-24 h-fit">

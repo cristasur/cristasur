@@ -64,6 +64,14 @@ export default function AddToCartButton({
         ? Number(rawWq)
         : null
 
+    // Tercer nivel: precio por ciento. También del producto padre.
+    const rawHp = product.hundredPrice
+    const rawHq = product.hundredMinQty
+    const hundredPrice =
+      Number.isFinite(Number(rawHp)) && Number(rawHp) > 0 ? Number(rawHp) : null
+    const hundredMinQty =
+      Number.isFinite(Number(rawHq)) && Number(rawHq) >= 2 ? Number(rawHq) : null
+
     // Múltiplo de venta del producto (qtyStep). Si el cliente pulsó "Comprar"
     // desde el home/card y `qty` es 1, ascendemos automáticamente al step.
     const qtyStep = Number(product.qtyStep) >= 1 ? Math.floor(Number(product.qtyStep)) : 1
@@ -76,6 +84,8 @@ export default function AddToCartButton({
         price,
         wholesalePrice,
         wholesaleMinQty,
+        hundredPrice,
+        hundredMinQty,
         qtyStep,
         sku,
         image,

@@ -45,15 +45,27 @@ function lineKey(productId, variantValue, variantLabel) {
   return `${productId}::${l}::${v}`
 }
 
-// Calcula el precio efectivo de una línea según si activa mayoreo o no.
+// Calcula el precio efectivo de una línea según el nivel que alcance la
+// cantidad: menudeo → mayoreo → por ciento. Gana el nivel más barato que
+// el cliente ya haya alcanzado, igual que muestra la tarjeta del catálogo.
 export function effectiveUnitPrice(item) {
   const base = Number(item?.price) || 0
+  const qty = Number(item?.qty) || 0
+  let price = base
+
   const wp = Number(item?.wholesalePrice)
-  const minQ = Number(item?.wholesaleMinQty)
-  if (Number.isFinite(wp) && wp > 0 && Number.isFinite(minQ) && minQ >= 2 && item?.qty >= minQ) {
-    return wp
+  const wq = Number(item?.wholesaleMinQty)
+  if (Number.isFinite(wp) && wp > 0 && Number.isFinite(wq) && wq >= 2 && qty >= wq) {
+    price = wp
   }
-  return base
+
+  const hp = Number(item?.hundredPrice)
+  const hq = Number(item?.hundredMinQty)
+  if (Number.isFinite(hp) && hp > 0 && Number.isFinite(hq) && hq >= 2 && qty >= hq && hp < price) {
+    price = hp
+  }
+
+  return price
 }
 
 export function isWholesaleActive(item) {
@@ -181,6 +193,14 @@ export default function CartProvider({ children }) {
           price: Number(item.price) || 0,
           // Mayoreo (opcional): si vienen, se persisten en la línea para que
           // el cálculo siempre tenga la info al cambiar la cantidad.
+          hundredPrice:
+            Number.isFinite(Number(item.hundredPrice)) && Number(item.hundredPrice) > 0
+              ? Number(item.hundredPrice)
+              : null,
+          hundredMinQty:
+            Number.isFinite(Number(item.hundredMinQty)) && Number(item.hundredMinQty) >= 2
+              ? Number(item.hundredMinQty)
+              : null,
           wholesalePrice:
             Number.isFinite(Number(item.wholesalePrice)) && Number(item.wholesalePrice) > 0
               ? Number(item.wholesalePrice)
@@ -327,6 +347,8 @@ export default function CartProvider({ children }) {
             qty: x.qty,
             price: x.price,
             wholesalePrice: x.wholesalePrice ?? null,
+            hundredPrice: x.hundredPrice ?? null,
+            hundredMinQty: x.hundredMinQty ?? null,
             wholesaleMinQty: x.wholesaleMinQty ?? null,
             categoryIds: x.categoryIds || [],
           })),

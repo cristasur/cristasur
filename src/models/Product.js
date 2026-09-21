@@ -9,17 +9,27 @@
 // ============================================================
 import mongoose from 'mongoose'
 
-// Variantes embebidas: cada una puede tener su propio precio, stock e imagen.
-// Si el producto tiene variantes, el precio/stock del producto padre sirven
-// como valores "por defecto" cuando el usuario aún no elige.
+// Variantes embebidas — MODELO SIMÉTRICO.
+//
+// Regla de oro: si un producto tiene variantes, TODAS las opciones vendibles
+// viven aquí dentro. El producto padre NO representa una variante; es sólo el
+// contenedor con la info común (nombre, descripción, reglas de precio).
+//
+// Ejemplo correcto:
+//   product.name = "Hielera 48 QTS Nordic"
+//   product.color = ""                       ← el padre no tiene color
+//   product.variants = [
+//     { label:"Color", value:"Azul", sku:"HIE48-AZ", pkgWeight:4.1, ... },
+//     { label:"Color", value:"Rojo", sku:"HIE48-RJ", pkgWeight:4.1, ... },
+//   ]
+//
+// Cada variante es una unidad vendible real: tiene su propio SKU, su stock,
+// su peso y sus medidas de caja. Eso es lo que permite cobrar con Mercado Pago
+// y cotizar envíos automáticamente sin intervención humana.
 const VariantSchema = new mongoose.Schema(
   {
     label: { type: String, required: true, trim: true, maxlength: 60 }, // "Tamaño", "Color"
     value: { type: String, required: true, trim: true, maxlength: 60 }, // "10L", "Rojo"
-    // optionValues: para variantes multi-dimensionales generadas automáticamente.
-    // Ej: { Tamaño: "7 pies", Color: "Blanco" }
-    // Si está presente, label/value se derivan de él automáticamente.
-    optionValues: { type: mongoose.Schema.Types.Mixed, default: undefined },
     sku: { type: String, trim: true, uppercase: true, maxlength: 40 },
     price: { type: Number, min: 0 },       // null → hereda del producto padre
     comparePrice: { type: Number, min: 0 }, // null → hereda
@@ -28,11 +38,31 @@ const VariantSchema = new mongoose.Schema(
     wholesalePrice:  { type: Number, min: 0, default: null },
     wholesaleMinQty: { type: Number, min: 1, default: null },
     // Tercer nivel ("precio por ciento") — típicamente desde 100 piezas.
-    bulkPrice:       { type: Number, min: 0, default: null },
-    bulkMinQty:      { type: Number, min: 1, default: null },
     hundredPrice:    { type: Number, min: 0, default: null },
     hundredMinQty:   { type: Number, min: 1, default: null },
-    stock: { type: Number, min: 0, default: null }, // null = ilimitado, 0 = sin stock
+    // ---- Disponibilidad ----
+    // available: bandera simple "se puede comprar o no". Es lo que consulta el
+    //   front para habilitar el botón. Siempre confiable, incluso si no llevas
+    //   conteo exacto de piezas.
+    // stock: conteo real (opcional). null = no se lleva inventario de esta variante.
+    //   Cuando es un número, el checkout lo descuenta al confirmarse el pago.
+    available: { type: Boolean, default: true },
+    stock: { type: Number, min: 0, default: null },
+
+    // ---- Logística por variante (REQUERIDO para cotizar envíos) ----
+    // Peso y medidas de la PIEZA suelta. Se muestran al cliente.
+    weight: { type: Number, min: 0, default: null }, // kg
+    // Caja lista para embarcar (pieza + embalaje). USO INTERNO.
+    // Si el producto se vende por múltiplos (qtyStep), estas medidas son las
+    // del paquete completo que sale del almacén, no las de una pieza.
+    pkgWeight: { type: Number, min: 0, default: null }, // kg
+    pkgLength: { type: Number, min: 0, default: null }, // cm
+    pkgWidth:  { type: Number, min: 0, default: null }, // cm
+    pkgHeight: { type: Number, min: 0, default: null }, // cm
+
+    // Código de barras (EAN/UPC). Google Merchant lo pide como GTIN.
+    barcode: { type: String, trim: true, default: '' },
+
     image: { type: String, trim: true, default: '' },   // thumbnail (primera foto)
     images: { type: [String], default: [] },             // galería completa de la variante
   },
@@ -86,17 +116,8 @@ const ProductSchema = new mongoose.Schema(
     // Variantes opcionales. Si el array está vacío, el producto no tiene variantes.
     variants: { type: [VariantSchema], default: [] },
 
-    // Grupos de opciones para variantes multi-dimensionales.
-    // Ej: [{ name: "Tamaño", values: ["7 pies","9 pies","11 pies"] },
-    //      { name: "Color",  values: ["Blanco","Negro","Gris"] }]
-    // Cuando existe con ≥2 grupos, se muestra el picker en cascada (elige Tamaño → elige Color).
-    optionGroups: {
-      type: [{ name: { type: String, trim: true }, values: [String] }],
-      default: [],
-    },
 
     featured: { type: Boolean, default: false, index: true },
-    flagged: { type: Boolean, default: false }, // nota visual admin: "pendiente de revisar"
     stock: { type: Number, default: null, min: 0 }, // null = sin límite / no se sabe
     active: { type: Boolean, default: true, index: true },
     sku: { type: String, trim: true, uppercase: true, sparse: true, unique: true },
@@ -139,13 +160,6 @@ const ProductSchema = new mongoose.Schema(
     pkgHeight: { type: Number, min: 0, default: null }, // cm — alto de la caja
     pkgNote: { type: String, trim: true, default: '' },  // ej: "caja de 6 piezas", "rollo de 3"
 
-    // Productos relacionados (vinculados manualmente desde el admin).
-    // Se muestran en la sección "También disponible en" del detalle de producto,
-    // junto a los que comparten etiqueta. Máx 12.
-    relatedProducts: {
-      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-      default: [],
-    },
 
     // Marca opcional (ref a la colección Brand)
     brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', default: null },
@@ -153,13 +167,13 @@ const ProductSchema = new mongoose.Schema(
     // Materiales (puede tener varios: plástico, vidrio, acero…)
     materials: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Material' }],
 
-    // Material en texto libre (complementa el desplegable, ej: "Polipropileno virgen")
-    materialText: { type: String, trim: true, default: '' },
-
     // Resistencia del producto (baja / media / alta)
     resistencia: { type: String, enum: ['', 'baja', 'media', 'alta'], default: '' },
 
-    // Color principal del producto (texto libre, ej: "Rojo", "Azul marino")
+    // Color del producto — SÓLO para productos SIN variantes de color.
+    // Si el producto tiene variantes con label "Color", este campo debe ir
+    // vacío: el color vive en cada variante. Mantenerlo lleno en un producto
+    // con variantes genera el bug de "elijo azul pero se agrega rojo".
     color: { type: String, trim: true, default: '' },
 
     // Etiquetas libres (eco, navidad, restaurante, etc.). Independientes de

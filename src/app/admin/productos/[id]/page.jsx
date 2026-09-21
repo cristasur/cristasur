@@ -17,7 +17,6 @@ export default async function EditProductPage({ params }) {
   await dbConnect()
   const [product, categories, brands, materialsList] = await Promise.all([
     Product.findById(params.id)
-      .populate('relatedProducts', '_id name image price')
       .lean(),
     Category.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),

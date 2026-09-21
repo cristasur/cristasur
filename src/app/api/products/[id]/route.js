@@ -69,7 +69,7 @@ export async function PUT(request, { params }) {
       'wholesaleMinQty', 'stock', 'featured', 'active', 'sku', 'image',
       'gallery', 'variants', 'categories', 'brand', 'color',
       'weight', 'length', 'width', 'height', 'status', 'publishAt',
-      'qtyStep', 'materials', 'materialText', 'resistencia', 'tags',
+      'qtyStep', 'materials', 'resistencia', 'tags',
     ]
     const summary = diffSummary(before, value, DIFF_FIELDS) || 'sin cambios relevantes'
     const diff = diffFields(before, value, DIFF_FIELDS)
@@ -189,13 +189,6 @@ export async function PATCH(request, { params }) {
     // Las acciones admin requieren auth (middleware ya la obliga en PATCH)
     const user = await getCurrentUser()
 
-    if (action === 'flag') {
-      const product = await Product.findById(params.id).select('flagged').lean()
-      if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-      const next = !product.flagged
-      await Product.updateOne({ _id: params.id }, { flagged: next })
-      return NextResponse.json({ ok: true, flagged: next })
-    }
 
     if (action === 'featured') {
       const product = await Product.findById(params.id).select('featured').lean()

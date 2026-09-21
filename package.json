@@ -11,7 +11,8 @@
     "seed": "node scripts/seed.js",
     "backup": "node scripts/backup.js",
     "add-blog": "node scripts/add-blog.js",
-    "add-product": "node scripts/add-product.js"
+    "add-product": "node scripts/add-product.js",
+    "migrate:variants": "node scripts/migrate-variants.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",

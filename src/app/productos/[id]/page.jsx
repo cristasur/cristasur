@@ -53,20 +53,11 @@ async function loadProduct(id) {
     .populate('categories', 'name slug')
     .populate('brand', 'name slug')
     .populate('materials', 'name')
-    .populate('relatedProducts', '_id name image price')
     .lean()
   if (!product) return null
 
-  // Productos relacionados vinculados manualmente (populate)
-  const manualRelated = product.relatedProducts?.length > 0
-    ? await Product.find({
-        _id: { $in: product.relatedProducts },
-        active: true,
-        deleted: { $ne: true },
-      })
-        .select('_id name image price')
-        .lean()
-    : []
+  // Los relacionados salen de etiquetas compartidas (y marca como fallback).
+  const manualRelated = []
 
   // "También compraron" — primero buscamos por coOrders (carritos reales).
   // Si aún no hay datos suficientes, fallback a más vistos de la misma categoría.
@@ -100,8 +91,7 @@ async function loadProduct(id) {
   //   2) Si NO hay coincidencias por etiqueta, se cae a productos que
   //      compartan la MISMA MARCA (brand).
   //   3) Si tampoco hay por marca, la sección no se muestra.
-  // Los productos vinculados manualmente (relatedProducts) se respetan
-  // siempre como primeros, pero el total final siempre es 4.
+  // El total final siempre es 4.
   const RELATED_LIMIT = 4
 
   function pickRandom(arr, n) {
@@ -329,7 +319,7 @@ export default async function ProductDetail({ params, searchParams }) {
       {/* ── Especificaciones técnicas (estilo Amazon) ── */}
       {(product.capacity || product.weight || product.length || product.width || product.height ||
         product.boxLength || product.boxWidth || product.boxHeight || product.boxWeight ||
-        product.materials?.length > 0 || product.materialText || product.resistencia ||
+        product.materials?.length > 0 || product.resistencia ||
         product.brand?.name) && (
         <section className="mt-10 border-t border-slate-100 pt-8">
           <div className="md:w-1/2">
@@ -341,14 +331,11 @@ export default async function ProductDetail({ params, searchParams }) {
                   <div className="flex-1 px-4 py-3 text-slate-800">{product.brand.name}</div>
                 </div>
               )}
-              {(product.materials?.length > 0 || product.materialText) && (
+              {product.materials?.length > 0 && (
                 <div className="flex border-b border-slate-100">
                   <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Material</div>
                   <div className="flex-1 px-4 py-3 text-slate-800">
-                    {[
-                      ...(product.materials?.map(m => m.name).filter(Boolean) || []),
-                      ...(product.materialText ? [product.materialText] : [])
-                    ].join(', ')}
+                    {(product.materials?.map(m => m.name).filter(Boolean) || []).join(', ')}
                   </div>
                 </div>
               )}

@@ -9,7 +9,7 @@
 //   → si el grupo se llama "Color": círculos igual que arriba.
 //   → otros grupos (Tamaño, Capacidad…): pills de texto.
 // ============================================================
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
 
 // ── Mapa de nombres (español) → color CSS ──────────────────────────────────
 const COLOR_MAP = {
@@ -130,137 +130,14 @@ function ColorSwatch({ value, active, out, onClick }) {
 }
 
 // ── Componente principal ───────────────────────────────────────────────────
-export default function VariantPicker({ variants = [], selected, onChange, optionGroups = [], baseColor = '', onSelectBase = null }) {
-  const isMultiDim = optionGroups.length >= 2
-
-  // ── Modo multi-dimensional ────────────────────────────────────────────────
-  const [selections, setSelections] = useState(() => {
-    if (selected?.optionValues) return { ...selected.optionValues }
-    return {}
-  })
-
-  const matchedVariant = useMemo(() => {
-    if (!isMultiDim) return null
-    const allChosen = optionGroups.every((g) => selections[g.name])
-    if (!allChosen) return null
-    return (
-      variants.find(
-        (v) =>
-          v.optionValues &&
-          optionGroups.every((g) => v.optionValues[g.name] === selections[g.name])
-      ) || null
-    )
-  }, [selections, variants, optionGroups, isMultiDim])
-
-  useEffect(() => {
-    if (!isMultiDim) return
-    onChange?.(matchedVariant)
-  }, [matchedVariant]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function isValuePresent(groupName, value) {
-    return variants.some((v) => {
-      if (!v.optionValues) return false
-      if (v.optionValues[groupName] !== value) return false
-      return optionGroups
-        .filter((g) => g.name !== groupName)
-        .every((g) => !selections[g.name] || v.optionValues[g.name] === selections[g.name])
-    })
-  }
-
-  function isValueOutOfStock(groupName, value) {
-    const matching = variants.filter((v) => {
-      if (!v.optionValues) return false
-      if (v.optionValues[groupName] !== value) return false
-      return optionGroups
-        .filter((g) => g.name !== groupName)
-        .every((g) => !selections[g.name] || v.optionValues[g.name] === selections[g.name])
-    })
-    if (!matching.length) return false
-    return matching.every((v) => (v.stock ?? 0) <= 0)
-  }
-
+// Modelo simétrico: todas las opciones vendibles viven en `variants`.
+// El producto padre no representa ninguna. Se agrupan por `label`
+// ("Color", "Tamaño"…) y se pinta un selector por grupo.
+export default function VariantPicker({ variants = [], selected, onChange }) {
   const isColorGroup = (name) => name?.toLowerCase() === 'color'
 
-  if (isMultiDim) {
-    const allChosen = optionGroups.every((g) => selections[g.name])
-    const baseActive = Object.keys(selections).length === 0
-    return (
-      <div className="space-y-4">
-        {optionGroups.map((group, gi) => (
-          <div key={group.name}>
-            <div className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
-              {group.name}
-              {selections[group.name] && (
-                <span className="ml-1.5 font-normal normal-case text-slate-500">
-                  — {selections[group.name]}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 items-center">
-              {/* Swatch "Principal" solo en el primer grupo de Color */}
-              {gi === 0 && onSelectBase && isColorGroup(group.name) && (
-                <ColorSwatch
-                  value={baseColor || '⬜'}
-                  active={baseActive}
-                  out={false}
-                  onClick={() => { setSelections({}); onSelectBase() }}
-                />
-              )}
-              {(group.values || []).map((value) => {
-                const present = isValuePresent(group.name, value)
-                const out = present && isValueOutOfStock(group.name, value)
-                const active = selections[group.name] === value
-                if (isColorGroup(group.name)) {
-                  return (
-                    <ColorSwatch
-                      key={value}
-                      value={value}
-                      active={active}
-                      out={out}
-                      onClick={() => setSelections((s) => ({ ...s, [group.name]: value }))}
-                    />
-                  )
-                }
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={out}
-                    onClick={() => setSelections((s) => ({ ...s, [group.name]: value }))}
-                    className={
-                      'px-3 py-1.5 rounded-lg border text-sm font-semibold transition ' +
-                      (out
-                        ? 'bg-slate-50 border-slate-200 text-slate-400 line-through cursor-not-allowed'
-                        : active
-                          ? 'bg-brand-600 border-brand-600 text-white shadow'
-                          : 'bg-white border-slate-300 text-slate-700 hover:border-brand-400')
-                    }
-                    title={out ? 'Sin stock en esta combinación' : value}
-                  >
-                    {value}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-
-        {allChosen && !matchedVariant && (
-          <p className="text-xs text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">
-            Esta combinación no está disponible.
-          </p>
-        )}
-        {matchedVariant && (matchedVariant.stock ?? 0) > 0 && (
-          <p className="text-xs text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
-            {matchedVariant.stock} disponibles en esta combinación.
-          </p>
-        )}
-      </div>
-    )
-  }
-
-  // ── Modo simple (1 dimensión) ─────────────────────────────────────────────
-  // Agrupa por label. Variantes sin label se meten en 'Color' por compatibilidad.
+  // Agrupa por label. Variantes sin label caen en 'Color' por compatibilidad
+  // con datos viejos.
   const groups = useMemo(() => {
     const map = new Map()
     for (const v of variants || []) {
@@ -274,63 +151,47 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
 
   if (!groups.length) return null
 
-  const baseActive = !selected
-
   return (
     <div className="space-y-4">
-      {groups.map(([label, opts], gi) => {
+      {groups.map(([label, opts]) => {
         const isColor = isColorGroup(label)
-        const activeOpt = opts.find(
+        const active = opts.find(
           (v) => selected?.label === v.label && selected?.value === v.value
-        )
-        // Para compatibilidad con datos viejos que no tienen label: comparar solo por value
-        const activeOptFallback = !activeOpt && opts.find((v) => selected?.value === v.value)
-        const resolvedActive = activeOpt || activeOptFallback
+        ) || opts.find((v) => selected?.value === v.value)
 
         return (
           <div key={label}>
             <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">
               {label}
-              {resolvedActive && (
+              {active && (
                 <span className="ml-1.5 font-normal normal-case text-slate-500">
-                  — {resolvedActive.value}
-                </span>
-              )}
-              {gi === 0 && isColor && baseActive && baseColor && (
-                <span className="ml-1.5 font-normal normal-case text-slate-500">
-                  — {baseColor}
+                  — {active.value}
                 </span>
               )}
             </div>
 
             <div className="flex flex-wrap gap-2 items-center">
-              {/* Swatch "Principal" solo en primer grupo de Color */}
-              {gi === 0 && isColor && onSelectBase && (
-                <ColorSwatch
-                  value={baseColor || 'gris'}
-                  active={baseActive}
-                  out={false}
-                  onClick={onSelectBase}
-                />
-              )}
-
               {opts.map((v) => {
-                const active =
+                const isActive =
                   (selected?.label === v.label && selected?.value === v.value) ||
                   (!selected?.label && selected?.value === v.value)
-                const out = v.stock !== null && v.stock !== undefined && (v.stock ?? 0) <= 0
+                // Sin stock = available:false explícito, o stock 0.
+                const out =
+                  v.available === false ||
+                  (v.stock !== null && v.stock !== undefined && Number(v.stock) <= 0)
+
                 if (isColor) {
                   return (
                     <ColorSwatch
                       key={`${v.label}-${v.value}`}
                       value={v.value}
-                      active={active}
+                      active={isActive}
                       out={out}
                       onClick={() => onChange?.(v)}
                     />
                   )
                 }
-                // Pills de texto para Tamaño u otros
+                // Pills de texto para Tamaño u otras dimensiones
                 return (
                   <button
                     key={`${v.label}-${v.value}`}
@@ -339,7 +200,7 @@ export default function VariantPicker({ variants = [], selected, onChange, optio
                     title={out ? `${v.value} — Sin stock` : v.value}
                     className={
                       'px-3 py-1.5 rounded-lg border text-sm font-semibold transition ' +
-                      (active
+                      (isActive
                         ? 'bg-brand-600 border-brand-600 text-white shadow'
                         : out
                           ? 'bg-slate-50 border-slate-200 text-slate-400 line-through'

@@ -7,7 +7,6 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 import FeaturedButton from './FeaturedButton'
-import FlagButton from './FlagButton'
 import ActiveButton from './ActiveButton'
 import DeleteProductButton from './DeleteProductButton'
 import DuplicateButton from './DuplicateButton'
@@ -223,7 +222,6 @@ export default function ProductsTableDnd({ initialProducts, canReorder }) {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          {p.flagged && <span className="shrink-0 w-2 h-2 rounded-full bg-amber-400" title="Pendiente de revisar" />}
                           <div className="font-semibold text-slate-900 line-clamp-1">{p.name}</div>
                         </div>
                         {p.sku
@@ -283,7 +281,6 @@ export default function ProductsTableDnd({ initialProducts, canReorder }) {
                         }}
                       />
                       <FeaturedButton id={p._id} featured={!!p.featured} />
-                      <FlagButton id={p._id} flagged={!!p.flagged} />
                       <Link
                         href={`/admin/productos/${p._id}`}
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"

@@ -6,32 +6,20 @@ import { useCart } from './CartProvider'
 import Icon from './Icon'
 
 // Decide qué variante mandar al carrito cuando el cliente NO eligió ninguna
-// explícitamente (caso típico: clic desde una card del catálogo).
-// Orden de preferencia:
-//   1) Si el producto tiene un `color` base → crear una variante virtual con
-//      ese color (representa al producto "tal como sale en la foto principal").
-//   2) Si no hay color base pero hay variantes reales → primera con stock.
-//   3) Sin variantes → null (producto sencillo).
+// explícitamente (caso típico: clic en "Añadir" desde una card del catálogo).
+//
+// Modelo simétrico: si el producto tiene variantes, TODAS son opciones reales
+// y vendibles. Elegimos la primera disponible. El producto padre nunca es una
+// opción vendible por sí mismo.
 function defaultEffectiveVariant(p) {
-  if (!p) return null
-  const baseColor = String(p?.color || '').trim()
-  if (baseColor) {
-    return {
-      label: 'Color',
-      value: baseColor,
-      image: p.image || '',
-      // No tiene sku/stock/precio propios — heredan del padre.
-      sku: '',
-      stock: null,
-      price: null,
-    }
-  }
   if (!Array.isArray(p?.variants) || p.variants.length === 0) return null
-  const withStock = p.variants.find((v) => {
+  const firstAvailable = p.variants.find((v) => {
+    if (v?.available === false) return false
     const s = Number(v?.stock)
-    return Number.isFinite(s) && s > 0
+    // stock null = sin control de inventario → se considera disponible
+    return !Number.isFinite(s) || s > 0
   })
-  return withStock || p.variants[0]
+  return firstAvailable || p.variants[0]
 }
 
 export default function AddToCartButton({

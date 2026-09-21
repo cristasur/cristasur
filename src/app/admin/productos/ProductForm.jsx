@@ -53,14 +53,6 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           bulkMinQty:      v.bulkMinQty      ?? v.hundredMinQty   ?? '',
         }))
       : [],
-    // Grupos de opciones para variantes multi-dim.
-    // Se guarda con valuesStr (string separado por comas) para el input del formulario.
-    optionGroups: Array.isArray(initial?.optionGroups)
-      ? initial.optionGroups.map((g) => ({
-          name: g.name || '',
-          valuesStr: (g.values || []).join(', '),
-        }))
-      : [],
     status: initial?.status || 'published',
     publishAt: initial?.publishAt || '',
     tags: Array.isArray(initial?.tags) ? initial.tags : [],
@@ -68,7 +60,6 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     materials: Array.isArray(initial?.materials)
       ? initial.materials.map((m) => m._id || m)
       : [],
-    materialText: initial?.materialText || '',
     resistencia: initial?.resistencia || '',
     color: initial?.color || '',
     weight: initial?.weight ?? '',
@@ -82,18 +73,6 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     pkgWidth:  initial?.pkgWidth  ?? '',
     pkgHeight: initial?.pkgHeight ?? '',
     pkgNote:   initial?.pkgNote   || '',
-    // Productos relacionados (selección manual). Se guarda como array de objetos
-    // { _id, name, image, price } para mostrar en el formulario.
-    // Al enviar, la API extrae solo los _id.
-    relatedProducts: Array.isArray(initial?.relatedProducts)
-      ? initial.relatedProducts
-          .filter(Boolean)
-          .map((r) =>
-            typeof r === 'object'
-              ? { _id: String(r._id || r), name: r.name || '', image: r.image || '', price: r.price ?? 0 }
-              : { _id: String(r), name: '', image: '', price: 0 }
-          )
-      : [],
   })
   const [uploading, setUploading] = useState(false)
   const [uploadingGallery, setUploadingGallery] = useState(false)
@@ -220,56 +199,6 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   }
 
   // ---- Búsqueda de productos relacionados (mantenido internamente, UI removida) ----
-  const [relSearch, setRelSearch] = useState('')
-  const [relResults, setRelResults] = useState([])
-  const [relSearching, setRelSearching] = useState(false)
-  const relTimerRef = useRef(null)
-
-  async function searchRelated(q) {
-    if (!q || q.length < 2) { setRelResults([]); return }
-    setRelSearching(true)
-    try {
-      const res = await fetch(
-        `/api/products?q=${encodeURIComponent(q)}&limit=8&all=1`,
-        { cache: 'no-store' }
-      )
-      const data = await res.json().catch(() => ({}))
-      const currentId = initial?._id ? String(initial._id) : null
-      const addedIds = new Set(form.relatedProducts.map((r) => String(r._id)))
-      setRelResults(
-        (data.products || [])
-          .filter((p) => String(p._id) !== currentId && !addedIds.has(String(p._id)))
-          .map((p) => ({ _id: String(p._id), name: p.name, image: p.image || '', price: p.price ?? 0 }))
-      )
-    } catch {
-      setRelResults([])
-    } finally {
-      setRelSearching(false)
-    }
-  }
-
-  function onRelSearchChange(e) {
-    const q = e.target.value
-    setRelSearch(q)
-    clearTimeout(relTimerRef.current)
-    relTimerRef.current = setTimeout(() => searchRelated(q), 300)
-  }
-
-  function addRelated(product) {
-    setForm((f) => {
-      if (f.relatedProducts.some((r) => String(r._id) === String(product._id))) return f
-      return { ...f, relatedProducts: [...f.relatedProducts, product] }
-    })
-    setRelSearch('')
-    setRelResults([])
-  }
-
-  function removeRelated(id) {
-    setForm((f) => ({
-      ...f,
-      relatedProducts: f.relatedProducts.filter((r) => String(r._id) !== String(id)),
-    }))
-  }
 
   function update(k, v) {
     setForm((f) => ({ ...f, [k]: v }))
@@ -435,7 +364,16 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       ...f,
       variants: [
         ...f.variants,
-        { label: 'Color', value: '', price: '', comparePrice: '', wholesalePrice: '', wholesaleMinQty: '', bulkPrice: '', bulkMinQty: '', stock: null, sku: '', image: '', images: [] },
+        {
+          label: 'Color', value: '',
+          sku: '', barcode: '',
+          price: '', comparePrice: '',
+          wholesalePrice: '', wholesaleMinQty: '',
+          bulkPrice: '', bulkMinQty: '',
+          available: true, stock: null,
+          weight: '', pkgWeight: '', pkgLength: '', pkgWidth: '', pkgHeight: '',
+          image: '', images: [],
+        },
       ],
     }))
   }
@@ -500,66 +438,6 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     }
   }
 
-  // ---- Grupos de opciones (multi-dim) ----
-  function addOptionGroup() {
-    setForm((f) => {
-      if (f.optionGroups.length >= 3) return f
-      return { ...f, optionGroups: [...f.optionGroups, { name: '', valuesStr: '' }] }
-    })
-  }
-  function removeOptionGroup(i) {
-    setForm((f) => ({ ...f, optionGroups: f.optionGroups.filter((_, idx) => idx !== i) }))
-  }
-  function updateOptionGroup(i, field, val) {
-    setForm((f) => ({
-      ...f,
-      optionGroups: f.optionGroups.map((g, idx) => (idx === i ? { ...g, [field]: val } : g)),
-    }))
-  }
-
-  // Genera el producto cartesiano de todos los grupos y crea las filas de variantes.
-  // Preserva datos (precio, stock, sku) de combinaciones que ya existían.
-  function generateCombinations() {
-    const groups = form.optionGroups
-      .map((g) => ({
-        name: g.name.trim(),
-        values: g.valuesStr.split(',').map((s) => s.trim()).filter(Boolean),
-      }))
-      .filter((g) => g.name && g.values.length > 0)
-
-    if (!groups.length) return
-
-    // Producto cartesiano
-    let combos = [{}]
-    for (const group of groups) {
-      combos = combos.flatMap((combo) =>
-        group.values.map((v) => ({ ...combo, [group.name]: v }))
-      )
-    }
-
-    const newVariants = combos.map((optionValues) => {
-      // Reutilizar fila existente si ya tiene esa combinación
-      const existing = form.variants.find(
-        (v) =>
-          v.optionValues &&
-          Object.entries(optionValues).every(([k, val]) => v.optionValues[k] === val)
-      )
-      if (existing) return existing
-      const entries = Object.entries(optionValues)
-      return {
-        label: entries[0]?.[0] || 'Opción',
-        value: entries.map(([, val]) => val).join(' / '),
-        optionValues,
-        price: '',
-        comparePrice: '',
-        stock: 0,
-        sku: '',
-        image: '',
-      }
-    })
-
-    update('variants', newVariants)
-  }
 
   async function onDuplicate() {
     if (!isEdit) return
@@ -598,15 +476,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       const endpoint = isEdit ? `/api/products/${initial._id}` : '/api/products'
       const method = isEdit ? 'PUT' : 'POST'
 
-      // Convertir optionGroups de {valuesStr} a {values: string[]} para la API
       const payload = {
         ...form,
-        optionGroups: form.optionGroups
-          .map((g) => ({
-            name: g.name.trim(),
-            values: g.valuesStr.split(',').map((s) => s.trim()).filter(Boolean),
-          }))
-          .filter((g) => g.name && g.values.length > 0),
       }
 
       const res = await fetch(endpoint, {
@@ -1114,23 +985,6 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         {form.materials.length === 0 && (
           <span className="text-xs text-slate-400 mt-1 block">Ningún material seleccionado.</span>
         )}
-      </div>
-
-      {/* Material en texto libre */}
-      <div>
-        <label className="block">
-          <span className="text-sm font-medium text-slate-700">
-            Material (texto libre) <span className="text-slate-400 font-normal">— opcional</span>
-          </span>
-          <input
-            type="text"
-            value={form.materialText}
-            onChange={(e) => update('materialText', e.target.value)}
-            placeholder="Ej: Polipropileno virgen, acero inoxidable 304…"
-            className="mt-1 block w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-          <span className="text-xs text-slate-400 mt-1 block">Se mostrará junto al material del desplegable en la ficha del producto.</span>
-        </label>
       </div>
 
       {/* Resistencia */}
@@ -1695,167 +1549,47 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         )}
       </div>
 
-      {/* ── Variantes y opciones ───────────────────────────────────────────── */}
+      {/* ── Variantes ──────────────────────────────────────────────────────── */}
       <fieldset className="border border-slate-200 rounded-xl p-4 space-y-4">
-        <legend className="px-2 text-sm font-bold text-slate-700">Variantes y opciones</legend>
-        <p className="text-xs text-slate-500 -mt-2">
-          ¿El producto viene en distintos <b>tamaños</b>, <b>colores</b> u otras opciones?
-          Define cada dimensión abajo y genera las combinaciones automáticamente.
-          O usa "Variante simple" para un solo nivel (ej. solo talla sin color).
-        </p>
-
-        {/* Editor de grupos de opciones */}
-        <div className="space-y-2">
-          {form.optionGroups.map((group, i) => (
-            <div key={i} className="flex flex-wrap gap-2 items-center">
-              <input
-                value={group.name}
-                onChange={(e) => updateOptionGroup(i, 'name', e.target.value)}
-                placeholder="Nombre de opción (ej: Tamaño)"
-                className="px-2 py-1.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500 w-40"
-              />
-              <input
-                value={group.valuesStr}
-                onChange={(e) => updateOptionGroup(i, 'valuesStr', e.target.value)}
-                placeholder="Valores separados por coma (ej: 7 pies, 9 pies, 11 pies)"
-                className="px-2 py-1.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-brand-500 flex-1 min-w-[180px]"
-              />
-              <button
-                type="button"
-                onClick={() => removeOptionGroup(i)}
-                className="w-8 h-8 grid place-items-center rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-bold shrink-0"
-                title="Eliminar esta opción"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            <button
-              type="button"
-              onClick={addOptionGroup}
-              disabled={form.optionGroups.length >= 3}
-              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-40"
-            >
-              + Añadir opción
-            </button>
-
-            {form.optionGroups.length >= 1 && (
-              <button
-                type="button"
-                onClick={generateCombinations}
-                className="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold"
-              >
-                ⚡ Generar combinaciones
-              </button>
-            )}
-
-            {form.optionGroups.length === 0 && (
-              <button
-                type="button"
-                onClick={addVariant}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50"
-              >
-                + Variante simple
-              </button>
-            )}
-          </div>
+        <legend className="px-2 text-sm font-bold text-slate-700">Variantes</legend>
+        <div className="text-xs text-slate-600 -mt-2 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+          <p>
+            <b>Regla:</b> si este producto se vende en varios colores o tamaños,
+            <b> cada opción debe ser una variante</b> — incluyendo la del color principal.
+          </p>
+          <p className="text-slate-500">
+            Ejemplo: una hielera que viene en azul y rojo lleva <b>dos</b> variantes
+            (Color: Azul y Color: Rojo). El campo "Color" de arriba se deja vacío.
+          </p>
+          <p className="text-slate-500">
+            Cada variante necesita su <b>SKU</b>, su <b>peso de caja</b> y sus
+            <b> medidas</b> para poder cotizar envíos automáticamente.
+          </p>
         </div>
 
-        {/* Tabla multi-dim (cuando hay optionGroups definidos y variantes generadas) */}
-        {form.optionGroups.length >= 1 && form.variants.length > 0 && (() => {
-          // Parsear los grupos para las columnas
-          const cols = form.optionGroups
-            .map((g) => ({ name: g.name.trim() }))
-            .filter((g) => g.name)
-          return (
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
-                    {cols.map((c) => (
-                      <th key={c.name} className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">
-                        {c.name}
-                      </th>
-                    ))}
-                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Precio</th>
-                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Anterior</th>
-                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Stock</th>
-                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">SKU</th>
-                    <th className="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Imagen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {form.variants.map((v, i) => (
-                    <tr key={i} className="hover:bg-slate-50 border-b border-slate-100 last:border-0">
-                      {cols.map((c) => (
-                        <td key={c.name} className="px-3 py-2 font-medium text-slate-800 whitespace-nowrap">
-                          {v.optionValues?.[c.name] || v.value || '—'}
-                        </td>
-                      ))}
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="number" min={0} step="0.01"
-                          value={v.price ?? ''}
-                          onChange={(e) => updateVariant(i, 'price', e.target.value)}
-                          placeholder="base"
-                          className="w-24 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="number" min={0} step="0.01"
-                          value={v.comparePrice ?? ''}
-                          onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
-                          className="w-24 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="number" min={0}
-                          value={v.stock ?? 0}
-                          onChange={(e) => updateVariant(i, 'stock', e.target.value)}
-                          className="w-20 px-2 py-1 rounded-md border border-slate-200 text-sm focus:outline-none focus:border-brand-500"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          value={v.sku ?? ''}
-                          onChange={(e) => updateVariant(i, 'sku', e.target.value)}
-                          placeholder="SKU-001"
-                          className="w-28 px-2 py-1 rounded-md border border-slate-200 text-sm uppercase focus:outline-none focus:border-brand-500"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        {v.image ? (
-                          <div className="flex items-center gap-1">
-                            <img src={v.image} alt="" className="w-8 h-8 rounded object-cover border border-slate-200" />
-                            <button
-                              type="button"
-                              onClick={() => updateVariant(i, 'image', '')}
-                              className="text-rose-500 text-xs hover:text-rose-700"
-                              title="Quitar imagen"
-                            >×</button>
-                          </div>
-                        ) : (
-                          <input
-                            type="file" accept="image/*"
-                            onChange={(e) => uploadVariantImage(i, e.target.files?.[0])}
-                            className="text-xs max-w-[120px]"
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        })()}
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={addVariant}
+            className="px-3 py-2 rounded-lg bg-slate-900 hover:bg-black text-white text-sm font-semibold"
+          >
+            + Añadir variante
+          </button>
+          {form.variants.length > 0 && (
+            <span className="text-xs text-slate-500">
+              {form.variants.length} variante{form.variants.length === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
 
-        {/* Lista simple de variantes (cuando NO hay optionGroups) */}
-        {form.optionGroups.length === 0 && form.variants.length > 0 && (
+        {form.variants.length === 0 && (
+          <p className="text-xs text-slate-400 italic">
+            Sin variantes. El producto se vende como una sola opción, usando el
+            precio, SKU y medidas de arriba.
+          </p>
+        )}
+
+        {form.variants.length > 0 && (
           <div className="space-y-4">
             {form.variants.map((v, i) => {
               const vLabel = v.label || 'Color'
@@ -2019,6 +1753,76 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                           />
                         )}
                       </div>
+                    </div>
+
+                    {/* ── Logística de esta variante (para cotizar envíos) ── */}
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-3">
+                      <div className="flex items-baseline justify-between gap-2 mb-2 flex-wrap">
+                        <span className="text-xs font-semibold text-blue-800">
+                          Envío — caja de esta variante
+                        </span>
+                        <span className="text-[11px] text-blue-700/70">
+                          Uso interno. Sin estos datos no se puede cotizar envío.
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <label className="block">
+                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Peso pieza (kg)</span>
+                          <input type="number" min={0} step="0.01"
+                            value={v.weight ?? ''}
+                            onChange={(e) => updateVariant(i, 'weight', e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Peso caja (kg)</span>
+                          <input type="number" min={0} step="0.01"
+                            value={v.pkgWeight ?? ''}
+                            onChange={(e) => updateVariant(i, 'pkgWeight', e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Largo (cm)</span>
+                          <input type="number" min={0} step="0.1"
+                            value={v.pkgLength ?? ''}
+                            onChange={(e) => updateVariant(i, 'pkgLength', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Ancho (cm)</span>
+                          <input type="number" min={0} step="0.1"
+                            value={v.pkgWidth ?? ''}
+                            onChange={(e) => updateVariant(i, 'pkgWidth', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Alto (cm)</span>
+                          <input type="number" min={0} step="0.1"
+                            value={v.pkgHeight ?? ''}
+                            onChange={(e) => updateVariant(i, 'pkgHeight', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
+                          />
+                        </label>
+                      </div>
+                      <label className="block mt-2">
+                        <span className="text-[11px] font-semibold text-blue-700 block mb-1">
+                          Código de barras <span className="font-normal text-blue-600/60">— opcional (GTIN/EAN para Google Shopping)</span>
+                        </span>
+                        <input type="text"
+                          value={v.barcode ?? ''}
+                          onChange={(e) => updateVariant(i, 'barcode', e.target.value)}
+                          placeholder="7501234567890"
+                          className="w-full sm:w-64 px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white font-mono placeholder:text-slate-300"
+                        />
+                      </label>
                     </div>
 
                     {/* ── Fotos de esta variante ── */}

@@ -27,63 +27,51 @@ function sanitizeVariants(input) {
   return input
     .slice(0, MAX_VARIANTS)
     .map((v) => {
-      // ¿Variante multi-dimensional? (tiene optionValues con al menos una clave)
-      const rawOV = v?.optionValues
-      const hasOV =
-        rawOV &&
-        typeof rawOV === 'object' &&
-        !Array.isArray(rawOV) &&
-        Object.keys(rawOV).length > 0
+      // Modelo simétrico: cada variante declara su dimensión (label) y su
+      // valor (value). Ambos obligatorios — sin ellos la variante no es vendible.
+      const label = cleanSoft(v?.label, { max: 60 })
+      const value = cleanSoft(v?.value, { max: 60 })
+      if (!label || !value) return null
 
-      // Sanitizar optionValues → objeto limpio { clave: valor }
-      const optionValues = hasOV
-        ? Object.fromEntries(
-            Object.entries(rawOV)
-              .map(([k, val]) => [
-                cleanSoft(String(k), { max: 40 }),
-                cleanSoft(String(val), { max: 60 }),
-              ])
-              .filter(([k, val]) => k && val)
-          )
-        : undefined
+      // Helper: '' / null / undefined → null; si no, número.
+      const num = (x) => (x === '' || x == null ? null : Number(x))
+      const okNum = (n, min = 0) => (Number.isFinite(n) && n >= min ? n : null)
 
-      // label y value: se derivan de optionValues o se usan directamente
-      let label, value
-      if (optionValues && Object.keys(optionValues).length > 0) {
-        const entries = Object.entries(optionValues)
-        label = entries[0][0]                             // primera clave como label
-        value = entries.map(([, val]) => val).join(' / ') // valores concatenados
-      } else {
-        label = cleanSoft(v?.label, { max: 60 })
-        value = cleanSoft(v?.value, { max: 60 })
-        if (!label || !value) return null
-      }
+      const priceN    = num(v?.price)
+      const cmpN      = num(v?.comparePrice)
+      const stockN    = num(v?.stock)
+      const wsPriceN  = num(v?.wholesalePrice)
+      const wsMinQtyN = num(v?.wholesaleMinQty)
+      // El form manda bulkPrice/bulkMinQty; la BD los guarda como hundredPrice.
+      const hPriceN   = num(v?.hundredPrice ?? v?.bulkPrice)
+      const hMinQtyN  = num(v?.hundredMinQty ?? v?.bulkMinQty)
 
-      const priceN = v?.price === '' || v?.price == null ? null : Number(v.price)
-      const cmpN   = v?.comparePrice === '' || v?.comparePrice == null ? null : Number(v.comparePrice)
-      // null/undefined/'' = ilimitado (Disponible), 0 = sin stock, >0 = cantidad exacta
-      const stockRaw = v?.stock
-      const stockN = (stockRaw === null || stockRaw === undefined || stockRaw === '')
-        ? null
-        : Number(stockRaw)
-      // Precios de mayoreo y por-ciento opcionales (null = hereda del padre)
-      const wsPriceN  = v?.wholesalePrice === '' || v?.wholesalePrice == null ? null : Number(v.wholesalePrice)
-      const wsMinQtyN = v?.wholesaleMinQty === '' || v?.wholesaleMinQty == null ? null : Number(v.wholesaleMinQty)
-      const hPriceN   = v?.hundredPrice === '' || v?.hundredPrice == null ? null : Number(v.hundredPrice)
-      const hMinQtyN  = v?.hundredMinQty === '' || v?.hundredMinQty == null ? null : Number(v.hundredMinQty)
+      // Logística (requerida para cotizar envíos automáticamente)
+      const weightN    = num(v?.weight)
+      const pkgWeightN = num(v?.pkgWeight)
+      const pkgLenN    = num(v?.pkgLength)
+      const pkgWidN    = num(v?.pkgWidth)
+      const pkgHeiN    = num(v?.pkgHeight)
 
       return {
         label,
         value,
-        ...(optionValues ? { optionValues } : {}),
         sku: v?.sku ? cleanString(v.sku, { max: 40 }) : undefined,
-        price: Number.isFinite(priceN) && priceN >= 0 ? priceN : null,
-        comparePrice: Number.isFinite(cmpN) && cmpN >= 0 ? cmpN : null,
-        wholesalePrice:  Number.isFinite(wsPriceN)  && wsPriceN  >= 0 ? wsPriceN  : null,
-        wholesaleMinQty: Number.isFinite(wsMinQtyN) && wsMinQtyN >= 2 ? wsMinQtyN : null,
-        hundredPrice:    Number.isFinite(hPriceN)   && hPriceN   >= 0 ? hPriceN   : null,
-        hundredMinQty:   Number.isFinite(hMinQtyN)  && hMinQtyN  >= 2 ? hMinQtyN  : null,
-        stock: stockN === null ? null : (Number.isFinite(stockN) && stockN >= 0 ? stockN : null),
+        barcode: cleanSoft(v?.barcode, { max: 40 }),
+        price:           okNum(priceN),
+        comparePrice:    okNum(cmpN),
+        wholesalePrice:  okNum(wsPriceN),
+        wholesaleMinQty: okNum(wsMinQtyN, 2),
+        hundredPrice:    okNum(hPriceN),
+        hundredMinQty:   okNum(hMinQtyN, 2),
+        // available: por defecto true; sólo false si viene explícitamente en false.
+        available: v?.available === false ? false : true,
+        stock: okNum(stockN),
+        weight:    okNum(weightN),
+        pkgWeight: okNum(pkgWeightN),
+        pkgLength: okNum(pkgLenN),
+        pkgWidth:  okNum(pkgWidN),
+        pkgHeight: okNum(pkgHeiN),
         image: cleanSoft(v?.image, { max: 500 }),
         images: Array.isArray(v?.images)
           ? v.images.map((u) => cleanSoft(u, { max: 500 })).filter(Boolean).slice(0, 10)
@@ -133,19 +121,6 @@ export function validateProductPayload(body) {
   ).slice(0, MAX_GALLERY)
   const variants = sanitizeVariants(body?.variants)
 
-  // Grupos de opciones para variantes multi-dimensionales (máx 3 grupos, 20 valores c/u)
-  const optionGroups = Array.isArray(body?.optionGroups)
-    ? body.optionGroups
-        .map((g) => ({
-          name: cleanSoft(g?.name, { max: 40 }),
-          values: Array.isArray(g?.values)
-            ? g.values.map((v) => cleanSoft(String(v), { max: 60 })).filter(Boolean).slice(0, 20)
-            : [],
-        }))
-        .filter((g) => g.name && g.values.length > 0)
-        .slice(0, 3)
-    : []
-
   const featured = Boolean(body?.featured)
   const active = body?.active === undefined ? true : Boolean(body.active)
   // null = ilimitado (campo vacío). 0 = sin stock. >0 = cantidad exacta.
@@ -163,17 +138,6 @@ export function validateProductPayload(body) {
   const materials = Array.isArray(body?.materials)
     ? body.materials.map(String).filter((m) => validator.isMongoId(m))
     : []
-
-  // Productos relacionados (selección manual). Array de ObjectIds, máx 12.
-  const relatedProducts = Array.isArray(body?.relatedProducts)
-    ? body.relatedProducts
-        .map((r) => (r?._id ? String(r._id) : String(r)))
-        .filter((id) => validator.isMongoId(id))
-        .slice(0, 12)
-    : []
-
-  // Material en texto libre — opcional
-  const materialText = cleanSoft(body?.materialText, { max: 200 })
 
   // Resistencia — baja / media / alta
   const resistencia = ['baja', 'media', 'alta'].includes(body?.resistencia) ? body.resistencia : ''
@@ -330,7 +294,6 @@ export function validateProductPayload(body) {
       image,
       gallery,
       variants,
-      optionGroups,
       featured,
       active,
       stock,
@@ -340,7 +303,6 @@ export function validateProductPayload(body) {
       tags,
       brand,
       materials,
-      materialText,
       resistencia,
       color,
       qtyStep,
@@ -355,7 +317,6 @@ export function validateProductPayload(body) {
       pkgWidth,
       pkgHeight,
       pkgNote,
-      relatedProducts,
     },
   }
 }

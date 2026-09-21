@@ -27,33 +27,28 @@ function formatPrice(n) {
 
 export default function ProductDetailClient({ product, productUrl, isVip = false, initialColor = '' }) {
   const variants = Array.isArray(product.variants) ? product.variants : []
-  const optionGroups = Array.isArray(product.optionGroups) ? product.optionGroups : []
-  const isMultiDim = optionGroups.length >= 2
 
-  // Pre-selección de variante:
-  // 1) si viene ?color=X en la URL → esa variante,
-  // 2) si el producto tiene `color` base → null (el swatch base queda activo, no se
-  //    pre-selecciona ninguna variante; el AddToCartButton usará el color base como
-  //    la variante "default").
-  // 3) si no hay color base pero hay variantes → primera con stock (no hay un base
-  //    real que vender, así que asumimos la primera variante).
+  // Pre-selección de variante (modelo simétrico).
+  // Si el producto tiene variantes, SIEMPRE hay una seleccionada — el producto
+  // padre ya no representa una opción vendible, así que no existe el estado
+  // "ninguna seleccionada".
+  //   1) ?color=X en la URL (viene del filtro de catálogo) → esa variante
+  //   2) si no, la primera disponible
+  //   3) si ninguna está disponible, la primera de la lista
   const initialVariant = useMemo(() => {
     if (!variants.length) return null
     if (initialColor) {
       const safe = initialColor.toLowerCase().trim()
-      const fromUrl = variants.find((v) =>
-        v.value?.toLowerCase().includes(safe) ||
-        (v.optionValues?.Color || '').toLowerCase().includes(safe)
-      )
+      const fromUrl = variants.find((v) => v.value?.toLowerCase().includes(safe))
       if (fromUrl) return fromUrl
     }
-    if (product.color) return null // base activo
-    if (isMultiDim) return null
-    const firstWithStock = variants.find((v) => {
+    const firstAvailable = variants.find((v) => {
+      if (v?.available === false) return false
       const s = Number(v?.stock)
-      return Number.isFinite(s) && s > 0
+      // stock null/undefined = sin control de inventario → disponible
+      return !Number.isFinite(s) || s > 0
     })
-    return firstWithStock || variants[0]
+    return firstAvailable || variants[0]
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [selected, setSelected] = useState(initialVariant)
@@ -62,25 +57,17 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   const [qty, setQty] = useState(step)
 
   function selectVariant(v) {
+    if (!v) return // modelo simétrico: nunca se deselecciona
     setSelected(v)
     setQty(step)
     if (!variants.length) return
-    // Siempre usamos 'jump' para no reemplazar la galería combinada
-    let detail
-    if (!v) {
-      // Seleccionar base: saltar a la primera imagen del producto
-      const firstBase = product.image ||
-        (Array.isArray(product.gallery) && product.gallery[0]) || null
-      detail = firstBase
-        ? { mode: 'jump', images: [firstBase] }
-        : { mode: 'clear', images: null }
-    } else {
-      const first = (Array.isArray(v.images) && v.images[0]) || v.image || null
-      detail = first
+    // 'jump' para saltar a la foto de la variante sin reemplazar la galería combinada
+    const first = (Array.isArray(v.images) && v.images[0]) || v.image || null
+    window.dispatchEvent(new CustomEvent('cristasur:variant-image', {
+      detail: first
         ? { mode: 'jump', images: [first] }
-        : { mode: 'clear', images: null }
-    }
-    window.dispatchEvent(new CustomEvent('cristasur:variant-image', { detail }))
+        : { mode: 'clear', images: null },
+    }))
   }
 
   // Al montar: si hay variantes con imágenes, construir la galería combinada
@@ -134,19 +121,11 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
           : v.image ? [v.image] : []
         return imgs.includes(url)
       })
+      // Sólo cambiamos de variante si la miniatura pertenece a una.
+      // Las imágenes generales del producto no deseleccionan nada.
       if (matched) {
         setSelected(matched)
         setQty(step)
-      } else {
-        // Imagen base → deseleccionar variante
-        const baseImgs = [
-          product.image,
-          ...(Array.isArray(product.gallery) ? product.gallery : []),
-        ].filter(Boolean)
-        if (baseImgs.includes(url)) {
-          setSelected(null)
-          setQty(step)
-        }
       }
     }
     window.addEventListener('cristasur:gallery-thumb-click', onGalleryThumbClick)
@@ -184,7 +163,9 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   const effectiveStock = variants.length
     ? (rawVariantStock ?? 0)
     : (product.stock ?? 0)
-  const outOfStock = !stockUnlimited && effectiveStock === 0
+  // La variante puede marcarse como no disponible aunque no se lleve conteo.
+  const variantUnavailable = variants.length > 0 && selected?.available === false
+  const outOfStock = variantUnavailable || (!stockUnlimited && effectiveStock === 0)
 
   // Tracking: view count + lista "vistos recientemente"
   useEffect(() => {
@@ -308,18 +289,10 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
 
       {variants.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-100 p-4">
-          {isMultiDim && (
-            <p className="text-xs text-slate-500 mb-3">
-              Elige todas las opciones para ver precio y disponibilidad exactos.
-            </p>
-          )}
           <VariantPicker
             variants={variants}
             selected={selected}
             onChange={selectVariant}
-            optionGroups={optionGroups}
-            baseColor={product.color || ''}
-            onSelectBase={() => selectVariant(null)}
           />
         </div>
       )}

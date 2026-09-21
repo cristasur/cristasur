@@ -27,8 +27,7 @@ export default function ProductCard({ product, colorFilter }) {
   if (colorFilter && Array.isArray(product.variants) && product.variants.length > 0) {
     const safe = colorFilter.toLowerCase().trim()
     matchedVariant = product.variants.find((v) =>
-      v.value?.toLowerCase().includes(safe) ||
-      (v.optionValues?.Color || '').toLowerCase().includes(safe)
+      v.value?.toLowerCase().includes(safe)
     ) || null
   }
 

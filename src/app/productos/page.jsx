@@ -65,7 +65,6 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
       $or: [
         { color: colorReg },
         { 'variants.value': colorReg },
-        { 'variants.optionValues.Color': colorReg },
       ],
     })
   }

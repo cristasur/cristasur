@@ -58,16 +58,11 @@ async function loadHome() {
 
 export default async function HomePage() {
   const { categories, featured, newest, banners } = await loadHome()
-  // Selección manual de las 4 que aparecen en el mosaico del hero.
-  // Si no hay ninguna marcada, caemos en las primeras 4 por orden.
-  const heroCategories =
-    categories.filter((c) => c.featured).slice(0, 4).length > 0
-      ? categories.filter((c) => c.featured).slice(0, 4)
-      : categories.slice(0, 4)
 
   return (
     <div>
-      <Hero categories={heroCategories} banners={banners} />
+      {/* Carrusel de banners. Todo se administra en /admin/banners. */}
+      <Hero banners={banners} />
 
       {/* Banner: repetir último pedido (solo si el cliente tiene historial local) */}
       <div className="pt-6">

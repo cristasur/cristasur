@@ -1,209 +1,157 @@
 'use client'
 // ============================================================
-// Hero carrusel — Slide 1: hero con texto y categorías.
-// Slides 2+: banners de imagen. Agrega más en BANNER_SLIDES.
+// Hero — carrusel de banners puro.
+//
+// Un solo rectángulo que rota imágenes hacia la derecha.
+// Todo el contenido viene de la colección `Banner` (DB) y se
+// administra en /admin/banners: imagen, enlace, orden y activo.
+//
+// Si no hay banners activos, el componente no renderiza nada
+// (la home arranca directo con las categorías).
+//
+// Medida recomendada de imagen: 2000 × 720 px (relación ~2.8:1).
+// Se recorta con object-cover, así que lo importante debe ir
+// centrado para que no se pierda en móvil.
 // ============================================================
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import Icon from './Icon'
 
-const AUTOPLAY_MS = 8000
+const AUTOPLAY_MS = 6000
+const SWIPE_MIN_PX = 50
 
-export default function Hero({ categories = [], banners = [] }) {
-  const totalSlides = 1 + banners.length
-  const [current, setCurrent]   = useState(0)
-  const timerRef                = useRef(null)
+export default function Hero({ banners = [] }) {
+  const slides = Array.isArray(banners) ? banners : []
+  const total = slides.length
 
-  const go = useCallback((idx) => {
-    setCurrent((idx + totalSlides) % totalSlides)
-  }, [totalSlides])
+  const [current, setCurrent] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const timerRef = useRef(null)
+  const touchStartX = useRef(null)
 
+  const go = useCallback(
+    (idx) => setCurrent(((idx % total) + total) % total),
+    [total]
+  )
   const next = useCallback(() => go(current + 1), [current, go])
   const prev = useCallback(() => go(current - 1), [current, go])
 
-  // Autoplay — siempre activo en pc y móvil
+  // Autoplay — se detiene al pasar el mouse encima o si solo hay 1 slide.
   useEffect(() => {
-    if (totalSlides < 2) return
+    if (total < 2 || paused) return
     timerRef.current = setTimeout(next, AUTOPLAY_MS)
     return () => clearTimeout(timerRef.current)
-  }, [current, next, totalSlides])
+  }, [current, next, total, paused])
+
+  // ── Swipe en móvil ──────────────────────────────────
+  function onTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX
+  }
+  function onTouchEnd(e) {
+    if (touchStartX.current == null) return
+    const delta = e.changedTouches[0].clientX - touchStartX.current
+    if (Math.abs(delta) > SWIPE_MIN_PX) {
+      delta < 0 ? next() : prev()
+    }
+    touchStartX.current = null
+  }
+
+  if (total === 0) return null
 
   return (
-    <section
-      className="relative overflow-hidden"
-      style={{ minHeight: '420px' }}
-    >
-      {/* ── Slides track ─────────────────────────────────── */}
+    <section className="max-w-7xl mx-auto px-4 pt-5 md:pt-8">
+      {/* ── Rectángulo del carrusel ─────────────────── */}
       <div
-        className="flex transition-transform duration-500 ease-in-out h-full"
-        style={{ transform: `translateX(-${current * 100}%)`, willChange: 'transform' }}
+        className="relative overflow-hidden rounded-2xl bg-slate-100 shadow-card"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        role="region"
+        aria-roledescription="carrusel"
+        aria-label="Promociones"
       >
+        {/* Track: todas las slides en fila, se desplaza con translateX */}
+        <div
+          className="flex transition-transform duration-500 ease-out"
+          style={{
+            transform: `translateX(-${current * 100}%)`,
+            willChange: 'transform',
+          }}
+        >
+          {slides.map((slide, i) => {
+            const img = (
+              <img
+                src={slide.image}
+                alt={slide.title || 'Promoción CRISTASUR'}
+                className="w-full h-full object-cover select-none"
+                draggable={false}
+                // El primer banner es el LCP de la home.
+                fetchPriority={i === 0 ? 'high' : 'low'}
+                loading={i === 0 ? 'eager' : 'lazy'}
+              />
+            )
 
-        {/* ── Slide 0: Hero original ───────────────────── */}
-        <div className="relative min-w-full bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 text-white">
-          <div className="absolute inset-0 bg-dots opacity-40 pointer-events-none" />
-          <div className="absolute -top-40 -right-20 w-[28rem] h-[28rem] bg-accent-500/30 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-20 w-[28rem] h-[28rem] bg-brand-400/30 rounded-full blur-3xl" />
-
-          <div className="relative max-w-7xl mx-auto px-4 py-10 md:py-16 grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs uppercase tracking-widest mb-6 backdrop-blur">
-                Mayoreo y Menudeo
-              </span>
-              <h1 className="text-4xl md:text-6xl font-black leading-tight tracking-tight">
-                Todo para tu <span className="text-accent-300">hogar</span> y tu <span className="text-accent-300">negocio</span>.
-              </h1>
-              <p className="mt-6 text-lg text-brand-100 max-w-xl">
-                Equipa tu hogar o negocio con la mejor calidad al mejor precio.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href="/productos"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-semibold shadow-lg"
-                >
-                  Ver catálogo
-                  <Icon name="arrow" className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/productos?featured=1"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold backdrop-blur"
-                >
-                  Productos destacados
-                </Link>
+            return (
+              <div
+                key={slide._id || i}
+                className="min-w-full aspect-[4/3] sm:aspect-[16/7] lg:aspect-[1000/340]"
+                aria-hidden={i !== current}
+              >
+                {slide.href ? (
+                  <Link
+                    href={slide.href}
+                    className="block w-full h-full"
+                    tabIndex={i === current ? 0 : -1}
+                    aria-label={slide.title || `Promoción ${i + 1}`}
+                  >
+                    {img}
+                  </Link>
+                ) : (
+                  img
+                )}
               </div>
-
-              <div className="mt-10 grid grid-cols-3 gap-4 max-w-xl">
-                {[
-                  { icon: 'tag',    t: 'Precios de mayoreo' },
-                  { icon: 'truck',  t: 'Envío nacional' },
-                  { icon: 'shield', t: 'Calidad garantizada' },
-                ].map((b) => (
-                  <div key={b.t} className="text-sm">
-                    <Icon name={b.icon} className="w-6 h-6 text-accent-300" />
-                    <div className="mt-2 font-semibold">{b.t}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Grid de categorías */}
-            <div className="grid grid-cols-2 gap-4">
-              {categories.slice(0, 4).map((c, idx) => (
-                <Link
-                  key={c._id}
-                  href={`/categoria/${c.slug}`}
-                  className="group relative overflow-hidden aspect-[5/4] rounded-2xl bg-white/10 border border-white/20 backdrop-blur flex flex-col justify-end hover:bg-white/15 transition"
-                >
-                  {c.image ? (
-                    <>
-                      <img
-                        src={c.image}
-                        alt={c.name}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        // Las primeras 2 cards del hero son LCP en móvil y desktop.
-                        // fetchpriority=high le dice al browser que las cargue antes
-                        // que cualquier imagen lazy de más abajo.
-                        fetchPriority={idx < 2 ? 'high' : 'auto'}
-                        loading={idx < 2 ? 'eager' : 'lazy'}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/85 via-slate-900/30 to-transparent" />
-                    </>
-                  ) : c.icon ? (
-                    <div className="absolute inset-0 grid place-items-center text-6xl opacity-70">
-                      {c.icon}
-                    </div>
-                  ) : null}
-                  <div className="relative p-5">
-                    <span className="text-[10px] uppercase tracking-widest text-white/70">Categoría</span>
-                    <div className="text-xl font-bold leading-tight mt-1">{c.name}</div>
-                    <div className="text-sm text-white/80 mt-1 flex items-center gap-1 group-hover:text-white">
-                      Explorar <Icon name="arrow" className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
+            )
+          })}
         </div>
 
-        {/* ── Slides 1+: banners de imagen (desde DB) ─── */}
-        {banners.map((slide, i) => (
-          <div key={i} className="relative min-w-full">
-            <img
-              src={slide.image}
-              alt={slide.title || 'Banner CRISTASUR'}
-              className="w-full h-full object-cover"
-              style={{ minHeight: '420px', maxHeight: '600px' }}
-              // El primer banner es el LCP cuando está visible al cargar la página.
-              fetchPriority={i === 0 ? 'high' : 'low'}
-              loading={i === 0 ? 'eager' : 'lazy'}
-            />
-            {/* Overlay solo si hay texto encima */}
-            {slide.title && (
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-900/60 to-transparent" />
-            )}
-            {/* Texto opcional */}
-            {slide.title && (
-              <div className="absolute inset-0 flex items-center">
-                <div className="max-w-7xl mx-auto px-4 w-full">
-                  <h2 className="text-3xl md:text-5xl font-black text-white leading-tight max-w-lg">
-                    {slide.title}
-                  </h2>
-                  {slide.subtitle && (
-                    <p className="mt-3 text-lg text-white/80 max-w-md">{slide.subtitle}</p>
-                  )}
-                  {slide.cta && slide.href && (
-                    <Link
-                      href={slide.href}
-                      className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-bold shadow-lg"
-                    >
-                      {slide.cta}
-                      <Icon name="arrow" className="w-4 h-4" />
-                    </Link>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+        {/* ── Flechas (solo con 2 o más slides) ──────── */}
+        {total > 1 && (
+          <>
+            <button
+              onClick={prev}
+              aria-label="Anterior"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/80 hover:bg-white text-slate-800 shadow-md flex items-center justify-center backdrop-blur transition"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={next}
+              aria-label="Siguiente"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/80 hover:bg-white text-slate-800 shadow-md flex items-center justify-center backdrop-blur transition"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
-      {/* ── Flechas (solo si hay más de 1 slide) ─────── */}
-      {totalSlides > 1 && (
-        <>
-          <button
-            onClick={prev}
-            aria-label="Anterior"
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur transition"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-          <button
-            onClick={next}
-            aria-label="Siguiente"
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur transition"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-        </>
-      )}
-
-      {/* ── Puntos de navegación ──────────────────────── */}
-      {totalSlides > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
-          {Array.from({ length: totalSlides }).map((_, i) => (
+      {/* ── Puntitos, abajo y centrados ──────────────── */}
+      {total > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          {slides.map((_, i) => (
             <button
               key={i}
               onClick={() => go(i)}
-              aria-label={`Ir al slide ${i + 1}`}
+              aria-label={`Ir a la promoción ${i + 1}`}
+              aria-current={i === current}
               className={`rounded-full transition-all duration-300 ${
                 i === current
-                  ? 'w-6 h-2.5 bg-white'
-                  : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/70'
+                  ? 'w-7 h-2.5 bg-brand-600'
+                  : 'w-2.5 h-2.5 bg-slate-300 hover:bg-slate-400'
               }`}
             />
           ))}

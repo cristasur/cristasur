@@ -371,6 +371,7 @@ export function validateCategoryPayload(body) {
   const seoText = cleanSoft(body?.seoText, { max: 8000 })
   const icon = cleanSoft(body?.icon, { max: 10 })
   const image = cleanSoft(body?.image, { max: 500 })
+  const bannerColor = cleanSoft(body?.bannerColor, { max: 20 })
   const order = Number.isFinite(Number(body?.order)) ? Number(body.order) : 0
   const active = body?.active === undefined ? true : Boolean(body.active)
   const featured = Boolean(body?.featured)
@@ -395,6 +396,7 @@ export function validateCategoryPayload(body) {
       seoText,
       icon,
       image,
+      bannerColor,
       order,
       active,
       featured,

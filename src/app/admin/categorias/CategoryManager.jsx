@@ -2,6 +2,7 @@
 // Gestor de categorías - CRUD inline con subida de imagen
 import { useState } from 'react'
 import Icon from '@/components/Icon'
+import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from '@/lib/categoryColors'
 
 const emptyForm = {
   name: '',
@@ -15,6 +16,7 @@ const emptyForm = {
   active: true,
   featured: false,
   parent: '',
+  bannerColor: '',
 }
 
 export default function CategoryManager({ initialCategories }) {
@@ -105,6 +107,7 @@ export default function CategoryManager({ initialCategories }) {
       active: cat.active,
       featured: Boolean(cat.featured),
       parent: cat.parent ? String(cat.parent) : '',
+      bannerColor: cat.bannerColor || '',
     })
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -264,6 +267,33 @@ export default function CategoryManager({ initialCategories }) {
             className={input}
           />
         </label>
+
+        {/* Color del banner de la landing */}
+        <div className="mb-4">
+          <span className="text-sm font-medium text-slate-700">Color del banner</span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {Object.entries(CATEGORY_COLORS).map(([key, c]) => {
+              const active = (form.bannerColor || DEFAULT_CATEGORY_COLOR) === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setForm({ ...form, bannerColor: key })}
+                  title={c.label}
+                  aria-label={c.label}
+                  aria-pressed={active}
+                  className={`w-9 h-9 rounded-lg border-2 transition ${
+                    active ? 'border-brand-600 ring-2 ring-brand-100' : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                  style={{ backgroundColor: c.bg }}
+                />
+              )
+            })}
+          </div>
+          <span className="block text-[11px] text-slate-400 mt-1.5">
+            Va en el bloque de la izquierda del banner, detrás del nombre de la categoría.
+          </span>
+        </div>
 
         {/* Categoría padre — define la jerarquía del menú */}
         <label className="block mb-4">

@@ -15,6 +15,7 @@ import Material from '@/models/Material'
 import ProductGrid from '@/components/ProductGrid'
 import ProductFilters from '@/components/ProductFilters'
 import SubcategoryStrip from '@/components/SubcategoryStrip'
+import CategoryHero from '@/components/CategoryHero'
 import {
   parseSpecParams, specFilterClauses, buildFacets, countSelectedSpecs,
 } from '@/lib/facets'
@@ -40,7 +41,9 @@ async function loadData(slug, sp) {
   // Si es una categoría principal, mostramos también lo de sus subcategorías.
   // Así "Cocina" incluye lo que esté en "Platos", "Cubiertos", etc.
   const children = await Category.find({ parent: category._id, active: true })
-    .select('_id name slug')
+    // `image` e `icon` los usa la tira de círculos de SubcategoryStrip.
+    .select('_id name slug image icon')
+    .sort({ order: 1, name: 1 })
     .lean()
   const categoryIds = [category._id, ...children.map((c) => c._id)]
 
@@ -183,41 +186,41 @@ export default async function CategoryLanding({ params, searchParams }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10 space-y-10">
-      <header>
-        <div className="text-xs uppercase tracking-widest text-brand-600 font-bold">
-          {parentCat ? (
-            <>
-              <Link href={`/categoria/${parentCat.slug}`} className="hover:underline">
-                {parentCat.name}
-              </Link>
-              <span className="text-slate-300 mx-1.5">/</span>
-              <span className="text-slate-400">{category.name}</span>
-            </>
-          ) : (
-            'Categoría'
-          )}
-        </div>
-        <h1 className="text-3xl md:text-4xl font-black text-slate-900 mt-1">
-          {category.name}
-          {brandDoc && (
-            <span className="ml-2 text-slate-400 font-bold text-2xl">· {brandDoc.name}</span>
-          )}
-          {materialDoc && (
-            <span className="ml-2 text-slate-400 font-bold text-2xl">· {materialDoc.name}</span>
-          )}
-        </h1>
-        {category.description && (
-          <p className="text-slate-600 mt-2 max-w-3xl">{category.description}</p>
-        )}
-        <p className="text-sm text-slate-500 mt-2">
-          {total} {total === 1 ? 'producto' : 'productos'} disponibles
-        </p>
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      {/* Miga de pan */}
+      <nav className="text-xs uppercase tracking-widest text-brand-600 font-bold">
+        <Link href="/" className="hover:underline">Inicio</Link>
+        <span className="text-slate-300 mx-1.5">/</span>
+        {parentCat ? (
+          <>
+            <Link href={`/categoria/${parentCat.slug}`} className="hover:underline">
+              {parentCat.name}
+            </Link>
+            <span className="text-slate-300 mx-1.5">/</span>
+          </>
+        ) : null}
+        <span className="text-slate-400">{category.name}</span>
+      </nav>
 
-      </header>
+      {/* Banner de la categoría */}
+      <CategoryHero category={category} subtitle={category.description} />
+
+      {/* Filtro activo de marca o material, si viene por URL */}
+      {(brandDoc || materialDoc) && (
+        <p className="text-sm text-slate-500">
+          Filtrando por{' '}
+          <strong className="text-slate-800">
+            {[brandDoc?.name, materialDoc?.name].filter(Boolean).join(' · ')}
+          </strong>
+        </p>
+      )}
 
       {/* Subcategorías en círculos, como MAHA */}
       <SubcategoryStrip subcategories={children} />
+
+      <p className="text-sm text-slate-500">
+        {total} {total === 1 ? 'producto' : 'productos'} disponibles
+      </p>
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">
         <aside className="lg:sticky lg:top-24 h-fit">

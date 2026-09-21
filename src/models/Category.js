@@ -87,6 +87,15 @@ const CategorySchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    // Color del bloque del banner en la landing de la categoría.
+    // Clave de la paleta definida en src/lib/categoryColors.js.
+    // Vacío = se usa el color por defecto.
+    bannerColor: {
+      type: String,
+      default: '',
+      maxlength: 20,
+    },
+
     // ---- Jerarquía ----
     // null  = categoría principal (aparece en la barra de navegación)
     // ObjectId = subcategoría (aparece en el desplegable de su padre)

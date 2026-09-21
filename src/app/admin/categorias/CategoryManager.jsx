@@ -14,6 +14,7 @@ const emptyForm = {
   order: 0,
   active: true,
   featured: false,
+  parent: '',
 }
 
 export default function CategoryManager({ initialCategories }) {
@@ -103,12 +104,36 @@ export default function CategoryManager({ initialCategories }) {
       order: cat.order || 0,
       active: cat.active,
       featured: Boolean(cat.featured),
+      parent: cat.parent ? String(cat.parent) : '',
     })
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const featuredCount = cats.filter((c) => c.featured).length
+
+  // Solo pueden ser padre las categorías principales (sin padre propio),
+  // y nunca la categoría que se está editando.
+  const parentOptions = cats.filter(
+    (c) => !c.parent && c._id !== editingId
+  )
+  const nameById = Object.fromEntries(cats.map((c) => [String(c._id), c.name]))
+  // La que se edita no puede volverse subcategoría si ya tiene hijas.
+  const editingHasChildren =
+    editingId && cats.some((c) => String(c.parent) === String(editingId))
+
+  // Orden de la tabla: cada principal seguida de sus subcategorías.
+  const ordered = []
+  for (const root of cats.filter((c) => !c.parent)) {
+    ordered.push(root)
+    for (const kid of cats.filter((c) => String(c.parent) === String(root._id))) {
+      ordered.push(kid)
+    }
+  }
+  // Huérfanas (por si el padre fue eliminado) van al final.
+  for (const c of cats) {
+    if (c.parent && !ordered.includes(c)) ordered.push(c)
+  }
 
   const input =
     'mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none'
@@ -138,10 +163,13 @@ export default function CategoryManager({ initialCategories }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {cats.map((c) => (
-              <tr key={c._id} className="hover:bg-slate-50">
+            {ordered.map((c) => (
+              <tr key={c._id} className={`hover:bg-slate-50 ${c.parent ? 'bg-slate-50/40' : ''}`}>
                 <td className="p-3">
-                  <div className="flex items-center gap-3">
+                  <div className={`flex items-center gap-3 ${c.parent ? 'pl-6' : ''}`}>
+                    {c.parent && (
+                      <span className="text-slate-300 -ml-4 select-none" aria-hidden="true">└</span>
+                    )}
                     <div className="w-12 h-12 rounded-lg bg-brand-50 overflow-hidden grid place-items-center text-brand-700 font-black shrink-0">
                       {c.image ? (
                         <img src={c.image} alt="" className="w-full h-full object-cover" />
@@ -152,8 +180,16 @@ export default function CategoryManager({ initialCategories }) {
                       )}
                     </div>
                     <div>
-                      <div className="font-semibold text-slate-900">{c.name}</div>
-                      {c.description && <div className="text-xs text-slate-500 line-clamp-1">{c.description}</div>}
+                      <div className={c.parent ? 'text-slate-700' : 'font-semibold text-slate-900'}>
+                        {c.name}
+                      </div>
+                      {c.parent ? (
+                        <div className="text-[11px] text-slate-400">
+                          Subcategoría de {nameById[String(c.parent)] || '—'}
+                        </div>
+                      ) : (
+                        c.description && <div className="text-xs text-slate-500 line-clamp-1">{c.description}</div>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -227,6 +263,29 @@ export default function CategoryManager({ initialCategories }) {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className={input}
           />
+        </label>
+
+        {/* Categoría padre — define la jerarquía del menú */}
+        <label className="block mb-4">
+          <span className="text-sm font-medium text-slate-700">Categoría padre</span>
+          <select
+            value={form.parent}
+            disabled={editingHasChildren}
+            onChange={(e) => setForm({ ...form, parent: e.target.value })}
+            className={`${input} disabled:bg-slate-100 disabled:text-slate-400`}
+          >
+            <option value="">— Ninguna (categoría principal) —</option>
+            {parentOptions.map((p) => (
+              <option key={p._id} value={p._id}>{p.name}</option>
+            ))}
+          </select>
+          <span className="block text-[11px] text-slate-400 mt-1">
+            {editingHasChildren
+              ? 'Esta categoría ya tiene subcategorías, por eso no puede volverse subcategoría de otra.'
+              : form.parent
+                ? 'Aparecerá en el desplegable de la categoría que elegiste, no en la barra principal.'
+                : 'Aparecerá directamente en la barra de navegación de la tienda.'}
+          </span>
         </label>
 
         {/* Imagen */}

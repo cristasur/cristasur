@@ -4,6 +4,7 @@
 // filtros (sin la opción "Categoría" porque ya estás dentro de una)
 // y un texto largo (seoText) indexable. Si no existe, 404.
 // ============================================================
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import dbConnect from '@/lib/mongodb'
@@ -32,9 +33,16 @@ async function loadData(slug, sp) {
   const colorTerm = (sp?.color || '').trim()
   const materialSlug = (sp?.material || '').trim()
 
+  // Si es una categoría principal, mostramos también lo de sus subcategorías.
+  // Así "Cocina" incluye lo que esté en "Platos", "Cubiertos", etc.
+  const children = await Category.find({ parent: category._id, active: true })
+    .select('_id name slug')
+    .lean()
+  const categoryIds = [category._id, ...children.map((c) => c._id)]
+
   const now = new Date()
   const filter = {
-    categories: category._id,
+    categories: { $in: categoryIds },
     active: true,
     deleted: { $ne: true },
     $and: [
@@ -109,8 +117,14 @@ async function loadData(slug, sp) {
     Product.countDocuments(filter),
   ])
 
+  const parentCat = category.parent
+    ? await Category.findById(category.parent).select('name slug').lean()
+    : null
+
   return {
     category: JSON.parse(JSON.stringify(category)),
+    children: JSON.parse(JSON.stringify(children)),
+    parentCat: parentCat ? JSON.parse(JSON.stringify(parentCat)) : null,
     products: JSON.parse(JSON.stringify(products)),
     brands: JSON.parse(JSON.stringify(brands)),
     materials: JSON.parse(JSON.stringify(materials)),
@@ -135,7 +149,7 @@ export async function generateMetadata({ params }) {
 export default async function CategoryLanding({ params, searchParams }) {
   const data = await loadData(params.slug, searchParams || {})
   if (!data) notFound()
-  const { category, products, brands, materials, brandDoc, materialDoc, total } = data
+  const { category, children, parentCat, products, brands, materials, brandDoc, materialDoc, total } = data
 
   // Estado actual de los filtros, para que el sidebar arranque alineado al URL.
   const initialFilters = {
@@ -155,7 +169,17 @@ export default async function CategoryLanding({ params, searchParams }) {
     <div className="max-w-7xl mx-auto px-4 py-10 space-y-10">
       <header>
         <div className="text-xs uppercase tracking-widest text-brand-600 font-bold">
-          Categoría
+          {parentCat ? (
+            <>
+              <Link href={`/categoria/${parentCat.slug}`} className="hover:underline">
+                {parentCat.name}
+              </Link>
+              <span className="text-slate-300 mx-1.5">/</span>
+              <span className="text-slate-400">{category.name}</span>
+            </>
+          ) : (
+            'Categoría'
+          )}
         </div>
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 mt-1">
           {category.name}
@@ -172,6 +196,20 @@ export default async function CategoryLanding({ params, searchParams }) {
         <p className="text-sm text-slate-500 mt-2">
           {total} {total === 1 ? 'producto' : 'productos'} disponibles
         </p>
+
+        {children.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {children.map((sub) => (
+              <Link
+                key={sub._id}
+                href={`/categoria/${sub.slug}`}
+                className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800 text-sm font-medium transition-colors"
+              >
+                {sub.name}
+              </Link>
+            ))}
+          </div>
+        )}
       </header>
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">

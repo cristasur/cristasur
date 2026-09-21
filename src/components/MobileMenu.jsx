@@ -123,16 +123,33 @@ export default function MobileMenu({ categories = [] }) {
                 >
                   Todos los productos
                 </Link>
-                {categories.map((c) => (
-                  <Link
-                    key={c._id}
-                    href={`/categoria/${c.slug}`}
-                    onClick={() => setOpen(false)}
-                    style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', borderRadius: 10, textDecoration: 'none', color: '#334155', fontSize: 14, fontWeight: 500 }}
-                  >
-                    {c.name}
-                  </Link>
-                ))}
+                {/* Principales primero, y debajo sus subcategorías sangradas. */}
+                {categories.filter((c) => !c.parent).map((c) => {
+                  const subs = categories.filter(
+                    (s) => String(s.parent) === String(c._id)
+                  )
+                  return (
+                    <div key={c._id}>
+                      <Link
+                        href={`/categoria/${c.slug}`}
+                        onClick={() => setOpen(false)}
+                        style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', borderRadius: 10, textDecoration: 'none', color: '#334155', fontSize: 14, fontWeight: subs.length ? 700 : 500 }}
+                      >
+                        {c.name}
+                      </Link>
+                      {subs.map((sub) => (
+                        <Link
+                          key={sub._id}
+                          href={`/categoria/${sub.slug}`}
+                          onClick={() => setOpen(false)}
+                          style={{ display: 'flex', alignItems: 'center', padding: '7px 12px 7px 26px', borderRadius: 10, textDecoration: 'none', color: '#64748b', fontSize: 13.5, fontWeight: 400 }}
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )
+                })}
               </div>
             </>
           )}

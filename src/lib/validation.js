@@ -333,9 +333,14 @@ export function validateCategoryPayload(body) {
   const order = Number.isFinite(Number(body?.order)) ? Number(body.order) : 0
   const active = body?.active === undefined ? true : Boolean(body.active)
   const featured = Boolean(body?.featured)
+  // parent: '' o null = categoría principal. Si viene, debe ser un ObjectId.
+  const rawParent = typeof body?.parent === 'string' ? body.parent.trim() : ''
+  const parent = rawParent && /^[a-f\d]{24}$/i.test(rawParent) ? rawParent : null
 
   if (!name || name.length < 2)
     errors.push('El nombre de la categoría es obligatorio (mín. 2 caracteres)')
+  if (rawParent && !parent)
+    errors.push('La categoría padre no es válida')
   if (description && description.length > 300)
     errors.push('La descripción de la categoría es demasiado larga')
 
@@ -352,6 +357,7 @@ export function validateCategoryPayload(body) {
       order,
       active,
       featured,
+      parent,
     },
   }
 }

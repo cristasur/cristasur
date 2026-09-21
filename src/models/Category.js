@@ -87,6 +87,18 @@ const CategorySchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    // ---- Jerarquía ----
+    // null  = categoría principal (aparece en la barra de navegación)
+    // ObjectId = subcategoría (aparece en el desplegable de su padre)
+    //
+    // Solo se admiten DOS niveles. Una subcategoría no puede tener hijas:
+    // la API rechaza asignar como padre a una categoría que ya tiene padre.
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true }
 )

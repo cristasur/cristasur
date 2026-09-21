@@ -21,6 +21,21 @@ async function findCategory(idOrSlug) {
   return Category.findOne({ slug: idOrSlug })
 }
 
+// Valida que `parentId` pueda ser padre de `selfId`.
+// Reglas: no puede ser uno mismo, debe existir, y no puede ser ya una
+// subcategoría (solo admitimos dos niveles). Devuelve un string de error
+// o null si todo está bien.
+async function validateParent(parentId, selfId = null) {
+  if (!parentId) return null
+  if (selfId && String(parentId) === String(selfId))
+    return 'Una categoría no puede ser su propia categoría padre'
+  const parent = await Category.findById(parentId).select('parent').lean()
+  if (!parent) return 'La categoría padre no existe'
+  if (parent.parent)
+    return 'Esa categoría ya es una subcategoría. Solo se admiten dos niveles.'
+  return null
+}
+
 export async function GET(_request, { params }) {
   try {
     await dbConnect()
@@ -41,6 +56,20 @@ export async function PUT(request, { params }) {
     await dbConnect()
     const category = await findCategory(params.id)
     if (!category) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
+
+    const parentError = await validateParent(value.parent, category._id)
+    if (parentError) return NextResponse.json({ error: parentError }, { status: 400 })
+
+    // Si esta categoría ya tiene subcategorías, no puede volverse subcategoría.
+    if (value.parent) {
+      const childCount = await Category.countDocuments({ parent: category._id })
+      if (childCount > 0) {
+        return NextResponse.json({
+          error: `No se puede: "${category.name}" tiene ${childCount} subcategoría(s). Muévelas primero.`,
+        }, { status: 409 })
+      }
+    }
+
     Object.assign(category, value)
     await category.save()
     return NextResponse.json({ category })
@@ -58,6 +87,13 @@ export async function DELETE(_request, { params }) {
     await dbConnect()
     const category = await findCategory(params.id)
     if (!category) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
+
+    const childCount = await Category.countDocuments({ parent: category._id })
+    if (childCount > 0) {
+      return NextResponse.json({
+        error: `No se puede eliminar: tiene ${childCount} subcategoría(s). Elimínalas o muévelas primero.`,
+      }, { status: 409 })
+    }
 
     const productsCount = await Product.countDocuments({ categories: category._id })
     if (productsCount > 0) {

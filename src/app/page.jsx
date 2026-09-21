@@ -81,7 +81,8 @@ export default async function HomePage() {
             <Icon name="arrow" className="w-4 h-4" />
           </Link>
         </div>
-        <CategoryCarousel categories={categories} />
+        {/* Solo categorías principales: las subcategorías se ven al entrar. */}
+        <CategoryCarousel categories={categories.filter((c) => !c.parent)} />
       </section>
 
       {/* Destacados */}

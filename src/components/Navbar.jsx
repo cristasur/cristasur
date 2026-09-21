@@ -16,7 +16,8 @@ async function fetchCategories() {
     await dbConnect()
     const cats = await Category.find({ active: true })
       .sort({ order: 1, name: 1 })
-      .select('name slug')
+      // `parent` es necesario para armar los desplegables de subcategorías.
+      .select('name slug parent')
       .lean()
     return JSON.parse(JSON.stringify(cats))
   } catch {

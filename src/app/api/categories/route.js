@@ -39,6 +39,16 @@ export async function POST(request) {
     if (existing) {
       return NextResponse.json({ error: 'Ya existe una categoría con ese nombre' }, { status: 409 })
     }
+    // Solo dos niveles: el padre elegido no puede ser ya una subcategoría.
+    if (value.parent) {
+      const parent = await Category.findById(value.parent).select('parent').lean()
+      if (!parent)
+        return NextResponse.json({ error: 'La categoría padre no existe' }, { status: 400 })
+      if (parent.parent)
+        return NextResponse.json({
+          error: 'Esa categoría ya es una subcategoría. Solo se admiten dos niveles.',
+        }, { status: 400 })
+    }
     const category = await Category.create(value)
     return NextResponse.json({ category }, { status: 201 })
   } catch (err) {

@@ -31,6 +31,12 @@ function sanitizeItems(arr) {
         x?.wholesalePrice == null ? null : Number(x.wholesalePrice),
       wholesaleMinQty:
         x?.wholesaleMinQty == null ? null : Math.floor(Number(x.wholesaleMinQty)),
+      // Tercer nivel de precio. Si no se guarda, al recargar la página
+      // el carrito del servidor pisa al local y el precio SUBE.
+      hundredPrice:
+        x?.hundredPrice == null ? null : Number(x.hundredPrice),
+      hundredMinQty:
+        x?.hundredMinQty == null ? null : Math.floor(Number(x.hundredMinQty)),
       categoryIds: Array.isArray(x?.categoryIds)
         ? x.categoryIds.slice(0, 5).map((c) => String(c).slice(0, 30))
         : [],

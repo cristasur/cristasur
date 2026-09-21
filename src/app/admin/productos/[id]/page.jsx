@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic'
 export default async function EditProductPage({ params }) {
   if (!mongoose.Types.ObjectId.isValid(params.id)) notFound()
   await dbConnect()
+  const lines = (await Product.distinct('line')).filter(Boolean).sort()
   const [product, categories, brands, materialsList] = await Promise.all([
     Product.findById(params.id)
       .lean(),
@@ -31,6 +32,7 @@ export default async function EditProductPage({ params }) {
       <h1 className="text-2xl font-black text-slate-900 mb-1">Editar producto</h1>
       <p className="text-slate-500 mb-6">Actualiza los datos y guarda los cambios.</p>
       <ProductForm
+      lines={lines}
         categories={serialize(categories)}
         brands={serialize(brands)}
         materials={serialize(materialsList)}

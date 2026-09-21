@@ -78,6 +78,37 @@ export function snapToStep(qty, step) {
   return Math.max(step, Math.ceil(qty / step) * step)
 }
 
+/**
+ * Siguiente nivel de precio alcanzable, RESPETANDO el múltiplo de venta.
+ *
+ * Aquí vivía un bug: si el producto se vende de 4 en 4 y el mayoreo
+ * empieza en 6, sugerir "sube a 6" es imposible de cumplir. El
+ * siguiente válido es 8.
+ *
+ * Devuelve null si ya está en el mejor nivel o no hay más niveles.
+ * Si no, { qty, faltan, price, label } con la cantidad REAL a la que
+ * hay que subir.
+ */
+export function nextTierTarget(product, qty) {
+  const tiers = priceTiers(product)
+  const step = saleStep(product)
+  const actual = activeTier(product, qty)
+
+  const siguiente = tiers.find((t) => t.minQty > actual.minQty)
+  if (!siguiente) return null
+
+  // La cantidad real es el múltiplo de venta que alcanza ese nivel.
+  const objetivo = snapToStep(siguiente.minQty, step)
+  if (objetivo <= qty) return null
+
+  return {
+    qty: objetivo,
+    faltan: objetivo - qty,
+    price: siguiente.price,
+    label: siguiente.label,
+  }
+}
+
 export function formatMXN(n) {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -94,4 +125,49 @@ export function formatMXNShort(n) {
     currency: 'MXN',
     minimumFractionDigits: Number.isInteger(v) ? 0 : 2,
   }).format(v)
+}
+
+// ============================================================
+// Disponibilidad
+// ============================================================
+
+/**
+ * Estado de stock REAL de un producto, considerando sus variantes.
+ *
+ * Bug que corrige: la tarjeta leía `product.stock` del padre. En el
+ * modelo simétrico el padre es solo contenedor y su stock siempre es
+ * null, así que un producto con todas sus variantes agotadas se
+ * mostraba "Disponible" y se podía agregar al carrito.
+ *
+ * Devuelve { agotado, texto, unidades }.
+ *   unidades = null significa sin control de inventario.
+ */
+export function stockState(product) {
+  const variants = Array.isArray(product?.variants) ? product.variants : []
+
+  if (variants.length > 0) {
+    const vendibles = variants.filter((v) => {
+      if (v?.available === false) return false
+      const s = Number(v?.stock)
+      // stock null/indefinido = sin control de inventario → disponible
+      return !Number.isFinite(s) || s > 0
+    })
+
+    if (vendibles.length === 0) {
+      return { agotado: true, texto: 'Sin stock', unidades: 0 }
+    }
+
+    // Si alguna vendible no lleva conteo, no se puede sumar un total.
+    const sinConteo = vendibles.some((v) => !Number.isFinite(Number(v?.stock)))
+    if (sinConteo) return { agotado: false, texto: 'Disponible', unidades: null }
+
+    const total = vendibles.reduce((s, v) => s + Number(v.stock), 0)
+    return { agotado: false, texto: `${total} en stock`, unidades: total }
+  }
+
+  // Producto sin variantes: manda su propio stock.
+  const s = Number(product?.stock)
+  if (product?.stock === 0) return { agotado: true, texto: 'Sin stock', unidades: 0 }
+  if (!Number.isFinite(s)) return { agotado: false, texto: 'Disponible', unidades: null }
+  return { agotado: false, texto: `${s} en stock`, unidades: s }
 }

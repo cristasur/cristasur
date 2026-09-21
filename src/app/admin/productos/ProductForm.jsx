@@ -18,7 +18,7 @@ const COMMON_COLORS = [
 
 const COMMON_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Único']
 
-export default function ProductForm({ categories, brands = [], materials = [], initial }) {
+export default function ProductForm({ categories, brands = [], materials = [], initial, lines = []}) {
   const router = useRouter()
   const isEdit = Boolean(initial?._id)
 
@@ -61,6 +61,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       ? initial.materials.map((m) => m._id || m)
       : [],
     resistencia: initial?.resistencia || '',
+    line: initial?.line || '',
+    lineLabel: initial?.lineLabel || '',
     specs: Array.isArray(initial?.specs) ? initial.specs : [],
     highlights: Array.isArray(initial?.highlights) ? initial.highlights : [],
     usage: initial?.usage || '',
@@ -1063,6 +1065,52 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           ))}
         </div>
       </div>
+
+      {/* Línea / colección */}
+      <fieldset className="border border-slate-200 rounded-xl p-4">
+        <legend className="px-2 text-sm font-bold text-slate-700">Línea o colección</legend>
+        <p className="text-xs text-slate-500 mb-3">
+          Agrupa productos <strong>hermanos</strong>: el plato de 28 cm, el de 26, el
+          tazón y la taza de la misma colección. En la ficha aparecen como miniaturas
+          para saltar entre ellos. No son variantes: cada uno tiene su precio y su SKU.
+        </p>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Nombre de la línea</span>
+            <input
+              list="lineas-existentes"
+              maxLength={80}
+              value={form.line}
+              onChange={(e) => update('line', e.target.value)}
+              placeholder="Ej: Caribe NYC, Liora Ripple"
+              className={input}
+            />
+            {/* Autocompletado con las líneas que ya existen: escribir
+                "Caribe" y "caribe " crearía dos líneas distintas. */}
+            <datalist id="lineas-existentes">
+              {(lines || []).map((l) => <option key={l} value={l} />)}
+            </datalist>
+            <span className="block text-[11px] text-slate-400 mt-1">
+              Debe escribirse IGUAL en todos los productos de la línea.
+            </span>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Etiqueta de este producto</span>
+            <input
+              maxLength={30}
+              value={form.lineLabel}
+              onChange={(e) => update('lineLabel', e.target.value)}
+              placeholder="Ej: 28 cm, 350 ml, Grande"
+              className={input}
+            />
+            <span className="block text-[11px] text-slate-400 mt-1">
+              Lo que distingue a este de sus hermanos. Se ve bajo la miniatura.
+            </span>
+          </label>
+        </div>
+      </fieldset>
 
       {/* Atributos destacados */}
       <fieldset className="border border-slate-200 rounded-xl p-4 space-y-3">

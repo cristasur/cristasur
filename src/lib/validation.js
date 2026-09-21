@@ -176,6 +176,8 @@ export function validateProductPayload(body) {
 
   // Resistencia — baja / media / alta
   const resistencia = ['baja', 'media', 'alta'].includes(body?.resistencia) ? body.resistencia : ''
+  const line = cleanSoft(body?.line, { max: 80 })
+  const lineLabel = cleanSoft(body?.lineLabel, { max: 30 })
   const specs = sanitizeSpecs(body?.specs)
   const highlights = sanitizeHighlights(body?.highlights)
   const usage = cleanSoft(body?.usage, { max: 1200 })
@@ -317,6 +319,16 @@ export function validateProductPayload(body) {
   if (stock !== null && (!Number.isFinite(stock) || stock < 0))
     errors.push('El stock debe ser un número positivo o dejarse vacío (ilimitado)')
 
+  // REGLA DURA: si el producto tiene variantes de color, el campo
+  // `color` del padre DEBE ir vacío. Tenerlo lleno hace que el padre
+  // actúe como una variante fantasma y reaparece el bug de "elijo
+  // azul y se agrega rojo". Se limpia en silencio en vez de rechazar,
+  // porque el admin no tiene por qué conocer esta sutileza.
+  const tieneVariantesDeColor = variants.some(
+    (v) => String(v?.label || '').toLowerCase().includes('color')
+  )
+  const colorFinal = tieneVariantesDeColor ? '' : color
+
   return {
     errors,
     value: {
@@ -342,10 +354,12 @@ export function validateProductPayload(body) {
       brand,
       materials,
       resistencia,
+      line,
+      lineLabel,
       specs,
       highlights,
       usage,
-      color,
+      color: colorFinal,
       qtyStep,
       weight,
       length,
@@ -506,6 +520,7 @@ export function diffFields(before, after, fields) {
     publishAt: 'Publicar el', qtyStep: 'Paso de cantidad',
     materials: 'Materiales', tags: 'Etiquetas',
     specs: 'Ficha técnica', highlights: 'Atributos destacados', usage: 'Cómo utilizar',
+    line: 'Línea', lineLabel: 'Etiqueta de línea',
   }
   const result = []
   for (const f of fields) {

@@ -29,7 +29,7 @@ import AddToCartButton from './AddToCartButton'
 import FavoriteButton from './FavoriteButton'
 import {
   priceTiers, unitPriceFor, activeTier, maxTierDiscount,
-  saleStep, snapToStep, formatMXN, formatMXNShort,
+  saleStep, snapToStep, stockState, formatMXN, formatMXNShort,
 } from '@/lib/pricing'
 
 // Alturas reservadas. Tocar aquí si cambian los tamaños de fuente.
@@ -65,8 +65,11 @@ export default function ProductCard({ product, colorFilter }) {
     ...((product.gallery || []).filter((g) => g && g !== primaryImage)),
   ].filter(Boolean), [primaryImage, matchedVariant, product.gallery])
 
-  // stock null = sin control de inventario (disponible). Solo 0 es agotado.
-  const outOfStock = product.stock === 0
+  // Stock real considerando variantes: el padre siempre trae null en el
+  // modelo simétrico, así que leerlo directo marcaba como disponible un
+  // producto con todas sus variantes agotadas.
+  const stock = useMemo(() => stockState(product), [product])
+  const outOfStock = stock.agotado
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const discountPct = hasDiscount
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
@@ -312,11 +315,7 @@ export default function ProductCard({ product, colorFilter }) {
           <div className="flex items-center gap-1.5 h-[17px]">
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${outOfStock ? 'bg-rose-500' : 'bg-emerald-500'}`} />
             <span className={outOfStock ? 'text-rose-600 font-semibold' : 'text-slate-600'}>
-              {outOfStock
-                ? 'Sin stock'
-                : product.stock > 0
-                  ? `${product.stock} en stock`
-                  : 'Disponible'}
+              {stock.texto}
             </span>
           </div>
 
@@ -367,6 +366,9 @@ export default function ProductCard({ product, colorFilter }) {
 
           <AddToCartButton
             product={product}
+            // Si el catálogo está filtrado por color, se agrega ESA variante:
+            // sin esto se agregaba la primera del arreglo y llegaba otro color.
+            variant={matchedVariant}
             qty={qty}
             compact
             disabled={outOfStock}

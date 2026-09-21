@@ -170,6 +170,17 @@ const ProductSchema = new mongoose.Schema(
     // Resistencia del producto (baja / media / alta)
     resistencia: { type: String, enum: ['', 'baja', 'media', 'alta'], default: '' },
 
+    // ---- Línea / colección ----
+    // Agrupa productos HERMANOS: el plato de 28 cm, el de 26, el tazón
+    // y la taza de la misma colección. No son variantes (cada uno tiene
+    // su precio, su SKU y su caja); son productos distintos que el
+    // cliente quiere poder saltar entre sí desde la ficha.
+    //
+    // `line` es la clave que los agrupa (ej: "Liora Ripple").
+    // `lineLabel` es lo que los distingue (ej: "28 cm", "350 ml").
+    line:      { type: String, trim: true, maxlength: 80, default: '', index: true },
+    lineLabel: { type: String, trim: true, maxlength: 30, default: '' },
+
     // ---- Ficha técnica libre ----
     // Filas de especificación agrupadas. El admin escribe grupo, etiqueta y
     // valor, así que sirve igual para un plato, una cubeta o una escoba sin

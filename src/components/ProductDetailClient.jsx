@@ -9,7 +9,7 @@
 // - trackView al montar + PATCH ?action=view para viewsCount.
 // ============================================================
 import { useEffect, useMemo, useState } from 'react'
-import { priceTiers, unitPriceFor, activeTier, formatMXN, formatMXNShort } from '@/lib/pricing'
+import { priceTiers, unitPriceFor, activeTier, nextTierTarget, snapToStep, formatMXN, formatMXNShort } from '@/lib/pricing'
 import Icon from './Icon'
 import VariantPicker from './VariantPicker'
 import AddToCartButton from './AddToCartButton'
@@ -257,14 +257,6 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
         </div>
       )}
 
-      {/* Precio actualizado solo si la variante tiene precio distinto al base */}
-      {selected && Number.isFinite(Number(selected.price)) && Number(selected.price) > 0 && Number(selected.price) !== Number(product.price) && (
-        <div className="text-sm text-slate-500">
-          Precio de la variante seleccionada:{' '}
-          <b className="text-slate-900">{formatPrice(currentPrice)}</b>
-        </div>
-      )}
-
       {/* Tabla de precios por volumen — la fila activa se resalta según
           la cantidad que el cliente tenga puesta. */}
       {tiers.length > 1 && (
@@ -313,17 +305,25 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
               })}
             </tbody>
           </table>
-          {!wholesaleActive && tiers[1] && qty < tiers[1].minQty && (
-            <button
-              type="button"
-              onClick={() => setQty(tiers[1].minQty)}
-              className="w-full px-4 py-2.5 bg-amber-50 border-t border-amber-200 text-[13px] text-amber-900 text-left hover:bg-amber-100 transition-colors"
-            >
-              Te faltan <b>{tiers[1].minQty - qty}</b> piezas para bajar a{' '}
-              <b>{formatMXNShort(tiers[1].price)}</b> c/u.{' '}
-              <span className="font-bold underline">Subir a {tiers[1].minQty}</span>
-            </button>
-          )}
+          {/* Sugerencia para alcanzar el siguiente nivel. La cantidad que
+              se propone respeta el múltiplo de venta: si se vende de 4
+              en 4 y el mayoreo empieza en 6, se sube a 8, no a 6. */}
+          {(() => {
+            const objetivo = nextTierTarget(product, qty)
+            if (!objetivo) return null
+            return (
+              <button
+                type="button"
+                onClick={() => setQty(objetivo.qty)}
+                className="w-full px-4 py-2.5 bg-amber-50 border-t border-amber-200 text-[13px] text-amber-900 text-left hover:bg-amber-100 transition-colors"
+              >
+                Te {objetivo.faltan === 1 ? 'falta' : 'faltan'}{' '}
+                <b>{objetivo.faltan}</b> {objetivo.faltan === 1 ? 'pieza' : 'piezas'} para bajar a{' '}
+                <b>{formatMXNShort(objetivo.price)}</b> c/u.{' '}
+                <span className="font-bold underline">Subir a {objetivo.qty}</span>
+              </button>
+            )
+          })()}
         </div>
       )}
 

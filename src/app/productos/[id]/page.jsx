@@ -16,6 +16,7 @@ import {
 } from '@/components/ProductSpecs'
 import ProductFaq from '@/components/ProductFaq'
 import SkuCopy from '@/components/SkuCopy'
+import LineVariants from '@/components/LineVariants'
 import ReviewList from '@/components/ReviewList'
 import RecentlyViewed from '@/components/RecentlyViewed'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -66,6 +67,24 @@ async function loadProduct(id) {
     .populate('materials', 'name')
     .lean()
   if (!product) return null
+
+  // Hermanos de la misma línea (28 cm, 26 cm, tazón, taza…).
+  const lineSiblings = product.line
+    ? await Product.find({
+        line: product.line,
+        _id: { $ne: product._id },
+        active: true,
+        deleted: { $ne: true },
+        $and: [
+          { $or: [{ status: { $exists: false } }, { status: 'published' }] },
+          { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
+        ],
+      })
+        .select('_id name image lineLabel sortOrder')
+        .sort({ sortOrder: 1, name: 1 })
+        .limit(16)
+        .lean()
+    : []
 
   // Los relacionados salen de etiquetas compartidas (y marca como fallback).
   const manualRelated = []
@@ -153,6 +172,7 @@ async function loadProduct(id) {
   return {
     product: JSON.parse(JSON.stringify(product)),
     sameFamily: JSON.parse(JSON.stringify(sameFamily)),
+    lineSiblings: JSON.parse(JSON.stringify(lineSiblings)),
     related: [],
     alsoBought: JSON.parse(JSON.stringify(alsoBought)),
   }
@@ -194,7 +214,7 @@ export async function generateMetadata({ params }) {
 export default async function ProductDetail({ params, searchParams }) {
   const [data, session] = await Promise.all([loadProduct(params.id), getCurrentUser()])
   if (!data) notFound()
-  const { product, sameFamily, related, alsoBought } = data
+  const { product, sameFamily, lineSiblings, related, alsoBought } = data
   // Consultar DB directo para el VIP: el JWT puede estar desactualizado si el admin
   // revocó el acceso mayoreo sin que el usuario haya vuelto a iniciar sesión.
   let isVip = false
@@ -339,6 +359,13 @@ export default async function ProductDetail({ params, searchParams }) {
               <SkuCopy sku={product.sku} />
             </div>
           )}
+
+          {/* Hermanos de la misma línea: 28 cm, 26 cm, tazón, taza… */}
+          <LineVariants
+            line={product.line}
+            current={product}
+            siblings={lineSiblings}
+          />
 
           {product.description && (
             <div className="mt-4 max-h-36 md:max-h-48 overflow-y-auto pr-1">

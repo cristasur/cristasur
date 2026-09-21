@@ -14,6 +14,10 @@ import Brand from '@/models/Brand'
 import Material from '@/models/Material'
 import ProductGrid from '@/components/ProductGrid'
 import ProductFilters from '@/components/ProductFilters'
+import SubcategoryStrip from '@/components/SubcategoryStrip'
+import {
+  parseSpecParams, specFilterClauses, buildFacets, countSelectedSpecs,
+} from '@/lib/facets'
 
 export const dynamic = 'force-dynamic'
 
@@ -98,13 +102,23 @@ async function loadData(slug, sp) {
     filter.$or = orClauses
   }
 
+  // ── Facetas (atributos de la ficha técnica) ──────────────
+  // `baseForFacets` es el filtro SIN las facetas: los conteos se
+  // calculan sobre él para que no caigan a 1 al marcar una casilla.
+  const selectedSpecs = parseSpecParams(sp)
+  const baseForFacets = { ...filter }
+  const specClauses = specFilterClauses(selectedSpecs)
+  if (specClauses.length) {
+    filter.$and = [...(filter.$and || []), ...specClauses]
+  }
+
   let sortSpec = { sortOrder: 1, featured: -1, salesCount: -1, createdAt: -1 }
   if (sort === 'priceAsc') sortSpec = { price: 1 }
   else if (sort === 'priceDesc') sortSpec = { price: -1 }
   else if (sort === 'popular')
     sortSpec = { salesCount: -1, whatsappClicks: -1, viewsCount: -1 }
 
-  const [products, brands, materials, total] = await Promise.all([
+  const [products, brands, materials, total, facets] = await Promise.all([
     Product.find(filter)
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
@@ -115,6 +129,7 @@ async function loadData(slug, sp) {
     Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Material.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Product.countDocuments(filter),
+    buildFacets(Product, baseForFacets),
   ])
 
   const parentCat = category.parent
@@ -130,6 +145,8 @@ async function loadData(slug, sp) {
     materials: JSON.parse(JSON.stringify(materials)),
     brandDoc: brandDoc ? JSON.parse(JSON.stringify(brandDoc)) : null,
     materialDoc: materialDoc ? JSON.parse(JSON.stringify(materialDoc)) : null,
+    facets: JSON.parse(JSON.stringify(facets)),
+    selectedSpecs,
     total,
   }
 }
@@ -149,7 +166,7 @@ export async function generateMetadata({ params }) {
 export default async function CategoryLanding({ params, searchParams }) {
   const data = await loadData(params.slug, searchParams || {})
   if (!data) notFound()
-  const { category, children, parentCat, products, brands, materials, brandDoc, materialDoc, total } = data
+  const { category, children, parentCat, products, brands, materials, brandDoc, materialDoc, facets, selectedSpecs, total } = data
 
   // Estado actual de los filtros, para que el sidebar arranque alineado al URL.
   const initialFilters = {
@@ -197,20 +214,10 @@ export default async function CategoryLanding({ params, searchParams }) {
           {total} {total === 1 ? 'producto' : 'productos'} disponibles
         </p>
 
-        {children.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {children.map((sub) => (
-              <Link
-                key={sub._id}
-                href={`/categoria/${sub.slug}`}
-                className="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-brand-100 text-slate-700 hover:text-brand-800 text-sm font-medium transition-colors"
-              >
-                {sub.name}
-              </Link>
-            ))}
-          </div>
-        )}
       </header>
+
+      {/* Subcategorías en círculos, como MAHA */}
+      <SubcategoryStrip subcategories={children} />
 
       <div className="grid lg:grid-cols-[260px_1fr] gap-6">
         <aside className="lg:sticky lg:top-24 h-fit">
@@ -220,6 +227,8 @@ export default async function CategoryLanding({ params, searchParams }) {
             }
           >
             <ProductFilters
+              facets={facets}
+              selectedSpecs={selectedSpecs}
               categories={[]}
               brands={brands}
               materials={materials}

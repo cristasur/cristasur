@@ -7,6 +7,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Icon from './Icon'
 
 export default function ProductFilters({
+  // Facetas dinámicas sacadas de la ficha técnica de los productos.
+  // facets: [{ label, values: [{ value, count }] }]
+  facets = [],
+  selectedSpecs = {},
   categories = [],
   brands = [],
   materials = [],
@@ -31,13 +35,48 @@ export default function ProductFilters({
     material: sp.get('material') ?? initialFilters.material ?? '',
   })
 
+  // Facetas marcadas: { 'Acabado': ['Mate'], 'Forma': ['Redondo'] }
+  const [specs, setSpecs] = useState(() => {
+    const out = {}
+    for (const [k, v] of Object.entries(selectedSpecs || {})) out[k] = [...v]
+    return out
+  })
+
+  // Grupos de faceta abiertos. Los dos primeros arrancan abiertos.
+  const [openFacets, setOpenFacets] = useState(() =>
+    new Set(facets.slice(0, 2).map((f) => f.label))
+  )
+
+  const specCount = Object.values(specs).reduce((n, v) => n + v.length, 0)
+
+  function toggleSpec(label, value) {
+    setSpecs((prev) => {
+      const cur = prev[label] || []
+      const next = cur.includes(value)
+        ? cur.filter((v) => v !== value)
+        : [...cur, value]
+      const out = { ...prev }
+      if (next.length) out[label] = next
+      else delete out[label]
+      return out
+    })
+  }
+
+  function toggleFacetOpen(label) {
+    setOpenFacets((prev) => {
+      const next = new Set(prev)
+      next.has(label) ? next.delete(label) : next.add(label)
+      return next
+    })
+  }
+
   // Cuenta filtros activos para el badge
   const activeCount = [
     form.q, form.category, form.brand, form.color, form.material,
     form.minPrice, form.maxPrice,
     form.inStock ? '1' : '', form.onSale ? '1' : '', form.featured ? '1' : '',
     form.sort !== 'newest' ? '1' : '',
-  ].filter(Boolean).length
+  ].filter(Boolean).length + specCount
 
   // En móvil: siempre cerrado al entrar, el usuario lo abre manualmente
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -62,12 +101,17 @@ export default function ProductFilters({
     if (form.brand)    params.set('brand',    form.brand)
     if (form.color)    params.set('color',    form.color)
     if (form.material) params.set('material', form.material)
+    // Un parámetro `spec` por casilla marcada: Acabado~Mate, Forma~Redondo…
+    for (const [label, values] of Object.entries(specs)) {
+      for (const v of values) params.append('spec', `${label}~${v}`)
+    }
     const qs = params.toString()
     router.push(basePath + (qs ? `?${qs}` : ''))
   }
 
   function reset() {
     setForm({ q:'', category:'', minPrice:'', maxPrice:'', inStock:false, onSale:false, featured:false, sort:'newest', brand:'', color:'', material:'' })
+    setSpecs({})
     router.push(basePath)
   }
 
@@ -249,6 +293,62 @@ export default function ProductFilters({
             <option value="popular">Más populares</option>
           </select>
         </div>
+
+        {/* ── Facetas dinámicas ───────────────────────────────
+            Salen de la ficha técnica de los productos de esta
+            categoría. Si el admin captura "Acabado: Mate", aquí
+            aparece solo, con su conteo. */}
+        {facets.map((f) => {
+          const isOpen = openFacets.has(f.label)
+          const picked = specs[f.label] || []
+          return (
+            <div key={f.label} className="border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => toggleFacetOpen(f.label)}
+                aria-expanded={isOpen}
+                className="w-full flex items-center justify-between gap-2 text-left"
+              >
+                <span className="text-sm font-bold text-slate-800">
+                  {f.label}
+                  {picked.length > 0 && (
+                    <span className="ml-1.5 text-[11px] bg-brand-600 text-white rounded-full px-1.5 py-0.5 font-bold leading-none">
+                      {picked.length}
+                    </span>
+                  )}
+                </span>
+                <span className="text-slate-400 text-lg leading-none select-none shrink-0">
+                  {isOpen ? '−' : '+'}
+                </span>
+              </button>
+
+              {isOpen && (
+                <div className="mt-2 space-y-1 max-h-56 overflow-y-auto pr-1">
+                  {f.values.map((v) => {
+                    const checked = picked.includes(v.value)
+                    return (
+                      <label
+                        key={v.value}
+                        className="flex items-center gap-2 cursor-pointer group py-0.5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSpec(f.label, v.value)}
+                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-400 shrink-0"
+                        />
+                        <span className={`text-[13px] flex-1 truncate ${checked ? 'text-slate-900 font-medium' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                          {v.value}
+                        </span>
+                        <span className="text-[11px] text-slate-400 shrink-0">{v.count}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
 
         {/* Limpiar — solo móvil, dentro del panel abierto */}
         {activeCount > 0 && (

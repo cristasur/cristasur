@@ -243,4 +243,8 @@ if (process.env.NODE_ENV !== 'production' && mongoose.models.Product) {
   delete mongoose.models.Product
 }
 
+// Índice para el filtrado por facetas: la agregación agrupa por
+// specs.label + specs.value en cada categoría.
+ProductSchema.index({ 'specs.label': 1, 'specs.value': 1 })
+
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema)

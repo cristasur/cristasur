@@ -9,11 +9,12 @@ import Brand from '@/models/Brand'
 import Material from '@/models/Material'
 import ProductGrid from '@/components/ProductGrid'
 import ProductFilters from '@/components/ProductFilters'
+import { parseSpecParams, specFilterClauses, buildFacets } from '@/lib/facets'
 
 // Next.js detecta automáticamente el uso de searchParams y hace la página dinámica.
 // No se necesita force-dynamic explícito; lo eliminamos para no anclar el comportamiento.
 
-async function loadData({ q, category, featured, minPrice, maxPrice, inStock, onSale, sort, brand, color, material }) {
+async function loadData({ q, category, featured, minPrice, maxPrice, inStock, onSale, sort, brand, color, material, spec }) {
   await dbConnect()
   const now = new Date()
   // Usamos $and para que el $or de publishAt no colisione con el $or de búsqueda
@@ -86,13 +87,21 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
 
   // 'newest' (default) respeta el orden manual que asigna el admin.
   // Los destacados siguen al frente solo cuando no hay orden manual definido.
+  // Facetas: los conteos se calculan sin aplicar las facetas mismas.
+  const selectedSpecs = parseSpecParams({ spec })
+  const baseForFacets = { ...filter }
+  const specClauses = specFilterClauses(selectedSpecs)
+  if (specClauses.length) {
+    filter.$and = [...(filter.$and || []), ...specClauses]
+  }
+
   let sortSpec = { sortOrder: 1, featured: -1, createdAt: -1 }
   if (sort === 'priceAsc') sortSpec = { price: 1 }
   else if (sort === 'priceDesc') sortSpec = { price: -1 }
   else if (sort === 'popular')
     sortSpec = { salesCount: -1, whatsappClicks: -1, viewsCount: -1 }
 
-  const [products, categories, brands, materialsList, total] = await Promise.all([
+  const [products, categories, brands, materialsList, total, facets] = await Promise.all([
     Product.find(filter)
       .populate('categories', 'name slug')
       .populate('brand', 'name slug')
@@ -104,6 +113,7 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
     Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Material.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
     Product.countDocuments(filter),
+    buildFacets(Product, baseForFacets),
   ])
 
   return {
@@ -113,6 +123,8 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
     materials: JSON.parse(JSON.stringify(materialsList)),
     brandDoc: brandDoc ? JSON.parse(JSON.stringify(brandDoc)) : null,
     materialDoc: materialDoc ? JSON.parse(JSON.stringify(materialDoc)) : null,
+    facets: JSON.parse(JSON.stringify(facets)),
+    selectedSpecs,
     total,
   }
 }
@@ -130,7 +142,7 @@ export default async function CatalogoPage({ searchParams }) {
   const color    = (searchParams?.color    || '').trim()
   const material = (searchParams?.material || '').trim()
 
-  const { products, categories, brands, materials, brandDoc, materialDoc, total } = await loadData({
+  const { products, categories, brands, materials, brandDoc, materialDoc, facets, selectedSpecs, total } = await loadData({
     q,
     category,
     featured,
@@ -142,6 +154,7 @@ export default async function CatalogoPage({ searchParams }) {
     brand,
     color,
     material,
+    spec: searchParams?.spec,
   })
   const currentCat = categories.find((c) => c.slug === category)
 
@@ -173,6 +186,8 @@ export default async function CatalogoPage({ searchParams }) {
         <aside className="lg:sticky lg:top-24 h-fit">
           <Suspense fallback={<div className="bg-white rounded-2xl shadow-card border border-slate-100 p-4 h-96 animate-pulse" />}>
             <ProductFilters
+              facets={facets}
+              selectedSpecs={selectedSpecs}
               categories={categories}
               brands={brands}
               materials={materials}

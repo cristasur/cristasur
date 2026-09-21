@@ -81,8 +81,12 @@ export default async function HomePage() {
             <Icon name="arrow" className="w-4 h-4" />
           </Link>
         </div>
-        {/* Solo categorías principales: las subcategorías se ven al entrar. */}
-        <CategoryCarousel categories={categories.filter((c) => !c.parent)} />
+        {/* Tarjetas: solo principales. `allCategories` lleva la lista completa
+            para poder armar el desplegable de subcategorías al pasar el mouse. */}
+        <CategoryCarousel
+          categories={categories.filter((c) => !c.parent)}
+          allCategories={categories}
+        />
       </section>
 
       {/* Destacados */}

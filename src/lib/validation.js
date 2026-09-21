@@ -22,6 +22,41 @@ export function isValidEmail(email) {
   return typeof email === 'string' && validator.isEmail(email)
 }
 
+const MAX_SPECS = 60
+const MAX_HIGHLIGHTS = 12
+
+// Ficha técnica: filas { group, label, value }. Se descarta cualquier fila
+// sin etiqueta o sin valor — una fila a medias solo ensucia la vista pública.
+function sanitizeSpecs(input) {
+  if (!Array.isArray(input)) return []
+  return input
+    .slice(0, MAX_SPECS)
+    .map((r) => {
+      const label = cleanSoft(r?.label, { max: 60 })
+      const value = cleanSoft(r?.value, { max: 200 })
+      if (!label || !value) return null
+      return { group: cleanSoft(r?.group, { max: 60 }), label, value }
+    })
+    .filter(Boolean)
+}
+
+// Atributos destacados: lista simple de frases cortas, sin duplicados.
+function sanitizeHighlights(input) {
+  if (!Array.isArray(input)) return []
+  const seen = new Set()
+  const out = []
+  for (const raw of input) {
+    const t = cleanSoft(raw, { max: 120 })
+    if (!t) continue
+    const k = t.toLowerCase()
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(t)
+    if (out.length >= MAX_HIGHLIGHTS) break
+  }
+  return out
+}
+
 function sanitizeVariants(input) {
   if (!Array.isArray(input)) return []
   return input
@@ -141,6 +176,9 @@ export function validateProductPayload(body) {
 
   // Resistencia — baja / media / alta
   const resistencia = ['baja', 'media', 'alta'].includes(body?.resistencia) ? body.resistencia : ''
+  const specs = sanitizeSpecs(body?.specs)
+  const highlights = sanitizeHighlights(body?.highlights)
+  const usage = cleanSoft(body?.usage, { max: 1200 })
 
   // Color libre (ej: "Rojo", "Azul marino") — opcional
   const color = cleanSoft(body?.color, { max: 60 })
@@ -304,6 +342,9 @@ export function validateProductPayload(body) {
       brand,
       materials,
       resistencia,
+      specs,
+      highlights,
+      usage,
       color,
       qtyStep,
       weight,
@@ -462,6 +503,7 @@ export function diffFields(before, after, fields) {
     pkgNote: 'Nota caja envío', status: 'Estado',
     publishAt: 'Publicar el', qtyStep: 'Paso de cantidad',
     materials: 'Materiales', tags: 'Etiquetas',
+    specs: 'Ficha técnica', highlights: 'Atributos destacados', usage: 'Cómo utilizar',
   }
   const result = []
   for (const f of fields) {

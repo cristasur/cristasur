@@ -9,6 +9,7 @@
 // - trackView al montar + PATCH ?action=view para viewsCount.
 // ============================================================
 import { useEffect, useMemo, useState } from 'react'
+import { priceTiers, unitPriceFor, activeTier, formatMXN, formatMXNShort } from '@/lib/pricing'
 import Icon from './Icon'
 import VariantPicker from './VariantPicker'
 import AddToCartButton from './AddToCartButton'
@@ -149,10 +150,17 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     return Number.isFinite(Number(pq)) && Number(pq) >= 2 ? Number(pq) : null
   }, [product.wholesaleMinQty])
   // VIP: mayoreo activo siempre sin importar la cantidad pedida
-  const wholesaleActive =
-    wholesalePrice !== null &&
-    (isVip || (wholesaleMinQty !== null && qty >= wholesaleMinQty))
-  const currentPrice = wholesaleActive ? wholesalePrice : basePrice
+  // Escalera completa de precios (menudeo / mayoreo / por ciento).
+  // Viene de @/lib/pricing para que la tarjeta del catálogo, esta ficha
+  // y el carrito muestren y cobren exactamente lo mismo.
+  const tiers = useMemo(() => priceTiers(product), [product])
+  const tier = useMemo(() => activeTier(product, qty), [product, qty])
+
+  // VIP: el mayoreo se le aplica sin importar la cantidad que pida.
+  const vipPrice = isVip && wholesalePrice !== null ? wholesalePrice : null
+  const tierPrice = unitPriceFor(product, qty)
+  const currentPrice = vipPrice !== null ? Math.min(vipPrice, tierPrice) : tierPrice
+  const wholesaleActive = currentPrice < basePrice
 
   // Stock efectivo: null = ilimitado, 0 = sin stock, >0 = cantidad.
   // Para variantes, null stock también significa ilimitado.
@@ -257,35 +265,95 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
         </div>
       )}
 
-      {/* Banner de mayoreo */}
-      {wholesalePrice !== null && wholesaleMinQty !== null && (
-        <div
-          className={
-            'rounded-xl border p-3 text-sm flex items-start gap-3 ' +
-            (wholesaleActive
-              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-              : 'border-amber-300 bg-amber-50 text-amber-800')
-          }
-        >
-          <div className="text-xl leading-none">{wholesaleActive ? '🎉' : '💡'}</div>
-          <div className="flex-1">
-            {wholesaleActive ? (
-              <>
-                <b>¡Precio mayoreo activado!</b> Pagas{' '}
-                <b>{formatPrice(wholesalePrice)}</b> por pieza ({qty} unidades).
-                <span className="ml-1 font-semibold text-emerald-700">¡Ahorro incluido!</span>
-              </>
-            ) : (
-              <>
-                <b>Precio mayoreo disponible:</b> a partir de{' '}
-                <b>{wholesaleMinQty} piezas</b> bajan a{' '}
-                <b>{formatPrice(wholesalePrice)}</b> c/u.
-                Te faltan <b>{wholesaleMinQty - qty}</b> para activarlo.
-              </>
-            )}
+      {/* Tabla de precios por volumen — la fila activa se resalta según
+          la cantidad que el cliente tenga puesta. */}
+      {tiers.length > 1 && (
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-600">
+              Precio por volumen
+            </span>
           </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-brand-50 text-brand-900">
+                <th className="text-left font-semibold px-4 py-2">Unidades</th>
+                <th className="text-left font-semibold px-4 py-2">Precio por pieza</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiers.map((t, i) => {
+                const next = tiers[i + 1]
+                const range = next
+                  ? `${t.minQty}\u2013${next.minQty - 1}`
+                  : `${t.minQty}+`
+                const off = tiers[0].price > 0 && t.price < tiers[0].price
+                  ? Math.round(((tiers[0].price - t.price) / tiers[0].price) * 100)
+                  : 0
+                const isActive = t.minQty === tier.minQty
+                return (
+                  <tr
+                    key={t.minQty}
+                    className={`border-t border-slate-100 ${isActive ? 'bg-emerald-50' : ''}`}
+                  >
+                    <td className="px-4 py-2.5 text-slate-700">
+                      {range}
+                      {isActive && (
+                        <span className="ml-2 text-[10px] font-bold uppercase text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                          Tu precio
+                        </span>
+                      )}
+                    </td>
+                    <td className={`px-4 py-2.5 font-semibold ${off ? 'text-rose-600' : 'text-slate-900'}`}>
+                      {formatMXNShort(t.price)} MXN
+                      {off > 0 && <span className="ml-1.5 font-bold">(-{off}%)</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          {!wholesaleActive && tiers[1] && qty < tiers[1].minQty && (
+            <button
+              type="button"
+              onClick={() => setQty(tiers[1].minQty)}
+              className="w-full px-4 py-2.5 bg-amber-50 border-t border-amber-200 text-[13px] text-amber-900 text-left hover:bg-amber-100 transition-colors"
+            >
+              Te faltan <b>{tiers[1].minQty - qty}</b> piezas para bajar a{' '}
+              <b>{formatMXNShort(tiers[1].price)}</b> c/u.{' '}
+              <span className="font-bold underline">Subir a {tiers[1].minQty}</span>
+            </button>
+          )}
         </div>
       )}
+
+      {isVip && wholesalePrice !== null && (
+        <div className="rounded-xl border border-violet-300 bg-violet-50 px-4 py-2.5 text-sm text-violet-800">
+          <b>Precio VIP activo.</b> Pagas {formatMXNShort(wholesalePrice)} por pieza sin mínimo.
+        </div>
+      )}
+
+      {/* Resumen: total y formato de venta */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3">
+          <div className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">Total</div>
+          <div className="text-xl font-black text-brand-800 mt-0.5">
+            {formatMXN(currentPrice * qty)}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-0.5">
+            {qty} pz × {formatMXNShort(currentPrice)}
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 px-4 py-3">
+          <div className="text-[11px] uppercase tracking-widest text-slate-500 font-bold">Formato</div>
+          <div className="text-xl font-black text-slate-800 mt-0.5">
+            {step > 1 ? `${step} pz` : '1 pz'}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-0.5">
+            {step > 1 ? `Se vende de ${step} en ${step}` : 'Venta por pieza'}
+          </div>
+        </div>
+      </div>
 
       {variants.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-100 p-4">

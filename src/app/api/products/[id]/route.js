@@ -70,6 +70,7 @@ export async function PUT(request, { params }) {
       'gallery', 'variants', 'categories', 'brand', 'color',
       'weight', 'length', 'width', 'height', 'status', 'publishAt',
       'qtyStep', 'materials', 'resistencia', 'tags',
+      'specs', 'highlights', 'usage',
     ]
     const summary = diffSummary(before, value, DIFF_FIELDS) || 'sin cambios relevantes'
     const diff = diffFields(before, value, DIFF_FIELDS)

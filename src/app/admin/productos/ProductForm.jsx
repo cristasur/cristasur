@@ -61,6 +61,9 @@ export default function ProductForm({ categories, brands = [], materials = [], i
       ? initial.materials.map((m) => m._id || m)
       : [],
     resistencia: initial?.resistencia || '',
+    specs: Array.isArray(initial?.specs) ? initial.specs : [],
+    highlights: Array.isArray(initial?.highlights) ? initial.highlights : [],
+    usage: initial?.usage || '',
     color: initial?.color || '',
     weight: initial?.weight ?? '',
     length: initial?.length ?? '',
@@ -359,6 +362,52 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   }
 
   // ---- Variantes ----
+
+  // ---- Ficha técnica (specs) ----
+  // Cada fila es { group, label, value }. El grupo se hereda de la fila
+  // anterior al añadir, que es como se captura en la práctica: primero
+  // "Medidas", luego varias filas seguidas de ese mismo grupo.
+  function addSpec() {
+    setForm((f) => {
+      const last = f.specs[f.specs.length - 1]
+      return { ...f, specs: [...f.specs, { group: last?.group || '', label: '', value: '' }] }
+    })
+  }
+  function updateSpec(i, key, val) {
+    setForm((f) => {
+      const next = [...f.specs]
+      next[i] = { ...next[i], [key]: val }
+      return { ...f, specs: next }
+    })
+  }
+  function removeSpec(i) {
+    setForm((f) => ({ ...f, specs: f.specs.filter((_, j) => j !== i) }))
+  }
+  function moveSpec(i, dir) {
+    setForm((f) => {
+      const j = i + dir
+      if (j < 0 || j >= f.specs.length) return f
+      const next = [...f.specs]
+      ;[next[i], next[j]] = [next[j], next[i]]
+      return { ...f, specs: next }
+    })
+  }
+
+  // ---- Atributos destacados ----
+  function addHighlight() {
+    setForm((f) => ({ ...f, highlights: [...f.highlights, ''] }))
+  }
+  function updateHighlight(i, val) {
+    setForm((f) => {
+      const next = [...f.highlights]
+      next[i] = val
+      return { ...f, highlights: next }
+    })
+  }
+  function removeHighlight(i) {
+    setForm((f) => ({ ...f, highlights: f.highlights.filter((_, j) => j !== i) }))
+  }
+
   function addVariant() {
     setForm((f) => ({
       ...f,
@@ -1014,6 +1063,162 @@ export default function ProductForm({ categories, brands = [], materials = [], i
           ))}
         </div>
       </div>
+
+      {/* Atributos destacados */}
+      <fieldset className="border border-slate-200 rounded-xl p-4 space-y-3">
+        <legend className="px-2 text-sm font-bold text-slate-700">Atributos destacados</legend>
+        <p className="text-xs text-slate-500">
+          Lo más importante del producto, en frases cortas. Se muestran con palomita
+          arriba de la ficha técnica. Ej: «Apto lavavajillas», «Caja de 6 piezas».
+        </p>
+
+        {form.highlights.map((h, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="text-emerald-500 shrink-0">✓</span>
+            <input
+              value={h}
+              maxLength={120}
+              onChange={(e) => updateHighlight(i, e.target.value)}
+              placeholder="Ej: Resistente a temperaturas de -20 °C a 250 °C"
+              className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-brand-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => removeHighlight(i)}
+              className="shrink-0 px-2.5 py-2 rounded-lg text-rose-600 hover:bg-rose-50 text-sm"
+              aria-label="Quitar atributo"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+
+        {form.highlights.length === 0 && (
+          <p className="text-xs text-slate-400 italic">Sin atributos destacados todavía.</p>
+        )}
+
+        <button
+          type="button"
+          onClick={addHighlight}
+          disabled={form.highlights.length >= 12}
+          className="text-sm font-semibold text-brand-700 hover:text-brand-800 disabled:text-slate-400"
+        >
+          + Añadir atributo {form.highlights.length >= 12 && '(máximo 12)'}
+        </button>
+      </fieldset>
+
+      {/* Ficha técnica */}
+      <fieldset className="border border-slate-200 rounded-xl p-4 space-y-3">
+        <legend className="px-2 text-sm font-bold text-slate-700">Ficha técnica</legend>
+        <p className="text-xs text-slate-500">
+          Una fila por dato. El <strong>grupo</strong> junta las filas en bloques
+          («Medidas y dimensiones», «Materiales»…). Repite el mismo grupo en filas
+          seguidas para que queden juntas.
+        </p>
+
+        {form.specs.length > 0 && (
+          <div className="hidden md:grid grid-cols-[1fr_1fr_1.4fr_auto] gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wide px-1">
+            <span>Grupo</span><span>Etiqueta</span><span>Valor</span><span />
+          </div>
+        )}
+
+        {form.specs.map((row, i) => {
+          const newGroup = i === 0 || form.specs[i - 1]?.group !== row.group
+          return (
+            <div
+              key={i}
+              className={`grid md:grid-cols-[1fr_1fr_1.4fr_auto] gap-2 ${
+                newGroup && i > 0 ? 'pt-3 border-t border-slate-100' : ''
+              }`}
+            >
+              <input
+                value={row.group || ''}
+                maxLength={60}
+                onChange={(e) => updateSpec(i, 'group', e.target.value)}
+                placeholder="Medidas y dimensiones"
+                className="px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:border-brand-500 focus:outline-none"
+              />
+              <input
+                value={row.label || ''}
+                maxLength={60}
+                onChange={(e) => updateSpec(i, 'label', e.target.value)}
+                placeholder="Diámetro"
+                className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-brand-500 focus:outline-none"
+              />
+              <input
+                value={row.value || ''}
+                maxLength={200}
+                onChange={(e) => updateSpec(i, 'value', e.target.value)}
+                placeholder="28 cm"
+                className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-brand-500 focus:outline-none"
+              />
+              <div className="flex items-center gap-1 shrink-0">
+                <button type="button" onClick={() => moveSpec(i, -1)} disabled={i === 0}
+                  className="px-1.5 py-2 text-slate-400 hover:text-slate-700 disabled:opacity-25" aria-label="Subir">↑</button>
+                <button type="button" onClick={() => moveSpec(i, 1)} disabled={i === form.specs.length - 1}
+                  className="px-1.5 py-2 text-slate-400 hover:text-slate-700 disabled:opacity-25" aria-label="Bajar">↓</button>
+                <button type="button" onClick={() => removeSpec(i)}
+                  className="px-2 py-2 rounded-lg text-rose-600 hover:bg-rose-50 text-sm" aria-label="Quitar fila">✕</button>
+              </div>
+            </div>
+          )
+        })}
+
+        {form.specs.length === 0 && (
+          <p className="text-xs text-slate-400 italic">Sin ficha técnica todavía.</p>
+        )}
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={addSpec}
+            disabled={form.specs.length >= 60}
+            className="text-sm font-semibold text-brand-700 hover:text-brand-800 disabled:text-slate-400"
+          >
+            + Añadir fila {form.specs.length >= 60 && '(máximo 60)'}
+          </button>
+          {form.specs.length === 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                setForm((f) => ({
+                  ...f,
+                  specs: [
+                    { group: 'Información general', label: 'Tipo de producto', value: '' },
+                    { group: 'Información general', label: 'Formato de venta', value: '' },
+                    { group: 'Medidas y dimensiones', label: 'Largo', value: '' },
+                    { group: 'Medidas y dimensiones', label: 'Ancho', value: '' },
+                    { group: 'Medidas y dimensiones', label: 'Alto', value: '' },
+                    { group: 'Materiales', label: 'Material', value: '' },
+                    { group: 'Materiales', label: 'Color', value: '' },
+                  ],
+                }))
+              }
+              className="text-sm text-slate-500 hover:text-brand-700"
+            >
+              Empezar con una plantilla básica
+            </button>
+          )}
+        </div>
+      </fieldset>
+
+      {/* Cómo utilizar */}
+      <label className="block">
+        <span className="text-sm font-medium text-slate-700">
+          Cómo utilizar <span className="text-slate-400 font-normal">— opcional</span>
+        </span>
+        <textarea
+          rows={3}
+          maxLength={1200}
+          value={form.usage}
+          onChange={(e) => update('usage', e.target.value)}
+          placeholder="Ej: Ideal para servir cortes de carne, pastas y platillos principales en restaurantes y banquetes."
+          className={input}
+        />
+        <span className="block text-[11px] text-slate-400 mt-1">
+          {form.usage.length}/1200 — aparece como «Recomendaciones de uso» en la ficha.
+        </span>
+      </label>
 
       {/* Tags + estado + publishAt */}
       <fieldset className="border border-slate-200 rounded-xl p-4 space-y-4">

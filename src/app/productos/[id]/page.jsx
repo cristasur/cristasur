@@ -11,6 +11,11 @@ import Product from '@/models/Product'
 import ProductGrid from '@/components/ProductGrid'
 import ProductGallery from '@/components/ProductGallery'
 import ProductDetailClient from '@/components/ProductDetailClient'
+import {
+  ProductHighlights, ProductSpecsTable, ProductUsage, ProductTrust,
+} from '@/components/ProductSpecs'
+import ProductFaq from '@/components/ProductFaq'
+import SkuCopy from '@/components/SkuCopy'
 import ReviewList from '@/components/ReviewList'
 import RecentlyViewed from '@/components/RecentlyViewed'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -50,7 +55,13 @@ async function loadProduct(id) {
       { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
     ],
   })
-    .populate('categories', 'name slug')
+    .populate({
+      path: 'categories',
+      select: 'name slug parent',
+      // La miga de pan muestra "Cocina / Platos" cuando la categoría
+      // del producto es una subcategoría.
+      populate: { path: 'parent', select: 'name slug' },
+    })
     .populate('brand', 'name slug')
     .populate('materials', 'name')
     .lean()
@@ -241,6 +252,14 @@ export default async function ProductDetail({ params, searchParams }) {
         <Link href="/" className="hover:text-brand-700">Inicio</Link>
         <span className="mx-2">/</span>
         <Link href="/productos" className="hover:text-brand-700">Productos</Link>
+        {product.categories?.[0]?.parent?.slug && (
+          <>
+            <span className="mx-2">/</span>
+            <Link href={`/categoria/${product.categories[0].parent.slug}`} className="hover:text-brand-700">
+              {product.categories[0].parent.name}
+            </Link>
+          </>
+        )}
         {product.categories?.[0]?.slug && (
           <>
             <span className="mx-2">/</span>
@@ -263,6 +282,24 @@ export default async function ProductDetail({ params, searchParams }) {
         <div className="flex flex-col min-w-0 overflow-x-hidden">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
+              {/* Distintivos: materiales y resistencia, como etiquetas de color */}
+              {(product.materials?.length > 0 || product.resistencia) && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {product.materials?.map((m) => (
+                    <span
+                      key={m._id || m.name}
+                      className="text-[10.5px] font-bold uppercase tracking-wide text-white bg-violet-600 px-2 py-0.5 rounded-md"
+                    >
+                      {m.name}
+                    </span>
+                  ))}
+                  {product.resistencia && (
+                    <span className="text-[10.5px] font-bold uppercase tracking-wide text-white bg-emerald-600 px-2 py-0.5 rounded-md">
+                      Resistencia {product.resistencia}
+                    </span>
+                  )}
+                </div>
+              )}
               {product.categories?.[0]?.name && (
                 <div className="text-xs uppercase tracking-widest text-brand-600 font-bold">
                   {product.categories.map((c) => c.name).join(', ')}
@@ -298,8 +335,8 @@ export default async function ProductDetail({ params, searchParams }) {
           )}
 
           {product.sku && (
-            <div className="mt-2 text-[11px] text-slate-400 tracking-wide">
-              SKU: {product.sku}
+            <div className="mt-2">
+              <SkuCopy sku={product.sku} />
             </div>
           )}
 
@@ -316,95 +353,21 @@ export default async function ProductDetail({ params, searchParams }) {
         </div>
       </div>
 
-      {/* ── Especificaciones técnicas (estilo Amazon) ── */}
-      {(product.capacity || product.weight || product.length || product.width || product.height ||
-        product.boxLength || product.boxWidth || product.boxHeight || product.boxWeight ||
-        product.materials?.length > 0 || product.resistencia ||
-        product.brand?.name) && (
-        <section className="mt-10 border-t border-slate-100 pt-8">
-          <div className="md:w-1/2">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">Detalles del producto</h2>
-            <div className="border border-slate-200 rounded-xl overflow-hidden text-sm">
-              {product.brand?.name && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Marca</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.brand.name}</div>
-                </div>
-              )}
-              {product.materials?.length > 0 && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Material</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">
-                    {(product.materials?.map(m => m.name).filter(Boolean) || []).join(', ')}
-                  </div>
-                </div>
-              )}
-              {product.capacity && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Capacidad</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.capacity} {product.capacityUnit || 'L'}</div>
-                </div>
-              )}
-              {product.weight && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Peso</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.weight} kg</div>
-                </div>
-              )}
-              {product.length && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Largo</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.length} cm</div>
-                </div>
-              )}
-              {product.width && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Ancho</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.width} cm</div>
-                </div>
-              )}
-              {product.height && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Alto</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.height} cm</div>
-                </div>
-              )}
-              {(product.boxLength || product.boxWidth || product.boxHeight) && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Caja de envío</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">
-                    {[product.boxLength, product.boxWidth, product.boxHeight].filter(Boolean).join(' × ')} cm
-                  </div>
-                </div>
-              )}
-              {product.boxWeight && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Peso c/ caja</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800">{product.boxWeight} kg</div>
-                </div>
-              )}
-              {product.resistencia && (
-                <div className="flex border-b border-slate-100">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Resistencia</div>
-                  <div className="flex-1 px-4 py-3 text-slate-800 flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                      product.resistencia === 'alta' ? 'bg-emerald-500' :
-                      product.resistencia === 'media' ? 'bg-amber-400' : 'bg-red-400'
-                    }`} />
-                    <span className="capitalize">{product.resistencia}</span>
-                  </div>
-                </div>
-              )}
-              {product.sku && (
-                <div className="flex">
-                  <div className="w-40 shrink-0 bg-slate-50 px-4 py-3 font-semibold text-slate-700">SKU</div>
-                  <div className="flex-1 px-4 py-3 text-slate-500 font-mono text-xs tracking-wide">{product.sku}</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* ── Información del producto ──────────────────────────
+          Dos columnas: contenido a la izquierda, bloque de confianza
+          pegado a la derecha en pantallas grandes. */}
+      <div className="mt-10 border-t border-slate-100 pt-8 grid lg:grid-cols-[1fr_340px] gap-6 items-start">
+        <div className="space-y-6 min-w-0">
+          <ProductHighlights highlights={product.highlights} />
+          <ProductSpecsTable specs={product.specs} />
+          <ProductUsage usage={product.usage} />
+          <ProductFaq />
+        </div>
+
+        <div className="lg:sticky lg:top-24 space-y-6">
+          <ProductTrust />
+        </div>
+      </div>
 
       {/* Reseñas */}
       <ReviewList productId={product._id} />

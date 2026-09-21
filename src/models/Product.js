@@ -170,6 +170,31 @@ const ProductSchema = new mongoose.Schema(
     // Resistencia del producto (baja / media / alta)
     resistencia: { type: String, enum: ['', 'baja', 'media', 'alta'], default: '' },
 
+    // ---- Ficha técnica libre ----
+    // Filas de especificación agrupadas. El admin escribe grupo, etiqueta y
+    // valor, así que sirve igual para un plato, una cubeta o una escoba sin
+    // tener que tocar el modelo cada vez que aparece un atributo nuevo.
+    //
+    // Ej: { group: 'Medidas', label: 'Diámetro superior', value: '28 cm' }
+    //
+    // El orden de captura es el orden en que se muestran. Los grupos se
+    // arman agrupando filas consecutivas con el mismo `group`.
+    specs: {
+      type: [{
+        group: { type: String, trim: true, maxlength: 60, default: '' },
+        label: { type: String, trim: true, maxlength: 60, required: true },
+        value: { type: String, trim: true, maxlength: 200, required: true },
+        _id: false,
+      }],
+      default: [],
+    },
+
+    // Bullets de "Atributos destacados": lo más importante, arriba de todo.
+    highlights: { type: [String], default: [] },
+
+    // "Cómo utilizar" — recomendaciones de uso en texto corrido.
+    usage: { type: String, trim: true, maxlength: 1200, default: '' },
+
     // Color del producto — SÓLO para productos SIN variantes de color.
     // Si el producto tiene variantes con label "Color", este campo debe ir
     // vacío: el color vive en cada variante. Mantenerlo lleno en un producto

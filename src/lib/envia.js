@@ -18,13 +18,24 @@
 const PROD_URL = 'https://api.envia.com'
 const TEST_URL = 'https://api-test.envia.com'
 
+// Queries API: catálogos (paqueterías, servicios, direcciones…)
+const QUERIES_PROD = 'https://queries.envia.com'
+const QUERIES_TEST = 'https://queries.test.envia.com'
+
+// Orden de preferencia para cotizar en México. La API cobra una
+// petición por paquetería, así que no se pueden pedir todas: se
+// eligen las que de verdad sirven para paquetería nacional.
+const PREFERRED_MX = [
+  'fedex', 'paquetexpress', 'estafeta', 'dhl', 'ups', 'ampm', 'coordinadora',
+]
+
+// Cuántas cotizar en paralelo. Con el límite de 10 s de Vercel,
+// más de 5 es arriesgado.
+const MAX_CARRIERS = 5
+
 // Tiempo máximo por paquetería. Con 4 en paralelo y 6 s cada una,
 // el peor caso sigue cabiendo en el límite de Vercel.
 const CARRIER_TIMEOUT_MS = 6000
-
-// Paqueterías a cotizar. Se puede sobreescribir con ENVIA_CARRIERS
-// (separadas por coma) sin tocar código.
-const DEFAULT_CARRIERS = ['fedex', 'paquetexpress', 'dhl', 'estafeta']
 
 export function enviaConfig() {
   const token = process.env.ENVIA_TOKEN || ''
@@ -39,10 +50,63 @@ export function enviaConfig() {
   return {
     token,
     baseUrl: isProd ? PROD_URL : TEST_URL,
+    queriesUrl: isProd ? QUERIES_PROD : QUERIES_TEST,
     isProd,
-    carriers: carriers.length ? carriers : DEFAULT_CARRIERS,
+    // Vacío = descubrir por API. Con ENVIA_CARRIERS se fuerza la lista.
+    carriers,
     configured: Boolean(token),
   }
+}
+
+// ── Descubrimiento de paqueterías ───────────────────────────
+// Los identificadores exactos los da la Queries API; adivinarlos
+// produce cotizaciones vacías sin ningún error visible.
+let carrierCache = { at: 0, list: null }
+const CARRIER_TTL_MS = 60 * 60 * 1000
+
+export async function fetchAvailableCarriers({ country = 'MX' } = {}) {
+  const cfg = enviaConfig()
+  if (!cfg.configured) return []
+
+  if (carrierCache.list && Date.now() - carrierCache.at < CARRIER_TTL_MS) {
+    return carrierCache.list
+  }
+
+  try {
+    const res = await fetch(
+      `${cfg.queriesUrl}/carrier?country_code=${encodeURIComponent(country)}`,
+      {
+        headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(5000),
+      }
+    )
+    if (!res.ok) return []
+    const json = await res.json()
+    const rows = Array.isArray(json?.data) ? json.data : []
+    const names = rows
+      .filter((c) => c?.active !== false)
+      .map((c) => String(c?.name || '').toLowerCase())
+      .filter(Boolean)
+
+    carrierCache = { at: Date.now(), list: names }
+    return names
+  } catch {
+    return []
+  }
+}
+
+/** Qué paqueterías cotizar: configuradas, o descubiertas y priorizadas. */
+export async function resolveCarriers() {
+  const cfg = enviaConfig()
+  if (cfg.carriers.length) return cfg.carriers.slice(0, MAX_CARRIERS)
+
+  const available = await fetchAvailableCarriers()
+  if (!available.length) return PREFERRED_MX.slice(0, MAX_CARRIERS)
+
+  // Primero las preferidas que existan; si faltan, se rellena con el resto.
+  const preferred = PREFERRED_MX.filter((c) => available.includes(c))
+  const rest = available.filter((c) => !preferred.includes(c))
+  return [...preferred, ...rest].slice(0, MAX_CARRIERS)
 }
 
 /** Dirección de origen: la Matriz. Se configura por variables de entorno. */
@@ -134,9 +198,10 @@ export async function quoteAllCarriers({ destination, packages }) {
   }
 
   const origin = originAddress()
+  const carriers = await resolveCarriers()
 
   const results = await Promise.all(
-    cfg.carriers.map((carrier) =>
+    carriers.map((carrier) =>
       quoteOne({
         carrier,
         origin,

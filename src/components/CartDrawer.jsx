@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useCart, effectiveUnitPrice, isWholesaleActive } from './CartProvider'
 import Icon from './Icon'
 import ShippingQuote from './ShippingQuote'
+import { toStock } from '@/lib/pricing'
 
 // Codifica los items del carrito a una URL compartible. La URL queda
 // /carrito?items=<base64url(JSON)>. Comparte por WhatsApp / copiar.
@@ -206,6 +207,11 @@ export default function CartDrawer() {
                   <div className="inline-flex items-center border border-slate-200 rounded-lg">
                     {(() => {
                       const step = Number(x.qtyStep) >= 1 ? x.qtyStep : 1
+                      // Tope real: el mayor múltiplo de venta que cabe en
+                      // las existencias. Sin maxStock, no hay tope.
+                      const disp = toStock(x.maxStock)
+                      const tope = disp == null ? null : Math.floor(disp / step) * step
+                      const enElTope = tope != null && x.qty >= tope
                       return (
                         <>
                           <button
@@ -226,9 +232,16 @@ export default function CartDrawer() {
                           </span>
                           <button
                             onClick={() => updateQty(x.productId, x.variantValue, x.qty + step, x.variantLabel)}
-                            className="w-8 h-8 grid place-items-center text-slate-600 hover:bg-slate-100"
+                            disabled={enElTope}
+                            className="w-8 h-8 grid place-items-center text-slate-600 hover:bg-slate-100 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed"
                             aria-label={`Añadir ${step}`}
-                            title={step > 1 ? `Añade ${step} piezas` : 'Añadir uno'}
+                            title={
+                              enElTope
+                                ? `Es todo lo que tenemos (${disp} disponibles)`
+                                : step > 1
+                                  ? `Añade ${step} piezas`
+                                  : 'Añadir uno'
+                            }
                           >
                             +
                           </button>

@@ -411,20 +411,13 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   }
 
   function addVariant() {
+    // Solo los campos que el modelo conserva. Precio y caja se heredan
+    // del padre SIEMPRE (ver REGLA DE ORO en models/Product.js).
     setForm((f) => ({
       ...f,
       variants: [
         ...f.variants,
-        {
-          label: 'Color', value: '',
-          sku: '', barcode: '',
-          price: '', comparePrice: '',
-          wholesalePrice: '', wholesaleMinQty: '',
-          bulkPrice: '', bulkMinQty: '',
-          available: true, stock: null,
-          weight: '', pkgWeight: '', pkgLength: '', pkgWidth: '', pkgHeight: '',
-          image: '', images: [],
-        },
+        { label: 'Color', value: '', sku: '', barcode: '', available: true, stock: null, image: '', images: [] },
       ],
     }))
   }
@@ -1931,46 +1924,6 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                       </div>
                     )}
 
-                    {/* ── Precios ── */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <label className="block">
-                        <span className="text-xs font-semibold text-slate-600 block mb-1">Precio unitario</span>
-                        <input type="number" min={0} step="0.01"
-                          value={v.price ?? ''}
-                          onChange={(e) => updateVariant(i, 'price', e.target.value)}
-                          placeholder="Hereda del producto"
-                          className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-400 bg-slate-50 placeholder:text-slate-300"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="text-xs font-semibold text-slate-600 block mb-1">Precio anterior</span>
-                        <input type="number" min={0} step="0.01"
-                          value={v.comparePrice ?? ''}
-                          onChange={(e) => updateVariant(i, 'comparePrice', e.target.value)}
-                          placeholder="—"
-                          className="w-full px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-400 bg-slate-50 placeholder:text-slate-300"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="text-xs font-semibold text-amber-700 block mb-1">Mayoreo — precio</span>
-                        <input type="number" min={0} step="0.01"
-                          value={v.wholesalePrice ?? ''}
-                          onChange={(e) => updateVariant(i, 'wholesalePrice', e.target.value)}
-                          placeholder="Hereda del producto"
-                          className="w-full px-2.5 py-1.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-amber-50/40 placeholder:text-slate-300"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="text-xs font-semibold text-amber-700 block mb-1">Mayoreo — mín. piezas</span>
-                        <input type="number" min={2} step="1"
-                          value={v.wholesaleMinQty ?? ''}
-                          onChange={(e) => updateVariant(i, 'wholesaleMinQty', e.target.value)}
-                          placeholder="Hereda del producto"
-                          className="w-full px-2.5 py-1.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-amber-50/40 placeholder:text-slate-300"
-                        />
-                      </label>
-                    </div>
-
                     {/* ── Disponibilidad ── */}
                     <div>
                       <span className="text-xs font-semibold text-slate-600 block mb-2">Disponibilidad</span>
@@ -2008,75 +1961,18 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                       </div>
                     </div>
 
-                    {/* ── Logística de esta variante (para cotizar envíos) ── */}
-                    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-3">
-                      <div className="flex items-baseline justify-between gap-2 mb-2 flex-wrap">
-                        <span className="text-xs font-semibold text-blue-800">
-                          Envío — caja de esta variante
-                        </span>
-                        <span className="text-[11px] text-blue-700/70">
-                          Uso interno. Sin estos datos no se puede cotizar envío.
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                        <label className="block">
-                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Peso pieza (kg)</span>
-                          <input type="number" min={0} step="0.01"
-                            value={v.weight ?? ''}
-                            onChange={(e) => updateVariant(i, 'weight', e.target.value)}
-                            placeholder="0.00"
-                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Peso caja (kg)</span>
-                          <input type="number" min={0} step="0.01"
-                            value={v.pkgWeight ?? ''}
-                            onChange={(e) => updateVariant(i, 'pkgWeight', e.target.value)}
-                            placeholder="0.00"
-                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Largo (cm)</span>
-                          <input type="number" min={0} step="0.1"
-                            value={v.pkgLength ?? ''}
-                            onChange={(e) => updateVariant(i, 'pkgLength', e.target.value)}
-                            placeholder="0"
-                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Ancho (cm)</span>
-                          <input type="number" min={0} step="0.1"
-                            value={v.pkgWidth ?? ''}
-                            onChange={(e) => updateVariant(i, 'pkgWidth', e.target.value)}
-                            placeholder="0"
-                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-[11px] font-semibold text-blue-700 block mb-1">Alto (cm)</span>
-                          <input type="number" min={0} step="0.1"
-                            value={v.pkgHeight ?? ''}
-                            onChange={(e) => updateVariant(i, 'pkgHeight', e.target.value)}
-                            placeholder="0"
-                            className="w-full px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white placeholder:text-slate-300"
-                          />
-                        </label>
-                      </div>
-                      <label className="block mt-2">
-                        <span className="text-[11px] font-semibold text-blue-700 block mb-1">
-                          Código de barras <span className="font-normal text-blue-600/60">— opcional (GTIN/EAN para Google Shopping)</span>
-                        </span>
-                        <input type="text"
-                          value={v.barcode ?? ''}
-                          onChange={(e) => updateVariant(i, 'barcode', e.target.value)}
-                          placeholder="7501234567890"
-                          className="w-full sm:w-64 px-2.5 py-1.5 text-sm border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white font-mono placeholder:text-slate-300"
-                        />
-                      </label>
-                    </div>
+                    {/* ── Código de barras ── */}
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600 block mb-1">
+                        Código de barras <span className="font-normal text-slate-400">(EAN/UPC, opcional)</span>
+                      </span>
+                      <input
+                        value={v.barcode || ''}
+                        onChange={(e) => updateVariant(i, 'barcode', e.target.value)}
+                        placeholder="7501234567890"
+                        className="w-full sm:w-64 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-400 bg-white font-mono placeholder:text-slate-300"
+                      />
+                    </label>
 
                     {/* ── Fotos de esta variante ── */}
                     <div>

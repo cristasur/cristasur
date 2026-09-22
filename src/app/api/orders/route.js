@@ -13,6 +13,7 @@ import dbConnect from '@/lib/mongodb'
 import crypto from 'crypto'
 import Order from '@/models/Order'
 import Product from '@/models/Product'
+import { unitPriceFor, saleStep, snapToStep, availableUnits } from '@/lib/pricing'
 import Coupon from '@/models/Coupon'
 import { getCurrentUser } from '@/lib/auth'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
@@ -73,27 +74,70 @@ export async function POST(request) {
     const productIds = [...new Set(rawItems.map((x) => x.product).filter(Boolean))]
     const dbProducts = productIds.length
       ? await Product.find({ _id: { $in: productIds } })
-          .select('_id price wholesalePrice')
+          // Hace falta todo esto para recalcular precio, múltiplo y stock
+          // sin confiar en nada de lo que mande el navegador.
+          .select('_id name price wholesalePrice wholesaleMinQty hundredPrice hundredMinQty qtyStep stock variants')
           .lean()
       : []
     const priceMap = {}
     for (const p of dbProducts) priceMap[String(p._id)] = p
 
-    // Asignar precios desde DB (si hay ID) o del cliente (ítems sin producto)
+    // ── Recálculo en el servidor ──────────────────────────────
+    // Antes se aplicaba el precio de mayoreo según `wholesaleApplied`,
+    // una bandera que manda el NAVEGADOR: bastaba con mandarla en true
+    // para llevarse una pieza a precio de mayoreo. Ahora el nivel se
+    // deduce de la cantidad, igual que en la ficha y en la tarjeta.
+    const ajustes = []
+
     const cleanItems = rawItems
       .map((it) => {
-        let unitPrice = it._clientPrice
-        if (it.product && priceMap[it.product]) {
-          const dbP = priceMap[it.product]
-          // Usar precio mayoreo si aplica y es menor (más barato), sino precio normal
-          unitPrice = it.wholesaleApplied && dbP.wholesalePrice > 0
-            ? dbP.wholesalePrice
-            : dbP.price
+        const dbP = it.product ? priceMap[it.product] : null
+
+        // Ítem sin producto en la base (personalizado): se respeta lo que llega.
+        if (!dbP) {
+          const { _clientPrice, ...rest } = it
+          return { ...rest, unitPrice: Math.max(0, it._clientPrice) }
         }
+
+        // 1. Múltiplo de venta: si el producto va de 4 en 4, no se
+        //    aceptan 5 piezas aunque el carrito las haya dejado pasar.
+        const step = saleStep(dbP)
+        let qty = snapToStep(it.qty, step)
+        if (qty !== it.qty) {
+          ajustes.push(`${dbP.name}: ${it.qty} → ${qty} (se vende de ${step} en ${step})`)
+        }
+
+        // 2. Stock: nunca se acepta más de lo que hay.
+        const disponibles = availableUnits(dbP, it.variantLabel, it.variantValue)
+        if (disponibles === 0) {
+          ajustes.push(`${dbP.name}: sin existencias`)
+          return null
+        }
+        if (disponibles != null && qty > disponibles) {
+          // Mayor múltiplo de venta que cabe en las existencias.
+          // Con 10 piezas y venta de 4 en 4, el tope real son 8.
+          const tope = Math.floor(disponibles / step) * step
+          if (tope < step) {
+            ajustes.push(`${dbP.name}: quedan ${disponibles}, se vende de ${step} en ${step}`)
+            return null
+          }
+          ajustes.push(`${dbP.name}: ${qty} → ${tope} (solo quedan ${disponibles})`)
+          qty = tope
+        }
+
+        // 3. Precio del nivel que de verdad corresponde a esa cantidad.
+        const unitPrice = unitPriceFor(dbP, qty)
+
         const { _clientPrice, ...rest } = it
-        return { ...rest, unitPrice: Math.max(0, unitPrice) }
+        return {
+          ...rest,
+          qty,
+          unitPrice: Math.max(0, unitPrice),
+          wholesaleApplied: unitPrice < (Number(dbP.price) || 0),
+        }
       })
-      .filter((x) => x.unitPrice >= 0)
+      .filter(Boolean)
+      .filter((x) => x.qty > 0 && x.unitPrice >= 0)
 
     if (!cleanItems.length) {
       return NextResponse.json({ error: 'Carrito inválido' }, { status: 400 })

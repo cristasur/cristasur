@@ -3,6 +3,7 @@
 // (y opcionalmente una variante ya seleccionada).
 import { useState } from 'react'
 import { useCart } from './CartProvider'
+import { availableUnits } from '@/lib/pricing'
 import Icon from './Icon'
 
 // Decide qué variante mandar al carrito cuando el cliente NO eligió ninguna
@@ -92,6 +93,13 @@ export default function AddToCartButton({
         variantLabel: effectiveVariant?.label || '',
         variantValue: effectiveVariant?.value || '',
         categoryIds,
+        // Tope de existencias de ESTA línea, para que el carrito no
+        // deje subir la cantidad por encima de lo que hay en bodega.
+        maxStock: availableUnits(
+          product,
+          effectiveVariant?.label,
+          effectiveVariant?.value
+        ),
       },
       qty
     )

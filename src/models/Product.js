@@ -26,45 +26,43 @@ import mongoose from 'mongoose'
 // Cada variante es una unidad vendible real: tiene su propio SKU, su stock,
 // su peso y sus medidas de caja. Eso es lo que permite cobrar con Mercado Pago
 // y cotizar envíos automáticamente sin intervención humana.
+// ============================================================
+// REGLA DE ORO DE LAS VARIANTES
+//
+// Una variante es la MISMA mercancía en otra presentación visual:
+// la hielera roja y la azul. Mismo precio, misma caja, mismo peso.
+//
+// Si cambia el PRECIO o cambia la CAJA, entonces NO es una variante:
+// es otro producto. Se crea aparte y se enlaza con el campo `line`
+// (así aparece como "Variante de la línea" en la ficha). Es lo que
+// hacen las tiendas grandes: el plato de 26 cm no es una variante
+// del de 28, es otro producto de la misma colección.
+//
+// POR QUÉ IMPORTA: antes existían aquí campos de precio y de caja
+// por variante. Nunca se leían —el cobro y el envío siempre usan los
+// del padre— así que el admin podía capturar $180 en una variante y
+// el sitio cobraba $90, o medidas de caja que el cotizador ignoraba.
+// Campos que mienten al operador. Se eliminaron.
+// ============================================================
 const VariantSchema = new mongoose.Schema(
   {
-    label: { type: String, required: true, trim: true, maxlength: 60 }, // "Tamaño", "Color"
-    value: { type: String, required: true, trim: true, maxlength: 60 }, // "10L", "Rojo"
+    label: { type: String, required: true, trim: true, maxlength: 60 }, // "Color"
+    value: { type: String, required: true, trim: true, maxlength: 60 }, // "Rojo"
+
+    // SKU propio de la variante. Si se deja vacío se usa el del padre.
     sku: { type: String, trim: true, uppercase: true, maxlength: 40 },
-    price: { type: Number, min: 0 },       // null → hereda del producto padre
-    comparePrice: { type: Number, min: 0 }, // null → hereda
-    // Precios de mayoreo y por-ciento por variante (opcionales).
-    // null = hereda del producto padre.
-    wholesalePrice:  { type: Number, min: 0, default: null },
-    wholesaleMinQty: { type: Number, min: 1, default: null },
-    // Tercer nivel ("precio por ciento") — típicamente desde 100 piezas.
-    hundredPrice:    { type: Number, min: 0, default: null },
-    hundredMinQty:   { type: Number, min: 1, default: null },
+
     // ---- Disponibilidad ----
-    // available: bandera simple "se puede comprar o no". Es lo que consulta el
-    //   front para habilitar el botón. Siempre confiable, incluso si no llevas
-    //   conteo exacto de piezas.
-    // stock: conteo real (opcional). null = no se lleva inventario de esta variante.
-    //   Cuando es un número, el checkout lo descuenta al confirmarse el pago.
+    // available: se puede comprar o no. Es lo que habilita el botón.
+    // stock: conteo real. null = no se lleva inventario de esta variante.
     available: { type: Boolean, default: true },
     stock: { type: Number, min: 0, default: null },
-
-    // ---- Logística por variante (REQUERIDO para cotizar envíos) ----
-    // Peso y medidas de la PIEZA suelta. Se muestran al cliente.
-    weight: { type: Number, min: 0, default: null }, // kg
-    // Caja lista para embarcar (pieza + embalaje). USO INTERNO.
-    // Si el producto se vende por múltiplos (qtyStep), estas medidas son las
-    // del paquete completo que sale del almacén, no las de una pieza.
-    pkgWeight: { type: Number, min: 0, default: null }, // kg
-    pkgLength: { type: Number, min: 0, default: null }, // cm
-    pkgWidth:  { type: Number, min: 0, default: null }, // cm
-    pkgHeight: { type: Number, min: 0, default: null }, // cm
 
     // Código de barras (EAN/UPC). Google Merchant lo pide como GTIN.
     barcode: { type: String, trim: true, default: '' },
 
-    image: { type: String, trim: true, default: '' },   // thumbnail (primera foto)
-    images: { type: [String], default: [] },             // galería completa de la variante
+    image: { type: String, trim: true, default: '' },   // miniatura
+    images: { type: [String], default: [] },            // galería de la variante
   },
   { _id: true }
 )

@@ -59,54 +59,38 @@ function sanitizeHighlights(input) {
 
 function sanitizeVariants(input) {
   if (!Array.isArray(input)) return []
+
+  // Ver la REGLA DE ORO en src/models/Product.js: una variante es la
+  // misma mercancía en otro color. Precio y caja se heredan SIEMPRE
+  // del padre, por eso aquí no se aceptan.
+  const vistas = new Set()
+
   return input
     .slice(0, MAX_VARIANTS)
     .map((v) => {
-      // Modelo simétrico: cada variante declara su dimensión (label) y su
-      // valor (value). Ambos obligatorios — sin ellos la variante no es vendible.
       const label = cleanSoft(v?.label, { max: 60 })
       const value = cleanSoft(v?.value, { max: 60 })
       if (!label || !value) return null
 
-      // Helper: '' / null / undefined → null; si no, número.
-      const num = (x) => (x === '' || x == null ? null : Number(x))
-      const okNum = (n, min = 0) => (Number.isFinite(n) && n >= min ? n : null)
+      // Sin deduplicar, dos variantes "Color/Rojo" colapsan en una sola
+      // línea de carrito y aparecen repetidas en el selector.
+      const clave = `${label.toLowerCase()}::${value.toLowerCase()}`
+      if (vistas.has(clave)) return null
+      vistas.add(clave)
 
-      const priceN    = num(v?.price)
-      const cmpN      = num(v?.comparePrice)
-      const stockN    = num(v?.stock)
-      const wsPriceN  = num(v?.wholesalePrice)
-      const wsMinQtyN = num(v?.wholesaleMinQty)
-      // El form manda bulkPrice/bulkMinQty; la BD los guarda como hundredPrice.
-      const hPriceN   = num(v?.hundredPrice ?? v?.bulkPrice)
-      const hMinQtyN  = num(v?.hundredMinQty ?? v?.bulkMinQty)
-
-      // Logística (requerida para cotizar envíos automáticamente)
-      const weightN    = num(v?.weight)
-      const pkgWeightN = num(v?.pkgWeight)
-      const pkgLenN    = num(v?.pkgLength)
-      const pkgWidN    = num(v?.pkgWidth)
-      const pkgHeiN    = num(v?.pkgHeight)
+      const stockRaw = v?.stock
+      const stock =
+        stockRaw === '' || stockRaw == null
+          ? null
+          : Math.max(0, Math.floor(Number(stockRaw) || 0))
 
       return {
         label,
         value,
         sku: v?.sku ? cleanString(v.sku, { max: 40 }) : undefined,
         barcode: cleanSoft(v?.barcode, { max: 40 }),
-        price:           okNum(priceN),
-        comparePrice:    okNum(cmpN),
-        wholesalePrice:  okNum(wsPriceN),
-        wholesaleMinQty: okNum(wsMinQtyN, 2),
-        hundredPrice:    okNum(hPriceN),
-        hundredMinQty:   okNum(hMinQtyN, 2),
-        // available: por defecto true; sólo false si viene explícitamente en false.
         available: v?.available === false ? false : true,
-        stock: okNum(stockN),
-        weight:    okNum(weightN),
-        pkgWeight: okNum(pkgWeightN),
-        pkgLength: okNum(pkgLenN),
-        pkgWidth:  okNum(pkgWidN),
-        pkgHeight: okNum(pkgHeiN),
+        stock,
         image: cleanSoft(v?.image, { max: 500 }),
         images: Array.isArray(v?.images)
           ? v.images.map((u) => cleanSoft(u, { max: 500 })).filter(Boolean).slice(0, 10)

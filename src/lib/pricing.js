@@ -171,3 +171,41 @@ export function stockState(product) {
   if (!Number.isFinite(s)) return { agotado: false, texto: 'Disponible', unidades: null }
   return { agotado: false, texto: `${s} en stock`, unidades: s }
 }
+
+/**
+ * Normaliza un valor de existencias.
+ *
+ * OJO: Number(null) es 0 y Number.isFinite(0) es true, así que la
+ * comprobación ingenua confunde "sin control de inventario" (null)
+ * con "cero piezas" y bloquea la venta de todo el catálogo.
+ * Devuelve null cuando no hay conteo, o un entero >= 0.
+ */
+export function toStock(v) {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : null
+}
+
+/**
+ * Unidades disponibles de una línea concreta (producto + variante).
+ *
+ * Devuelve null cuando no se lleva inventario (venta libre).
+ * Devuelve 0 cuando está agotada.
+ */
+export function availableUnits(product, variantLabel, variantValue) {
+  const variants = Array.isArray(product?.variants) ? product.variants : []
+
+  if (variants.length && variantValue) {
+    const norm = (x) => String(x || '').trim().toLowerCase()
+    const v = variants.find(
+      (x) =>
+        norm(x.value) === norm(variantValue) &&
+        (!variantLabel || norm(x.label) === norm(variantLabel))
+    )
+    if (!v) return 0                    // variante inexistente
+    if (v.available === false) return 0
+    return toStock(v.stock)
+  }
+
+  return toStock(product?.stock)
+}

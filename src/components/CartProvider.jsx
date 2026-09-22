@@ -9,6 +9,7 @@
 // el precio mayoreo automáticamente al subtotal y al mensaje de
 // WhatsApp.
 // ============================================================
+import { toStock } from '@/lib/pricing'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const STORAGE_KEY = 'cristasur:cart:v1'
@@ -38,6 +39,20 @@ export function useCart() {
 function norm(s) {
   return String(s || '').toLowerCase().trim()
 }
+// Tope de existencias de una línea. null = sin control de inventario.
+// Se guarda en la línea para que los botones +/− del carrito no puedan
+// subir por encima de lo que realmente hay en bodega.
+function capQty(qty, step, maxStock) {
+  const min = Math.max(step, 1)
+  // null/undefined = sin control de inventario → sin tope.
+  if (maxStock == null) return Math.max(min, qty)
+  const n = Number(maxStock)
+  if (!Number.isFinite(n)) return Math.max(min, qty)
+  const tope = Math.floor(n / min) * min
+  if (tope < min) return 0
+  return Math.min(Math.max(min, qty), tope)
+}
+
 function lineKey(productId, variantValue, variantLabel) {
   const v = norm(variantValue)
   if (!v) return String(productId)
@@ -180,9 +195,13 @@ export default function CartProvider({ children }) {
       const finalQty = Number.isFinite(requested) && requested > 0
         ? Math.max(step, Math.ceil(requested / step) * step)
         : step
+      const maxStock = toStock(item.maxStock)
+
       if (idx >= 0) {
         const next = [...xs]
-        next[idx] = { ...next[idx], qty: next[idx].qty + finalQty }
+        const tope = next[idx].maxStock ?? maxStock
+        const sumada = capQty(next[idx].qty + finalQty, step, tope)
+        next[idx] = { ...next[idx], qty: sumada || next[idx].qty, maxStock: tope }
         return next
       }
       return [
@@ -217,7 +236,8 @@ export default function CartProvider({ children }) {
           variantLabel: item.variantLabel || '',
           variantValue: item.variantValue || '',
           categoryIds: Array.isArray(item.categoryIds) ? item.categoryIds : [],
-          qty: finalQty,
+          maxStock,
+          qty: capQty(finalQty, step, maxStock) || finalQty,
         },
       ]
     })
@@ -243,7 +263,7 @@ export default function CartProvider({ children }) {
           if (qty < step) return { ...x, qty: 0 }
           // Snap al múltiplo más cercano
           const snapped = Math.max(step, Math.round(qty / step) * step)
-          return { ...x, qty: snapped }
+          return { ...x, qty: capQty(snapped, step, x.maxStock) }
         })
         .filter((x) => x.qty > 0)
     )

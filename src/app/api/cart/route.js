@@ -5,6 +5,7 @@
 // Sólo para clientes logueados (role = customer/admin/editor).
 // ============================================================
 import { NextResponse } from 'next/server'
+import { toStock } from '@/lib/pricing'
 import dbConnect from '@/lib/mongodb'
 import User from '@/models/User'
 import { getCurrentUser } from '@/lib/auth'
@@ -26,6 +27,9 @@ function sanitizeItems(arr) {
       qty: Math.max(1, Math.floor(Number(x?.qty) || 1)),
       qtyStep:
         x?.qtyStep == null ? null : Math.max(1, Math.floor(Number(x.qtyStep)) || 1),
+      // Tope de existencias de la línea. Se persiste para que al
+      // recuperar un carrito guardado los botones +/− sigan topados.
+      maxStock: toStock(x?.maxStock),
       price: Math.max(0, Number(x?.price) || 0),
       wholesalePrice:
         x?.wholesalePrice == null ? null : Number(x.wholesalePrice),

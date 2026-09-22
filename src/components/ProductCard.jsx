@@ -135,7 +135,7 @@ export default function ProductCard({ product, colorFilter }) {
         {/* Distintivos */}
         <div className="absolute top-3 left-3 flex flex-col items-start gap-1 pointer-events-none">
           {hasDiscount && (
-            <span className="bg-rose-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+            <span className="bg-brand-900 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-sm">
               -{discountPct}%
             </span>
           )}
@@ -231,7 +231,7 @@ export default function ProductCard({ product, colorFilter }) {
 
         {/* Etiqueta del nivel — reservada siempre */}
         <div
-          className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 leading-none"
+          className="mt-2 text-[11px] font-bold uppercase tracking-wide text-brand-700 leading-none"
           style={{ height: ROW_LABEL }}
         >
           {isWholesale ? tier.label : ''}
@@ -239,7 +239,7 @@ export default function ProductCard({ product, colorFilter }) {
 
         {/* Precio */}
         <div className="flex items-baseline gap-1.5 flex-wrap">
-          <span className={`text-[21px] font-black leading-none ${isWholesale ? 'text-rose-600' : 'text-slate-900'}`}>
+          <span className={`text-[21px] font-black leading-none ${isWholesale ? 'text-brand-900' : 'text-slate-900'}`}>
             {formatMXNShort(unit)}
           </span>
           <span className="text-[11px] text-slate-400">/ pieza</span>
@@ -330,7 +330,7 @@ export default function ProductCard({ product, colorFilter }) {
 
           <div className="text-slate-500 h-[17px] truncate">
             Total ({qty}) pz:{' '}
-            <strong className="text-rose-600 text-[13px]">{formatMXN(total)}</strong>
+            <strong className="text-brand-900 text-[13px]">{formatMXN(total)}</strong>
           </div>
         </div>
 

@@ -296,7 +296,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
                         </span>
                       )}
                     </td>
-                    <td className={`px-4 py-2.5 font-semibold ${off ? 'text-rose-600' : 'text-slate-900'}`}>
+                    <td className={`px-4 py-2.5 font-semibold ${off ? 'text-brand-900' : 'text-slate-900'}`}>
                       {formatMXNShort(t.price)} MXN
                       {off > 0 && <span className="ml-1.5 font-bold">(-{off}%)</span>}
                     </td>

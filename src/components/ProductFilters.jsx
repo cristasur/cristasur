@@ -267,7 +267,7 @@ export default function ProductFilters({
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.onSale} onChange={(e) => set('onSale', e.target.checked)} className="w-4 h-4" />
             <span className="inline-flex items-center gap-1">
-              <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-1.5 py-0.5 rounded">OFERTA</span>
+              <span className="bg-brand-100 text-brand-800 text-[10px] font-bold px-1.5 py-0.5 rounded">OFERTA</span>
               En oferta
             </span>
           </label>

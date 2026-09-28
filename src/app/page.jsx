@@ -12,6 +12,7 @@ import Category from '@/models/Category'
 import Product from '@/models/Product'
 import Banner from '@/models/Banner'
 import HomeSection from '@/models/HomeSection'
+import { parseInstagram, fechaInstagram, datosInstagram } from '@/lib/instagram'
 import Hero from '@/components/Hero'
 import Icon from '@/components/Icon'
 import RepeatOrder from '@/components/RepeatOrder'
@@ -118,6 +119,15 @@ async function loadSectionsData(sections, publicMatch) {
         )
       )
     }
+    if (s.type === 'reels') {
+      // Portada y texto de cada reel de Instagram (caché 6 h).
+      return Promise.all(
+        (s.items || []).map((it) => {
+          const ig = parseInstagram(it.href)
+          return ig ? datosInstagram(ig.code, ig.kind) : Promise.resolve({})
+        })
+      )
+    }
     return Promise.resolve(null)
   })
   const results = await Promise.all(tasks)
@@ -135,6 +145,26 @@ async function loadSectionsData(sections, publicMatch) {
           href: it.href || (it.category?.slug ? `/categoria/${it.category.slug}` : ''),
           products: thumbs[j] || [],
         })),
+      }
+    }
+    if (s.type === 'reels') {
+      const datos = results[i] || []
+      return {
+        ...s,
+        items: (s.items || []).map((it, j) => {
+          const ig = parseInstagram(it.href)
+          const d = datos[j] || {}
+          return {
+            ...it,
+            // Lo capturado a mano manda; si no, lo de Instagram.
+            image: it.image || d.cover || '',
+            text: it.text || d.caption || '',
+            igCode: ig?.code || '',
+            igKind: ig?.kind || '',
+            href: ig?.url || it.href || '',
+            date: ig ? fechaInstagram(ig.code) : null,
+          }
+        }),
       }
     }
     return s

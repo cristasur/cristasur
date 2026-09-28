@@ -28,7 +28,7 @@ const cspDirectives = {
     ? ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com']
     : ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
   'connect-src': ["'self'", 'https:', 'wss:', 'https://www.google-analytics.com', 'https://analytics.google.com', 'https://stats.g.doubleclick.net', 'https://*.sentry.io', 'https://*.ingest.sentry.io', 'https://*.ingest.us.sentry.io'],
-  'media-src': ["'self'", 'data:', 'blob:'],
+  'media-src': ["'self'", 'data:', 'blob:', 'https:'], // videos mp4 de la portada (Vercel Blob)
   'worker-src': ["'self'", 'blob:'],
   'manifest-src': ["'self'"],
   // Permite cargar iframes de redes sociales y mapas en el blog

@@ -62,7 +62,7 @@ function renderSection(s) {
       )
     }
     case 'reels': {
-      const reels = withImage(items)
+      const reels = items.filter((it) => it?.image || it?.videoUrl || it?.igCode)
       if (!reels.length) return null
       return (
         <SectionShell>

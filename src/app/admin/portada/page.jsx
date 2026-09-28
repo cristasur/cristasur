@@ -7,6 +7,7 @@
 // lo que significa cada campo en cada tipo de bloque.
 // ============================================================
 import { useState, useEffect, useRef } from 'react'
+import { parseInstagram } from '@/lib/instagram'
 
 const TIPOS = {
   carrusel:    'Carrusel de productos',
@@ -50,6 +51,8 @@ const NUEVOS = {
 
 // Tipos con items que llevan imagen (para avisar de las que faltan)
 const CON_IMAGEN = ['reels', 'colecciones', 'mosaico', 'promos']
+// En reels la portada es opcional: si hay link de Instagram se toma sola.
+const IMAGEN_OBLIGATORIA = ['colecciones', 'mosaico', 'promos']
 const MAX_ITEMS = { mosaico: 5, promos: 3 }
 
 const inputCls = 'w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-brand-400'
@@ -70,7 +73,7 @@ function catId(c) { return c && typeof c === 'object' ? c._id : c || '' }
 function nombreItem(tipo, i) {
   if (tipo === 'mosaico') return i === 0 ? 'Cuadro grande' : 'Cuadro chico'
   if (tipo === 'promos') return i < 2 ? 'Promoción' : 'Banner de marca (opcional)'
-  if (tipo === 'reels') return 'Video / foto'
+  if (tipo === 'reels') return 'Reel'
   if (tipo === 'colecciones') return 'Colección'
   if (tipo === 'porque') return 'Razón'
   if (tipo === 'resenas') return 'Reseña'
@@ -180,9 +183,19 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
 
   return (
     <div className="grid sm:grid-cols-2 gap-3">
+      {tipo === 'reels' && (
+        <div className="sm:col-span-2">
+          <Campo label="Link del reel o código de inserción de Instagram" value={item.href}
+            onChange={(v) => f('href')(parseInstagram(v)?.url || v)}
+            placeholder="https://www.instagram.com/reel/…  o pega el código <blockquote…>"
+            ayuda={parseInstagram(item.href)
+              ? '✓ Reel reconocido. La portada, el texto y la fecha se toman solos de Instagram.'
+              : 'En Instagram: ··· → Insertar → Copiar código, o Copiar enlace. Pega cualquiera de los dos.'} />
+        </div>
+      )}
       {img && (
         <div className="sm:col-span-2">
-          <CampoImagen label="Imagen" medida={medidaItem(tipo, i)} url={item.image} onUrl={f('image')} onError={onError} />
+          <CampoImagen label={tipo === 'reels' ? 'Portada propia (opcional)' : 'Imagen'} medida={medidaItem(tipo, i)} url={item.image} onUrl={f('image')} onError={onError} />
         </div>
       )}
 
@@ -206,12 +219,17 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
           {(tipo === 'mosaico' ? i === 0 : ['colecciones', 'promos'].includes(tipo)) && (
             <Campo label="Subtítulo" value={item.subtitle} onChange={f('subtitle')} />
           )}
-          {tipo !== 'porque' && (
-            <Campo label="Enlace" value={item.href} onChange={f('href')}
-              placeholder={tipo === 'reels' ? 'https://www.instagram.com/reel/…' : '/productos?q=…'} />
+          {tipo !== 'porque' && tipo !== 'reels' && (
+            <Campo label="Enlace" value={item.href} onChange={f('href')} placeholder="/productos?q=…" />
           )}
           {tipo === 'reels' && (
-            <Campo label="Video MP4 (opcional)" value={item.videoUrl} onChange={f('videoUrl')} placeholder="https://…/video.mp4" />
+            <>
+              <Campo label="Video MP4 propio (opcional)" value={item.videoUrl} onChange={f('videoUrl')} placeholder="https://…/video.mp4" />
+              <div className="sm:col-span-2">
+                <Campo label="Texto (opcional)" value={item.text} onChange={f('text')} area
+                  ayuda="Si lo dejas vacío se usa el texto del reel en Instagram." />
+              </div>
+            </>
           )}
           {tipo === 'promos' && i < 2 && (
             <>
@@ -448,7 +466,7 @@ function resumen(s) {
   }
   const n = s.items?.length || 0
   const partes = [`${n} ${n === 1 ? 'elemento' : 'elementos'}`]
-  if (CON_IMAGEN.includes(s.type)) {
+  if (IMAGEN_OBLIGATORIA.includes(s.type)) {
     const sinFoto = (s.items || []).filter((it) => !it.image).length
     if (sinFoto) partes.push(`${sinFoto} sin imagen`)
   }

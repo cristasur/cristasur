@@ -2,41 +2,187 @@
 // ============================================================
 // src/components/home/ReelsStrip.jsx
 // "Contenido reciente": fila horizontal de cuadros verticales
-// (4:5) con los reels / publicaciones de redes.
+// (4:5) con los reels de Instagram.
 //
-// - Si el cuadro trae videoUrl (mp4) se reproduce en silencio y en
-//   bucle, con la imagen como portada. preload="none" para no gastar
-//   datos hasta que el navegador lo necesite.
-// - Si no, solo la imagen.
-// - Todo el cuadro es link al reel (pestaña nueva si es externo).
+// - Cuadro: video mp4 propio (si hay) o la portada del reel.
+// - Al darle clic se abre una ventana como la de Instagram:
+//   video a la izquierda y a la derecha la cuenta, el texto del
+//   reel, la fecha y "Ver en Instagram". Flechas para pasar al
+//   siguiente, Esc para cerrar.
+// - El video de Instagram se muestra con su reproductor oficial
+//   (iframe de inserción), recortando su encabezado.
 // ============================================================
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import Icon from '@/components/Icon'
 
-const isExternal = (href = '') => /^https?:\/\//i.test(href)
+const CUENTA = 'cristasurmx'
+const PERFIL = `https://www.instagram.com/${CUENTA}/`
 
-function TileLink({ href, label, children }) {
-  const cls = 'group relative block aspect-[4/5] rounded-2xl overflow-hidden bg-slate-100'
-  if (!href) return <div className={cls}>{children}</div>
-  if (isExternal(href)) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label} className={cls}>
-        {children}
-      </a>
-    )
-  }
+function fechaLarga(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const mismoAño = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleDateString('es-MX', {
+    day: 'numeric', month: 'long', ...(mismoAño ? {} : { year: 'numeric' }), timeZone: 'America/Merida',
+  })
+}
+
+// Texto del reel con links, hashtags y teléfonos clicables.
+function TextoReel({ texto }) {
+  if (!texto) return null
+  const partes = texto.split(/(https?:\/\/[^\s]+|#[\p{L}\d_]+)/gu)
   return (
-    <Link href={href} aria-label={label} className={cls}>
-      {children}
-    </Link>
+    <p className="whitespace-pre-line text-[15px] leading-relaxed text-slate-700 break-words">
+      {partes.map((p, i) => {
+        if (/^https?:\/\//.test(p)) {
+          return <a key={i} href={p} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline break-all">{p}</a>
+        }
+        if (/^#/.test(p)) {
+          return (
+            <a key={i} href={`https://www.instagram.com/explore/tags/${encodeURIComponent(p.slice(1))}/`}
+              target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">{p}</a>
+          )
+        }
+        return <span key={i}>{p}</span>
+      })}
+    </p>
   )
 }
 
+function IconoInstagram({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+// ── Ventana del reel ───────────────────────────────────────
+function VisorReel({ items, index, onClose, onGo }) {
+  const it = items[index]
+  const hayVarios = items.length > 1
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowRight' && hayVarios) onGo(1)
+      if (e.key === 'ArrowLeft' && hayVarios) onGo(-1)
+    }
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose, onGo, hayVarios])
+
+  if (!it) return null
+  const fecha = fechaLarga(it.date)
+  const embed = it.igCode ? `https://www.instagram.com/${it.igKind || 'reel'}/${it.igCode}/embed/` : ''
+
+  const flecha =
+    'hidden md:grid absolute top-1/2 -translate-y-1/2 z-20 place-items-center w-12 h-12 rounded-full bg-white/90 text-slate-900 shadow-lg hover:bg-white'
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-center justify-center p-0 md:p-6"
+      role="dialog" aria-modal="true" aria-label={it.title || 'Publicación de Instagram'} onClick={onClose}>
+      {hayVarios && (
+        <>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onGo(-1) }} aria-label="Anterior" className={`${flecha} left-4 lg:left-8`}>
+            <Icon name="chevron" className="w-5 h-5 rotate-180" />
+          </button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onGo(1) }} aria-label="Siguiente" className={`${flecha} right-4 lg:right-8`}>
+            <Icon name="chevron" className="w-5 h-5" />
+          </button>
+        </>
+      )}
+
+      <div onClick={(e) => e.stopPropagation()}
+        className="relative w-full h-full md:h-auto md:max-h-[90vh] md:max-w-5xl bg-white md:rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row">
+        {/* Cerrar */}
+        <button type="button" onClick={onClose} aria-label="Cerrar"
+          className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-black/50 md:bg-slate-100 text-white md:text-slate-700 grid place-items-center hover:bg-black/70 md:hover:bg-slate-200 text-2xl leading-none">
+          ×
+        </button>
+
+        {/* Video */}
+        <div className="relative bg-black shrink-0 w-full md:w-[420px] aspect-[4/5] md:aspect-auto md:h-[min(90vh,525px)] overflow-hidden">
+          {it.videoUrl ? (
+            <video key={it.videoUrl} src={it.videoUrl} poster={it.image || undefined} controls autoPlay playsInline
+              className="absolute inset-0 w-full h-full object-contain bg-black" />
+          ) : embed ? (
+            // Se recorta el encabezado de 54 px del reproductor de Instagram.
+            <iframe key={embed} src={embed} title={it.title || 'Reel de Instagram'} loading="lazy"
+              allow="autoplay; encrypted-media; picture-in-picture; clipboard-write" allowFullScreen
+              scrolling="no"
+              className="absolute left-0 w-full border-0 bg-black"
+              style={{ top: -54, height: 'calc(100% + 54px + 160px)' }} />
+          ) : (
+            <img src={it.image} alt={it.title || ''} className="absolute inset-0 w-full h-full object-cover" />
+          )}
+        </div>
+
+        {/* Texto */}
+        <div className="flex-1 min-w-0 flex flex-col min-h-0 md:h-[min(90vh,525px)]">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 pr-16">
+            <a href={PERFIL} target="_blank" rel="noopener noreferrer"
+              className="w-11 h-11 shrink-0 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600">
+              <span className="block w-full h-full rounded-full bg-white p-1">
+                <img src="/icon-symbol.png" alt="CRISTASUR" className="w-full h-full object-contain rounded-full" />
+              </span>
+            </a>
+            <div className="min-w-0">
+              <a href={PERFIL} target="_blank" rel="noopener noreferrer" className="font-bold text-slate-900 hover:underline">{CUENTA}</a>
+              <div className="text-xs text-slate-500">Mérida · Tanil · Bacalar</div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-5 py-5 min-h-0">
+            {it.title && <h3 className="font-bold text-slate-900 mb-2">{it.title}</h3>}
+            {it.text
+              ? <TextoReel texto={it.text} />
+              : <p className="text-slate-400 text-sm">Míralo completo en Instagram.</p>}
+          </div>
+
+          <div className="border-t border-slate-100 px-5 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm text-slate-500">{fecha}</span>
+            <div className="flex items-center gap-2">
+              {hayVarios && (
+                <span className="md:hidden flex gap-1">
+                  <button type="button" onClick={() => onGo(-1)} aria-label="Anterior"
+                    className="w-9 h-9 rounded-full border border-slate-200 grid place-items-center">
+                    <Icon name="chevron" className="w-4 h-4 rotate-180" />
+                  </button>
+                  <button type="button" onClick={() => onGo(1)} aria-label="Siguiente"
+                    className="w-9 h-9 rounded-full border border-slate-200 grid place-items-center">
+                    <Icon name="chevron" className="w-4 h-4" />
+                  </button>
+                </span>
+              )}
+              {it.href && (
+                <a href={it.href} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700">
+                  <IconoInstagram className="w-4 h-4" /> Ver en Instagram
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Fila de reels ──────────────────────────────────────────
 export default function ReelsStrip({ items = [] }) {
   const trackRef = useRef(null)
   const [canPrev, setCanPrev] = useState(false)
   const [canNext, setCanNext] = useState(false)
+  const [abierto, setAbierto] = useState(-1)
 
   const update = useCallback(() => {
     const el = trackRef.current
@@ -56,6 +202,12 @@ export default function ReelsStrip({ items = [] }) {
       window.removeEventListener('resize', update)
     }
   }, [update, items.length])
+
+  const cerrar = useCallback(() => setAbierto(-1), [])
+  const pasar = useCallback(
+    (dir) => setAbierto((i) => (i < 0 ? i : (i + dir + items.length) % items.length)),
+    [items.length]
+  )
 
   function go(dir) {
     const el = trackRef.current
@@ -81,43 +233,45 @@ export default function ReelsStrip({ items = [] }) {
               key={it._id || i}
               className="snap-start shrink-0 w-[calc((100%-0.75rem)/2.2)] sm:w-[calc((100%-2rem)/3.2)] md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)]"
             >
-              <TileLink href={it.href} label={label}>
+              <button type="button" onClick={() => setAbierto(i)} aria-label={`Ver: ${label}`}
+                className="group relative block w-full aspect-[4/5] rounded-2xl overflow-hidden bg-slate-100 text-left focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300">
                 {it.videoUrl ? (
                   <video
                     src={it.videoUrl}
-                    poster={it.image}
-                    muted
-                    loop
-                    playsInline
-                    autoPlay
-                    preload="none"
-                    aria-label={label}
+                    poster={it.image || undefined}
+                    muted loop playsInline autoPlay preload="metadata"
+                    aria-hidden="true"
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                   />
-                ) : (
+                ) : it.image ? (
                   <img
                     src={it.image}
                     alt={label}
                     loading="lazy"
+                    referrerPolicy="no-referrer"
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                   />
+                ) : (
+                  // Sin portada: tarjeta de marca con el inicio del texto.
+                  <div className="absolute inset-0 bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-4 flex flex-col justify-end text-white">
+                    <IconoInstagram className="w-7 h-7 mb-auto opacity-90" />
+                    <p className="text-sm font-semibold leading-snug line-clamp-4">{(it.text || '').split('\n')[0]}</p>
+                  </div>
                 )}
 
-                {/* Degradado + título */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-black/0 pointer-events-none" />
                 {it.title && (
                   <div className="absolute inset-x-0 bottom-0 p-3 text-white text-sm font-bold leading-snug line-clamp-2 pointer-events-none">
                     {it.title}
                   </div>
                 )}
 
-                {/* Ícono de play */}
-                <span className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/85 backdrop-blur text-slate-900 grid place-items-center shadow pointer-events-none">
+                <span className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/85 backdrop-blur text-slate-900 grid place-items-center shadow pointer-events-none transition-transform group-hover:scale-110">
                   <svg viewBox="0 0 24 24" className="w-4 h-4 translate-x-[1px]" fill="currentColor" aria-hidden="true">
                     <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
                   </svg>
                 </span>
-              </TileLink>
+              </button>
             </div>
           )
         })}
@@ -133,6 +287,8 @@ export default function ReelsStrip({ items = [] }) {
           <Icon name="chevron" className="w-5 h-5" />
         </button>
       )}
+
+      {abierto >= 0 && <VisorReel items={items} index={abierto} onClose={cerrar} onGo={pasar} />}
     </div>
   )
 }

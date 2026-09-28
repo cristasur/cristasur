@@ -1,0 +1,619 @@
+'use client'
+// ============================================================
+// /admin/portada — Bloques de la portada de la tienda
+//
+// Cada bloque (HomeSection) se puede agregar, ordenar, prender /
+// apagar, editar y eliminar. Ver src/models/HomeSection.js para
+// lo que significa cada campo en cada tipo de bloque.
+// ============================================================
+import { useState, useEffect, useRef } from 'react'
+
+const TIPOS = {
+  carrusel:    'Carrusel de productos',
+  reels:       'Contenido reciente',
+  colecciones: 'Colecciones destacadas',
+  mosaico:     'Mosaico',
+  promos:      'Promociones',
+  porque:      'Por qué elegirnos',
+  resenas:     'Reseñas',
+}
+
+const FUENTES = {
+  categoria:   'Por categoría',
+  masVendidos: 'Más vendidos',
+  destacados:  'Destacados',
+  nuevos:      'Nuevos',
+}
+
+// Valores iniciales al agregar un bloque nuevo (se crea apagado si necesita fotos)
+const NUEVOS = {
+  carrusel:    { title: 'Más vendidos', source: 'masVendidos', limit: 12, active: true },
+  reels:       { title: 'Contenido reciente', active: false, items: [] },
+  colecciones: { title: 'Colecciones destacadas', active: false, items: [] },
+  mosaico:     { title: '', active: false, items: [] },
+  promos:      { title: '', active: false, items: [], data: { textoTitulo: '', texto: '', boton: '', botonHref: '' } },
+  porque:      { title: '¿Por qué elegir CRISTASUR?', subtitle: 'Nuestra promesa', active: true, items: [] },
+  resenas:     { title: 'Lo que dicen nuestros clientes', active: true, items: [], data: { rating: 4.8, reviewsUrl: '', writeUrl: '' } },
+}
+
+// Tipos con items que llevan imagen (para avisar de las que faltan)
+const CON_IMAGEN = ['reels', 'colecciones', 'mosaico', 'promos']
+const MAX_ITEMS = { mosaico: 5, promos: 3 }
+
+const inputCls = 'w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-brand-400'
+
+async function subirImagen(file) {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('folder', 'portada')
+  const res = await fetch('/api/upload', { method: 'POST', body: fd })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Error al subir')
+  return data.url
+}
+
+function catId(c) { return c && typeof c === 'object' ? c._id : c || '' }
+
+/** Nombre del cuadro según el tipo y la posición. */
+function nombreItem(tipo, i) {
+  if (tipo === 'mosaico') return i === 0 ? 'Cuadro grande' : 'Cuadro chico'
+  if (tipo === 'promos') return i < 2 ? 'Promoción' : 'Banner de marca (opcional)'
+  if (tipo === 'reels') return 'Video / foto'
+  if (tipo === 'colecciones') return 'Colección'
+  if (tipo === 'porque') return 'Razón'
+  if (tipo === 'resenas') return 'Reseña'
+  return 'Elemento'
+}
+
+/** Medida recomendada de la imagen del item. */
+function medidaItem(tipo, i) {
+  if (tipo === 'reels') return '1080 × 1350 px (vertical)'
+  if (tipo === 'colecciones') return '1200 × 1200 px'
+  if (tipo === 'mosaico') return i === 0 ? '900 × 1000 px' : '700 × 500 px'
+  if (tipo === 'promos') return i < 2 ? '1200 × 600 px' : '1200 × 500 px'
+  return ''
+}
+
+// ── Campo de texto con etiqueta ─────────────────────────────
+function Campo({ label, value, onChange, placeholder, area, type = 'text', ayuda }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slate-600 mb-1">{label}</label>
+      {area ? (
+        <textarea rows={3} value={value ?? ''} placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)} className={inputCls} />
+      ) : (
+        <input type={type} value={value ?? ''} placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)} className={inputCls} />
+      )}
+      {ayuda && <p className="text-[11px] text-slate-400 mt-1">{ayuda}</p>}
+    </div>
+  )
+}
+
+// ── Imagen: subir archivo o pegar URL ───────────────────────
+function CampoImagen({ label, medida, url, onUrl, onError }) {
+  const ref = useRef()
+  const [subiendo, setSubiendo] = useState(false)
+
+  async function alElegir(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setSubiendo(true)
+    try {
+      onUrl(await subirImagen(file))
+    } catch (err) {
+      onError(err.message)
+    } finally {
+      setSubiendo(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-slate-600 mb-1">
+        {label} {medida && <span className="font-normal text-slate-400">· {medida}</span>}
+      </label>
+      <div className="flex gap-3 items-start">
+        <button type="button" onClick={() => ref.current?.click()}
+          className="relative shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 bg-slate-50 overflow-hidden flex items-center justify-center text-[11px] text-slate-400 text-center">
+          {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <span className="px-1">Subir imagen</span>}
+          {subiendo && (
+            <span className="absolute inset-0 bg-white/80 flex items-center justify-center text-xs font-semibold text-brand-600">Subiendo…</span>
+          )}
+        </button>
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <input type="text" value={url || ''} onChange={(e) => onUrl(e.target.value)}
+            placeholder="…o pega aquí la URL de la imagen" className={inputCls} />
+          <div className="flex gap-2">
+            <button type="button" onClick={() => ref.current?.click()}
+              className="text-xs font-semibold text-brand-700 hover:underline">
+              {url ? 'Cambiar imagen' : 'Subir desde la compu'}
+            </button>
+            {url && (
+              <button type="button" onClick={() => onUrl('')} className="text-xs text-red-600 hover:underline">Quitar</button>
+            )}
+          </div>
+        </div>
+      </div>
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={alElegir} />
+    </div>
+  )
+}
+
+// ── Selector de categoría (subcategorías con sangría) ───────
+function SelectCategoria({ categorias, value, onChange, vacio = 'Sin categoría' }) {
+  const padres = categorias.filter((c) => !c.parent)
+  const hijos = (id) => categorias.filter((c) => String(catId(c.parent)) === String(id))
+  const huerfanas = categorias.filter((c) => c.parent && !categorias.some((p) => String(p._id) === String(catId(c.parent))))
+  return (
+    <select value={value || ''} onChange={(e) => onChange(e.target.value || null)} className={inputCls}>
+      <option value="">{vacio}</option>
+      {padres.map((p) => [
+        <option key={p._id} value={p._id}>{p.name}{p.active === false ? ' (inactiva)' : ''}</option>,
+        ...hijos(p._id).map((h) => (
+          <option key={h._id} value={h._id}>{'   — '}{h.name}{h.active === false ? ' (inactiva)' : ''}</option>
+        )),
+      ])}
+      {huerfanas.map((h) => <option key={h._id} value={h._id}>— {h.name}</option>)}
+    </select>
+  )
+}
+
+// ── Editor de un item según el tipo ─────────────────────────
+function EditorItem({ tipo, i, item, set, categorias, onError }) {
+  const f = (k) => (v) => set({ ...item, [k]: v })
+  const img = CON_IMAGEN.includes(tipo)
+
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      {img && (
+        <div className="sm:col-span-2">
+          <CampoImagen label="Imagen" medida={medidaItem(tipo, i)} url={item.image} onUrl={f('image')} onError={onError} />
+        </div>
+      )}
+
+      {tipo === 'resenas' ? (
+        <>
+          <Campo label="Nombre" value={item.author} onChange={f('author')} placeholder="Ej: María G." />
+          <Campo label="Ciudad" value={item.place} onChange={f('place')} placeholder="Ej: Mérida" />
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Estrellas</label>
+            <select value={item.stars || 5} onChange={(e) => f('stars')(Number(e.target.value))} className={inputCls}>
+              {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{'★'.repeat(n)} ({n})</option>)}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <Campo label="Reseña" value={item.text} onChange={f('text')} area />
+          </div>
+        </>
+      ) : (
+        <>
+          <Campo label="Título" value={item.title} onChange={f('title')} />
+          {(tipo === 'mosaico' ? i === 0 : ['colecciones', 'promos'].includes(tipo)) && (
+            <Campo label="Subtítulo" value={item.subtitle} onChange={f('subtitle')} />
+          )}
+          {tipo !== 'porque' && (
+            <Campo label="Enlace" value={item.href} onChange={f('href')}
+              placeholder={tipo === 'reels' ? 'https://www.instagram.com/reel/…' : '/productos?q=…'} />
+          )}
+          {tipo === 'reels' && (
+            <Campo label="Video MP4 (opcional)" value={item.videoUrl} onChange={f('videoUrl')} placeholder="https://…/video.mp4" />
+          )}
+          {tipo === 'promos' && i < 2 && (
+            <>
+              <Campo label="Sello (descuento)" value={item.badge} onChange={f('badge')} placeholder="15%" />
+              <Campo label="Texto del sello" value={item.badgeLabel} onChange={f('badgeLabel')} placeholder="Ahora" />
+            </>
+          )}
+          {tipo === 'colecciones' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Categoría (sus productos salen como miniaturas)</label>
+              <SelectCategoria categorias={categorias} value={catId(item.category)} onChange={f('category')} />
+            </div>
+          )}
+          {(tipo === 'porque' || tipo === 'colecciones' || (tipo === 'mosaico' && i === 0)) && (
+            <div className="sm:col-span-2">
+              <Campo label="Texto" value={item.text} onChange={f('text')} area />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Editor completo de un bloque (panel modal) ──────────────
+function EditorSeccion({ inicial, categorias, onCerrar, onGuardado }) {
+  const [s, setS] = useState(() => ({
+    ...inicial,
+    category: catId(inicial.category) || null,
+    items: (inicial.items || []).map((it) => ({ ...it, category: catId(it.category) || null })),
+    data: { ...(inicial.data || {}) },
+  }))
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+  const [ok, setOk] = useState('')
+
+  const tipo = s.type
+  const set = (k) => (v) => setS((p) => ({ ...p, [k]: v }))
+  const setData = (k) => (v) => setS((p) => ({ ...p, data: { ...p.data, [k]: v } }))
+  const max = MAX_ITEMS[tipo] || 50
+
+  function setItem(i, it) { setS((p) => ({ ...p, items: p.items.map((x, j) => (j === i ? it : x)) })) }
+  function agregarItem() {
+    if (s.items.length >= max) return
+    setS((p) => ({ ...p, items: [...p.items, { title: '', stars: 5 }] }))
+  }
+  function quitarItem(i) {
+    if (!confirm('¿Quitar este elemento?')) return
+    setS((p) => ({ ...p, items: p.items.filter((_, j) => j !== i) }))
+  }
+  function moverItem(i, d) {
+    const j = i + d
+    if (j < 0 || j >= s.items.length) return
+    setS((p) => {
+      const items = [...p.items]
+      ;[items[i], items[j]] = [items[j], items[i]]
+      return { ...p, items }
+    })
+  }
+
+  async function guardar() {
+    setGuardando(true)
+    setError('')
+    setOk('')
+    try {
+      const body = {
+        title: s.title, subtitle: s.subtitle, href: s.href, image: s.image, active: s.active,
+        items: s.items, data: s.data,
+      }
+      if (tipo === 'carrusel') {
+        body.source = s.source
+        body.category = s.source === 'categoria' ? s.category || null : null
+        body.limit = s.limit
+        if (s.source === 'categoria' && !s.category) throw new Error('Elige la categoría del carrusel')
+      }
+      const res = await fetch(`/api/home-sections/${s._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al guardar')
+      setOk('Cambios guardados ✓')
+      onGuardado()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-start justify-center overflow-y-auto p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl my-8">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div>
+            <div className="text-xs font-semibold text-brand-700 uppercase tracking-wide">{TIPOS[tipo]}</div>
+            <h2 className="font-bold text-slate-900">{s.title || 'Sin título'}</h2>
+          </div>
+          <button onClick={onCerrar} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {error && <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>}
+
+          {/* Comunes */}
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Campo label="Título" value={s.title} onChange={set('title')} />
+            <Campo label="Subtítulo" value={s.subtitle} onChange={set('subtitle')} />
+            <Campo label='Enlace "Ver todos" (opcional)' value={s.href} onChange={set('href')} placeholder="/productos" />
+            <label className="flex items-center gap-2 text-sm text-slate-700 mt-5">
+              <input type="checkbox" checked={!!s.active} onChange={(e) => set('active')(e.target.checked)} className="w-4 h-4 accent-brand-600" />
+              Mostrar en la tienda (activo)
+            </label>
+          </div>
+
+          {/* Carrusel */}
+          {tipo === 'carrusel' && (
+            <div className="grid sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Productos a mostrar</label>
+                <select value={s.source} onChange={(e) => set('source')(e.target.value)} className={inputCls}>
+                  {Object.entries(FUENTES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              {s.source === 'categoria' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Categoría o subcategoría</label>
+                  <SelectCategoria categorias={categorias} value={s.category} onChange={set('category')} vacio="Elige una…" />
+                </div>
+              )}
+              <Campo label="Cuántos productos (4 a 24)" type="number" value={s.limit}
+                onChange={(v) => set('limit')(v === '' ? '' : Number(v))} />
+            </div>
+          )}
+
+          {/* Porque: foto del equipo */}
+          {tipo === 'porque' && (
+            <CampoImagen label="Foto del equipo" medida="1200 × 900 px" url={s.image} onUrl={set('image')} onError={setError} />
+          )}
+
+          {/* Promos: texto junto al banner de marca */}
+          {tipo === 'promos' && (
+            <div className="grid sm:grid-cols-2 gap-3 p-4 rounded-xl bg-slate-50">
+              <div className="sm:col-span-2 text-xs font-semibold text-slate-500 uppercase">Texto junto al banner de marca</div>
+              <Campo label="Título del texto" value={s.data.textoTitulo} onChange={setData('textoTitulo')} />
+              <Campo label="Texto del botón" value={s.data.boton} onChange={setData('boton')} placeholder="Conócenos" />
+              <div className="sm:col-span-2">
+                <Campo label="Texto" value={s.data.texto} onChange={setData('texto')} area />
+              </div>
+              <Campo label="Enlace del botón" value={s.data.botonHref} onChange={setData('botonHref')} placeholder="/quienes-somos" />
+            </div>
+          )}
+
+          {/* Reseñas: calificación y links */}
+          {tipo === 'resenas' && (
+            <div className="grid sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50">
+              <Campo label="Calificación promedio" type="number" value={s.data.rating}
+                onChange={(v) => setData('rating')(v === '' ? '' : Number(v))} ayuda="Ej. 4.8" />
+              <Campo label="Link a reseñas en Google" value={s.data.reviewsUrl} onChange={setData('reviewsUrl')} placeholder="https://g.page/…" />
+              <Campo label='Link "Escribir reseña"' value={s.data.writeUrl} onChange={setData('writeUrl')} placeholder="https://g.page/…/review" />
+              {s.data.ejemplo && (
+                <label className="sm:col-span-3 flex items-center gap-2 text-sm text-amber-800 bg-amber-50 rounded-lg p-2">
+                  <input type="checkbox" checked={!!s.data.ejemplo} onChange={(e) => setData('ejemplo')(e.target.checked)} className="w-4 h-4" />
+                  Las reseñas son de ejemplo, reemplázalas con reseñas reales y luego desmarca esta casilla.
+                </label>
+              )}
+            </div>
+          )}
+
+          {/* Items */}
+          {tipo !== 'carrusel' && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Elementos <span className="text-slate-400 font-normal">({s.items.length}{MAX_ITEMS[tipo] ? ` de ${max}` : ''})</span>
+                </h3>
+                <button type="button" onClick={agregarItem} disabled={s.items.length >= max}
+                  className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold disabled:opacity-40">
+                  + Agregar
+                </button>
+              </div>
+              {s.items.length === 0 && (
+                <div className="p-4 rounded-xl border border-dashed border-slate-200 text-sm text-slate-400 text-center">
+                  Todavía no hay elementos. Usa “+ Agregar”.
+                </div>
+              )}
+              <div className="space-y-3">
+                {s.items.map((it, i) => (
+                  <div key={it._id || i} className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-bold text-slate-700">
+                        {i + 1}. {nombreItem(tipo, i)}
+                        {tipo === 'resenas' && s.data.ejemplo && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">ejemplo, reemplázala</span>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => moverItem(i, -1)} disabled={i === 0}
+                          className="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30" title="Subir">↑</button>
+                        <button type="button" onClick={() => moverItem(i, 1)} disabled={i === s.items.length - 1}
+                          className="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30" title="Bajar">↓</button>
+                        <button type="button" onClick={() => quitarItem(i)}
+                          className="px-2 h-7 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs">Quitar</button>
+                      </div>
+                    </div>
+                    <EditorItem tipo={tipo} i={i} item={it} set={(v) => setItem(i, v)} categorias={categorias} onError={setError} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+          {ok && <span className="text-sm text-green-700 mr-auto">{ok}</span>}
+          {error && <span className="text-sm text-red-700 mr-auto truncate">{error}</span>}
+          <button onClick={onCerrar} className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">Cerrar</button>
+          <button onClick={guardar} disabled={guardando}
+            className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-50">
+            {guardando ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Resumen corto de un bloque para la lista ────────────────
+function resumen(s) {
+  if (s.type === 'carrusel') {
+    const fuente = s.source === 'categoria' ? (s.category?.name || 'Sin categoría elegida') : FUENTES[s.source]
+    return `${fuente} · ${s.limit || 12} productos`
+  }
+  const n = s.items?.length || 0
+  const partes = [`${n} ${n === 1 ? 'elemento' : 'elementos'}`]
+  if (CON_IMAGEN.includes(s.type)) {
+    const sinFoto = (s.items || []).filter((it) => !it.image).length
+    if (sinFoto) partes.push(`${sinFoto} sin imagen`)
+  }
+  if (s.type === 'porque' && !s.image) partes.push('sin foto del equipo')
+  if (s.type === 'resenas' && s.data?.ejemplo) partes.push('reseñas de ejemplo, reemplázalas')
+  return partes.join(' · ')
+}
+
+export default function AdminPortadaPage() {
+  const [secciones, setSecciones] = useState([])
+  const [categorias, setCategorias] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [aviso, setAviso] = useState('')
+  const [editando, setEditando] = useState(null)
+  const [menu, setMenu] = useState(false)
+  const [ocupado, setOcupado] = useState(false)
+
+  async function load() {
+    try {
+      const res = await fetch('/api/home-sections?all=1', { cache: 'no-store' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al cargar')
+      setSecciones(data.sections || [])
+    } catch (err) {
+      setError(err.message || 'Error al cargar la portada')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+    fetch('/api/categories?all=1')
+      .then((r) => r.json())
+      .then((d) => setCategorias(d.categories || []))
+      .catch(() => {})
+  }, [])
+
+  async function pedir(url, opts, exito) {
+    setError('')
+    setAviso('')
+    setOcupado(true)
+    try {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' },
+        ...opts,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Ocurrió un error')
+      if (exito) setAviso(exito)
+      await load()
+      return data
+    } catch (err) {
+      setError(err.message)
+      return null
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  function crearSugerida() {
+    pedir('/api/home-sections', { method: 'POST', body: JSON.stringify({ seed: true }) },
+      'Portada sugerida creada. Sube las fotos de los bloques apagados y actívalos.')
+  }
+
+  async function agregar(tipo) {
+    setMenu(false)
+    const data = await pedir('/api/home-sections', {
+      method: 'POST',
+      body: JSON.stringify({ type: tipo, ...NUEVOS[tipo] }),
+    }, `Bloque "${TIPOS[tipo]}" agregado al final.`)
+    if (data?.section) setEditando(data.section)
+  }
+
+  function mover(i, d) {
+    const j = i + d
+    if (j < 0 || j >= secciones.length) return
+    const lista = [...secciones]
+    ;[lista[i], lista[j]] = [lista[j], lista[i]]
+    setSecciones(lista)
+    pedir('/api/home-sections', { method: 'PUT', body: JSON.stringify({ order: lista.map((s) => s._id) }) })
+  }
+
+  function alternar(s) {
+    pedir(`/api/home-sections/${s._id}`, { method: 'PUT', body: JSON.stringify({ active: !s.active }) },
+      s.active ? 'Bloque desactivado.' : 'Bloque activado.')
+  }
+
+  function eliminar(s) {
+    if (!confirm(`¿Eliminar el bloque "${s.title || TIPOS[s.type]}"? Esta acción no se puede deshacer.`)) return
+    pedir(`/api/home-sections/${s._id}`, { method: 'DELETE' }, 'Bloque eliminado.')
+  }
+
+  return (
+    <div>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">Portada de la tienda</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Los bloques que se ven en la página de inicio, en este orden. Muévelos con las flechas, apágalos mientras no tengan fotos y edita su contenido.
+          </p>
+        </div>
+        <div className="relative">
+          <button onClick={() => setMenu((m) => !m)}
+            className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">
+            + Agregar bloque
+          </button>
+          {menu && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-20">
+              {Object.entries(TIPOS).map(([k, v]) => (
+                <button key={k} onClick={() => agregar(k)}
+                  className="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-800">
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {error && <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>}
+      {aviso && <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">{aviso}</div>}
+
+      {loading ? (
+        <div className="text-slate-400 text-sm">Cargando…</div>
+      ) : secciones.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-8 text-center">
+          <h2 className="font-bold text-slate-900 text-lg">La portada todavía no tiene bloques</h2>
+          <p className="text-slate-500 text-sm mt-2 max-w-xl mx-auto">
+            Podemos crear una portada sugerida: carrusel de más vendidos, contenido reciente, colecciones, mosaico,
+            promociones, “¿Por qué elegir CRISTASUR?” y reseñas. Los bloques que necesitan fotos se crean apagados
+            para que la tienda no muestre cuadros vacíos; súbelas y actívalos cuando estén listos.
+          </p>
+          <button onClick={crearSugerida} disabled={ocupado}
+            className="mt-5 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold disabled:opacity-50">
+            {ocupado ? 'Creando…' : 'Crear portada sugerida'}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {secciones.map((s, i) => (
+            <div key={s._id}
+              className={`bg-white rounded-xl border shadow-card p-4 flex flex-wrap items-center gap-4 ${s.active ? 'border-slate-100' : 'border-slate-200 opacity-70'}`}>
+              <div className="flex flex-col gap-1">
+                <button onClick={() => mover(i, -1)} disabled={i === 0 || ocupado}
+                  className="w-8 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30" title="Subir">↑</button>
+                <button onClick={() => mover(i, 1)} disabled={i === secciones.length - 1 || ocupado}
+                  className="w-8 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30" title="Bajar">↓</button>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <div className="text-xs font-semibold text-brand-700 uppercase tracking-wide">{TIPOS[s.type] || s.type}</div>
+                <div className="font-bold text-slate-900">{s.title || <span className="text-slate-400 font-normal">Sin título</span>}</div>
+                <div className="text-xs text-slate-500 mt-0.5">{resumen(s)}</div>
+              </div>
+              <button onClick={() => alternar(s)} disabled={ocupado}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold ${s.active ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
+                {s.active ? 'Activo' : 'Inactivo'}
+              </button>
+              <button onClick={() => setEditando(s)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50">Editar</button>
+              <button onClick={() => eliminar(s)} disabled={ocupado}
+                className="px-3 py-1.5 rounded-lg border border-red-200 text-sm text-red-600 hover:bg-red-50">Eliminar</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editando && (
+        <EditorSeccion
+          key={editando._id}
+          inicial={editando}
+          categorias={categorias}
+          onCerrar={() => setEditando(null)}
+          onGuardado={load}
+        />
+      )}
+    </div>
+  )
+}

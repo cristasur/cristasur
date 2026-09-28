@@ -289,8 +289,9 @@ export default async function ProductDetail({ params, searchParams }) {
         )}
       </nav>
 
-      <div className="grid md:grid-cols-2 gap-4 md:gap-8 md:items-start min-w-0">
-        <div className="min-w-0 w-full">
+      <div className="grid md:grid-cols-2 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-4 md:gap-8 lg:gap-10 md:items-start min-w-0">
+        {/* Galería: miniaturas verticales a la izquierda en escritorio; fija al hacer scroll */}
+        <div className="min-w-0 w-full md:sticky md:top-24">
           <ProductGallery
             images={[product.image, ...(product.gallery || [])].filter(Boolean)}
             alt={product.name}

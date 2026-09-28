@@ -198,12 +198,20 @@ export default function CartProvider({ children }) {
       const maxStock = toStock(item.maxStock)
 
       if (idx >= 0) {
+        const tope = xs[idx].maxStock ?? maxStock
+        const sumada = capQty(xs[idx].qty + finalQty, step, tope)
+        // Tope 0 = ya no hay existencias: no se toca la línea. Antes se
+        // hacía `sumada || qty`, que ocultaba el caso sin corregir nada.
+        if (!sumada) return xs
         const next = [...xs]
-        const tope = next[idx].maxStock ?? maxStock
-        const sumada = capQty(next[idx].qty + finalQty, step, tope)
-        next[idx] = { ...next[idx], qty: sumada || next[idx].qty, maxStock: tope }
+        next[idx] = { ...next[idx], qty: sumada, maxStock: tope }
         return next
       }
+      // Cantidad topada por existencias. Si da 0 (sin stock) NO se agrega:
+      // antes `capQty(...) || finalQty` volvía a inflar la cantidad y se
+      // podía meter al carrito un producto agotado.
+      const qtyInicial = capQty(finalQty, step, maxStock)
+      if (!qtyInicial) return xs
       return [
         ...xs,
         {
@@ -237,7 +245,7 @@ export default function CartProvider({ children }) {
           variantValue: item.variantValue || '',
           categoryIds: Array.isArray(item.categoryIds) ? item.categoryIds : [],
           maxStock,
-          qty: capQty(finalQty, step, maxStock) || finalQty,
+          qty: qtyInicial,
         },
       ]
     })
@@ -376,6 +384,12 @@ export default function CartProvider({ children }) {
             productId: x.productId,
             name: x.name,
             image: x.image,
+            // SKU, múltiplo y tope de existencias: sin ellos, al repetir el
+            // pedido la línea perdía su SKU y se podían pedir piezas sueltas
+            // de un producto que se vende por caja.
+            sku: x.sku || '',
+            qtyStep: x.qtyStep ?? null,
+            maxStock: x.maxStock ?? null,
             variantLabel: x.variantLabel,
             variantValue: x.variantValue,
             qty: x.qty,
@@ -399,7 +413,24 @@ export default function CartProvider({ children }) {
   // Reordenar desde un snapshot (último pedido o link compartido)
   const reorderFromSnapshot = useCallback((snapshot) => {
     if (!snapshot?.items?.length) return
-    setItems(snapshot.items.map((x) => ({ ...x, qty: x.qty || 1 })))
+    // Se restauran SKU, múltiplo y tope; la cantidad se vuelve a ajustar al
+    // múltiplo y a las existencias guardadas. Líneas que quedan en 0 se omiten.
+    const restored = snapshot.items
+      .map((x) => {
+        const step = Number(x.qtyStep) >= 1 ? Math.floor(Number(x.qtyStep)) : 1
+        const maxStock = toStock(x.maxStock)
+        const pedida = Number(x.qty) > 0 ? Math.ceil(Number(x.qty) / step) * step : step
+        return {
+          ...x,
+          sku: String(x.sku || '').trim(),
+          qtyStep: step > 1 ? step : null,
+          maxStock,
+          qty: capQty(pedida, step, maxStock),
+        }
+      })
+      .filter((x) => x.qty > 0)
+    if (!restored.length) return
+    setItems(restored)
     setOpen(true)
   }, [])
 

@@ -146,30 +146,73 @@ export function stockState(product) {
   const variants = Array.isArray(product?.variants) ? product.variants : []
 
   if (variants.length > 0) {
-    const vendibles = variants.filter((v) => {
-      if (v?.available === false) return false
-      const s = Number(v?.stock)
-      // stock null/indefinido = sin control de inventario → disponible
-      return !Number.isFinite(s) || s > 0
-    })
+    // OJO: antes se usaba Number(v.stock), y Number(null) es 0, así que una
+    // variante sin control de inventario salía "Sin stock". Ahora se usa
+    // toStock(), que respeta null = venta libre.
+    const vendibles = variants.filter(isSellableVariant)
 
     if (vendibles.length === 0) {
       return { agotado: true, texto: 'Sin stock', unidades: 0 }
     }
 
     // Si alguna vendible no lleva conteo, no se puede sumar un total.
-    const sinConteo = vendibles.some((v) => !Number.isFinite(Number(v?.stock)))
+    const sinConteo = vendibles.some((v) => toStock(v?.stock) === null)
     if (sinConteo) return { agotado: false, texto: 'Disponible', unidades: null }
 
-    const total = vendibles.reduce((s, v) => s + Number(v.stock), 0)
+    const total = vendibles.reduce((s, v) => s + toStock(v.stock), 0)
     return { agotado: false, texto: `${total} en stock`, unidades: total }
   }
 
-  // Producto sin variantes: manda su propio stock.
-  const s = Number(product?.stock)
-  if (product?.stock === 0) return { agotado: true, texto: 'Sin stock', unidades: 0 }
-  if (!Number.isFinite(s)) return { agotado: false, texto: 'Disponible', unidades: null }
+  // Producto sin variantes: manda su propio stock (null = sin control).
+  const s = toStock(product?.stock)
+  if (s === null) return { agotado: false, texto: 'Disponible', unidades: null }
+  if (s === 0) return { agotado: true, texto: 'Sin stock', unidades: 0 }
   return { agotado: false, texto: `${s} en stock`, unidades: s }
+}
+
+/**
+ * ¿La variante se puede vender? No lo está si se marcó available=false
+ * o si lleva conteo y ya no quedan piezas. stock null = venta libre.
+ */
+export function isSellableVariant(v) {
+  if (!v || v.available === false) return false
+  const s = toStock(v.stock)
+  return s === null || s > 0
+}
+
+/**
+ * Variante que se manda al carrito cuando el cliente NO eligió ninguna
+ * explícitamente (caso típico: clic en "Agregar" desde una tarjeta).
+ *
+ * Modelo simétrico: si el producto tiene variantes, TODAS son opciones
+ * reales y vendibles. Elegimos la primera disponible; si ninguna lo está,
+ * la primera de la lista. El padre nunca es una opción vendible por sí solo.
+ * Vive aquí para que la tarjeta (foto y SKU) y el botón de carrito usen
+ * exactamente la misma variante.
+ */
+export function defaultEffectiveVariant(p) {
+  if (!Array.isArray(p?.variants) || p.variants.length === 0) return null
+  return p.variants.find(isSellableVariant) || p.variants[0]
+}
+
+/**
+ * Busca la variante que corresponde a un color (filtro de catálogo o
+ * ?color= en la URL). Primero coincidencia exacta sin importar mayúsculas;
+ * si no hay, una que lo contenga. Así "Azul" no cae en "Azul marino"
+ * cuando sí existe "Azul".
+ *   soloVendibles = true → ignora variantes agotadas o no disponibles.
+ */
+export function findVariantByColor(variants, color, { soloVendibles = false } = {}) {
+  if (!Array.isArray(variants) || !variants.length) return null
+  const safe = String(color || '').toLowerCase().trim()
+  if (!safe) return null
+  const lista = soloVendibles ? variants.filter(isSellableVariant) : variants
+  const val = (v) => String(v?.value ?? '').toLowerCase().trim()
+  return (
+    lista.find((v) => val(v) === safe) ||
+    lista.find((v) => val(v).includes(safe)) ||
+    null
+  )
 }
 
 /**

@@ -72,7 +72,7 @@ const EditLogSchema = new mongoose.Schema(
     at: { type: Date, default: Date.now },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     userEmail: { type: String, trim: true },
-    action: { type: String, enum: ['create', 'update', 'delete', 'restore', 'duplicate', 'import', 'import-update', 'bulk-update', 'publish', 'unpublish'], required: true },
+    action: { type: String, enum: ['create', 'update', 'delete', 'restore', 'duplicate', 'import', 'import-update', 'bulk-update', 'publish', 'unpublish', 'tags'], required: true },
     changes: { type: String }, // resumen legible (fallback para entradas antiguas)
     // Diff estructurado sin truncar: cada campo cambiado con su valor anterior y nuevo
     diff: { type: [{ field: String, from: String, to: String }], default: undefined },

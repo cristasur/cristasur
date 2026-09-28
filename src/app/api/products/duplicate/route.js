@@ -16,6 +16,11 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
   try {
+    // Solo quien administra el catálogo puede crear copias.
+    const quien = await getCurrentUser()
+    if (!quien || !['admin', 'editor'].includes(quien.role)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
     const body = await request.json().catch(() => ({}))
     const id = String(body?.id || '').trim()
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -39,8 +44,26 @@ export async function POST(request) {
       ...rest
     } = original
 
+    // Variantes de la copia: solo los campos del modelo, sin SKU (son
+    // de la original) y en formato simétrico. Si la original es del
+    // formato viejo (color "Azul" arriba + variante "Rojo"), el color de
+    // arriba se vuelve la primera variante en vez de copiarse mal.
+    const limpias = (rest.variants || []).map((v) => ({
+      label: v.label || 'Color', value: v.value || '', barcode: '',
+      available: v.available !== false, stock: v.stock ?? null,
+      image: v.image || '', images: Array.isArray(v.images) ? v.images : [],
+    })).filter((v) => v.value)
+    const base = String(rest.color || '').trim()
+    const hayColor = limpias.some((v) => /color/i.test(v.label))
+    if (base && hayColor && !limpias.some((v) => v.value.trim().toLowerCase() === base.toLowerCase())) {
+      const fotos = [rest.image, ...(rest.gallery || [])].filter(Boolean).slice(0, 10)
+      limpias.unshift({ label: 'Color', value: base, barcode: '', available: true, stock: null, image: fotos[0] || '', images: fotos })
+    }
+
     const copy = await Product.create({
       ...rest,
+      variants: limpias,
+      color: hayColor ? '' : rest.color,
       name: `${rest.name} (copia)`,
       active: false, // requiere revisión
       sku: undefined, // el admin asignará uno nuevo si quiere

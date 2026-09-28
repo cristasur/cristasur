@@ -70,7 +70,13 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
       if (mode === 'all') {
         // Galería combinada base + todas las variantes (se establece al montar)
         if (imgs && imgs.length > 0) {
-          setAllItems(imgs.map((url) => ({ type: 'image', url })))
+          // Conservar el video como primer item: la galería combinada solo
+          // trae imágenes y antes el video se perdía.
+          const vid = e.detail?.videoUrl || videoUrl
+          setAllItems([
+            ...(vid ? [{ type: 'video', url: vid }] : []),
+            ...imgs.map((url) => ({ type: 'image', url })),
+          ])
           setVariantItems(null)
           setIdx(0)
         }
@@ -102,7 +108,7 @@ export default function ProductGallery({ images = [], alt = 'Producto', videoUrl
     }
     window.addEventListener('cristasur:variant-image', onVariantImage)
     return () => window.removeEventListener('cristasur:variant-image', onVariantImage)
-  }, [allItems, baseItems])
+  }, [allItems, baseItems, videoUrl])
 
   const total = items.length
   const hasMany = total > 1

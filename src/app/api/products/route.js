@@ -4,7 +4,7 @@
 //   ?q=<texto>
 //   ?featured=1
 //   ?minPrice=100&maxPrice=500
-//   ?inStock=1            solo con stock > 0
+//   ?inStock=1            solo vendibles (stock > 0 o sin control; con variantes, alguna disponible)
 //   ?onSale=1             solo con comparePrice > price
 //   ?sort=newest|priceAsc|priceDesc|popular
 //   ?limit=48&skip=0
@@ -69,7 +69,19 @@ export async function GET(request) {
       filter.status = 'published'
     }
     if (featured) filter.featured = true
-    if (inStock) filter.stock = { $gt: 0 }
+    // "Solo con stock": stock null = sin control de inventario = disponible.
+    // Con variantes, el padre no lleva stock; basta con que UNA variante se pueda vender.
+    if (inStock) {
+      filter.$and = [
+        ...(filter.$and || []),
+        {
+          $or: [
+            { 'variants.0': { $exists: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] },
+            { variants: { $elemMatch: { available: { $ne: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] } } },
+          ],
+        },
+      ]
+    }
 
     if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
       filter.price = {}
@@ -136,11 +148,14 @@ export async function GET(request) {
         { name: { $regex: safe, $options: 'i' } },
         { description: { $regex: safe, $options: 'i' } },
         { color: { $regex: safe, $options: 'i' } },
+        // Con el modelo simétrico el color vive en las variantes.
+        { 'variants.value': { $regex: safe, $options: 'i' } },
         { sku: { $regex: safe, $options: 'i' } },
       ]
       if (brandIds.length) orClauses.push({ brand: { $in: brandIds } })
 
-      filter.$or = orClauses
+      // Dentro de $and para no chocar con otros $or.
+      filter.$and = [...(filter.$and || []), { $or: orClauses }]
     }
 
     let sort = { featured: -1, createdAt: -1 }

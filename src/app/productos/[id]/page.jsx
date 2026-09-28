@@ -15,6 +15,7 @@ import {
   ProductHighlights, ProductSpecsTable, ProductUsage, ProductTrust,
 } from '@/components/ProductSpecs'
 import ProductFaq from '@/components/ProductFaq'
+import { stockState } from '@/lib/pricing'
 import SkuCopy from '@/components/SkuCopy'
 import LineVariants from '@/components/LineVariants'
 import ReviewList from '@/components/ReviewList'
@@ -227,16 +228,14 @@ export default async function ProductDetail({ params, searchParams }) {
   }
   const hasDiscount = product.comparePrice && product.comparePrice > product.price
   const productUrl = `${siteUrl()}/productos/${product._id}`
-  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0
-  // null = ilimitado (sin número), 0 = sin stock, >0 = muestra cantidad
-  // Para productos sin variantes: null = ilimitado
-  // Para productos con variantes: si alguna tiene stock null, hay stock disponible
-  const stockUnlimited =
-    (!hasVariants && product.stock === null) ||
-    (hasVariants && product.variants.some((v) => v.stock === null))
-  const totalStock = hasVariants
-    ? product.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
-    : product.stock ?? 0
+  // Stock real con el mismo helper que la tarjeta del catálogo: considera
+  // variantes, respeta available=false y trata stock null como ilimitado.
+  // Antes una variante marcada como no disponible pero con stock null
+  // dejaba la ficha en "Disponible" e InStock para Google.
+  const stock = stockState(product)
+  const stockUnlimited = !stock.agotado && stock.unidades === null
+  const totalStock = stock.unidades ?? 0
+  const inStock = !stock.agotado
 
   // JSON-LD Schema.org Product para Google rich snippets
   const productJsonLd = {
@@ -254,7 +253,7 @@ export default async function ProductDetail({ params, searchParams }) {
       priceCurrency: 'MXN',
       price: product.price,
       availability:
-        stockUnlimited || totalStock > 0
+        inStock
           ? 'https://schema.org/InStock'
           : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
@@ -343,7 +342,7 @@ export default async function ProductDetail({ params, searchParams }) {
             )}
           </div>
 
-          {stockUnlimited || totalStock > 0 ? (
+          {inStock ? (
             <div className="mt-3 inline-flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full w-fit">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               Disponible{!stockUnlimited && ` (${totalStock} piezas)`}

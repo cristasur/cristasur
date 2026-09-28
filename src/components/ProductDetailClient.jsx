@@ -9,7 +9,10 @@
 // - trackView al montar + PATCH ?action=view para viewsCount.
 // ============================================================
 import { useEffect, useMemo, useState } from 'react'
-import { priceTiers, unitPriceFor, activeTier, nextTierTarget, snapToStep, formatMXN, formatMXNShort } from '@/lib/pricing'
+import {
+  priceTiers, unitPriceFor, activeTier, nextTierTarget, snapToStep, formatMXN, formatMXNShort,
+  defaultEffectiveVariant, findVariantByColor,
+} from '@/lib/pricing'
 import Icon from './Icon'
 import VariantPicker from './VariantPicker'
 import AddToCartButton from './AddToCartButton'
@@ -39,17 +42,13 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   const initialVariant = useMemo(() => {
     if (!variants.length) return null
     if (initialColor) {
-      const safe = initialColor.toLowerCase().trim()
-      const fromUrl = variants.find((v) => v.value?.toLowerCase().includes(safe))
+      // Primero coincidencia exacta (sin importar mayúsculas) y luego
+      // "contiene": ?color=Azul no debe abrir "Azul marino" si existe "Azul".
+      const fromUrl = findVariantByColor(variants, initialColor)
       if (fromUrl) return fromUrl
     }
-    const firstAvailable = variants.find((v) => {
-      if (v?.available === false) return false
-      const s = Number(v?.stock)
-      // stock null/undefined = sin control de inventario → disponible
-      return !Number.isFinite(s) || s > 0
-    })
-    return firstAvailable || variants[0]
+    // Misma regla que usa el botón de la tarjeta (stock null = disponible).
+    return defaultEffectiveVariant(product)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [selected, setSelected] = useState(initialVariant)
@@ -92,8 +91,10 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
       seen.add(u)
       return true
     })
+    // Se manda también el video del producto: sin él, la galería combinada
+    // reemplazaba la lista base y el video desaparecía de la ficha.
     window.dispatchEvent(new CustomEvent('cristasur:variant-image', {
-      detail: { mode: 'all', images: all },
+      detail: { mode: 'all', images: all, videoUrl: product.videoUrl || '' },
     }))
 
     // Si hay una variante pre-seleccionada (viene de ?color=X en la URL),
@@ -189,8 +190,9 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
   // Mensaje de WhatsApp con variante + cantidad + subtotal.
   const subtotal = currentPrice * qty
   // SKU normalizado: tolera espacios, valores nulos y números (a veces el CSV
-  // los importa como Number en lugar de String).
-  const skuStr = String(product.sku ?? '').trim()
+  // los importa como Number en lugar de String). Es el de la variante
+  // seleccionada; si no trae propio, el del producto padre.
+  const skuStr = String(selected?.sku || product.sku || '').trim()
   const waLines = [
     'Hola CRISTASUR, me interesa este producto:',
     '',
@@ -227,7 +229,8 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
       body: JSON.stringify({
         productName: product.name,
         productId: product._id,
-        sku: product.sku || null,
+        // SKU de la variante seleccionada (o del padre si no tiene propio).
+        sku: skuStr || null,
         price: formatPrice(currentPrice),
         qty,
         variant: selected ? `${selected.label}: ${selected.value}` : null,

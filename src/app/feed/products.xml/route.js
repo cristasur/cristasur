@@ -15,6 +15,7 @@
 //
 // Filtra: sólo productos publicados, activos, no borrados, no draft,
 // con imagen y precio > 0 (los requisitos mínimos de Google/Meta).
+// Productos con variantes: un <item> por variante con g:item_group_id.
 // ============================================================
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
@@ -46,61 +47,67 @@ export async function GET() {
     await dbConnect()
     const now = new Date()
     // Filtro estricto: sólo publicados, con imagen y precio.
+    // La imagen puede vivir en el padre o en alguna variante (modelo simétrico).
     const products = await Product.find({
       active: true,
       deleted: { $ne: true },
-      image: { $ne: '' },
       price: { $gt: 0 },
       $and: [
         { $or: [{ status: { $exists: false } }, { status: 'published' }] },
         { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
+        { $or: [{ image: { $nin: ['', null] } }, { 'variants.image': { $nin: ['', null] } }] },
       ],
     })
       .populate('categories', 'name')
       .populate('brand', 'name')
-      .select('name description price wholesalePrice comparePrice image gallery sku categories brand stock variants updatedAt')
+      .select('name description price image gallery sku categories brand stock variants updatedAt')
       .limit(20000)
       .lean()
 
     const base = siteUrl()
-    const items = products
-      .map((p) => {
-        const id = String(p._id)
-        const title = escapeXml((p.name || '').slice(0, 150))
-        const desc = escapeXml((p.description || p.name || '').slice(0, 5000))
-        const link = `${base}/productos/${id}`
-        const img = absUrl(p.image)
-        const gallery = (Array.isArray(p.gallery) ? p.gallery : [])
-          .slice(0, 10)
-          .map((g) => `<g:additional_image_link>${escapeXml(absUrl(g))}</g:additional_image_link>`)
-          .join('')
-        const price = `${Number(p.price).toFixed(2)} MXN`
-        // Si tiene precio comparativo o mayoreo, se reporta como sale_price.
-        const sale =
-          p.wholesalePrice && Number(p.wholesalePrice) > 0 && Number(p.wholesalePrice) < Number(p.price)
-            ? `<g:sale_price>${Number(p.wholesalePrice).toFixed(2)} MXN</g:sale_price>`
-            : p.comparePrice && Number(p.comparePrice) > Number(p.price)
-              ? `` // comparePrice es para tachar el "antes", se invierte: dejamos price como sale
-              : ''
-        const availability = (p.stock ?? 1) > 0 ? 'in stock' : 'out of stock'
-        const sku = escapeXml(p.sku || id)
-        const brand = escapeXml(p.brand?.name || 'CRISTASUR')
-        const category = escapeXml(p.categories?.[0]?.name || 'General')
 
-        return `<item>
-  <g:id>${escapeXml(id)}</g:id>
-  <g:title>${title}</g:title>
+    // Disponibilidad: stock null = sin control de inventario = hay.
+    const hayStock = (stock) => stock === null || stock === undefined || Number(stock) > 0
+
+    // Id estable por variante: "<id>-<valor-en-slug>"; si el valor no da un
+    // slug usable o se repite, se usa el índice.
+    const slugify = (s) =>
+      String(s || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+
+    // Arma un <item>. `extra` trae lo que cambia entre padre y variante.
+    function itemXml(p, extra) {
+      const brand = escapeXml(p.brand?.name || 'CRISTASUR')
+      const category = escapeXml(p.categories?.[0]?.name || 'General')
+      const desc = escapeXml((p.description || p.name || '').slice(0, 5000))
+      const gallery = (extra.gallery || [])
+        .filter(Boolean)
+        .slice(0, 10)
+        .map((g) => `<g:additional_image_link>${escapeXml(absUrl(g))}</g:additional_image_link>`)
+        .join('')
+      // Sólo se publica el precio normal. El mayoreo NO va como sale_price:
+      // exige una cantidad mínima y Google lo tomaría como precio por pieza.
+      const price = `${Number(p.price).toFixed(2)} MXN`
+
+      return `<item>
+  <g:id>${escapeXml(extra.id)}</g:id>
+  ${extra.groupId ? `<g:item_group_id>${escapeXml(extra.groupId)}</g:item_group_id>` : ''}
+  <g:title>${escapeXml(String(extra.title || '').slice(0, 150))}</g:title>
   <g:description>${desc}</g:description>
-  <g:link>${escapeXml(link)}</g:link>
-  <g:image_link>${escapeXml(img)}</g:image_link>
+  <g:link>${escapeXml(extra.link)}</g:link>
+  <g:image_link>${escapeXml(absUrl(extra.image))}</g:image_link>
   ${gallery}
-  <g:availability>${availability}</g:availability>
+  <g:availability>${extra.inStock ? 'in stock' : 'out of stock'}</g:availability>
   <g:price>${price}</g:price>
-  ${sale}
+  ${extra.color ? `<g:color>${escapeXml(extra.color)}</g:color>` : ''}
   <g:condition>new</g:condition>
   <g:brand>${brand}</g:brand>
-  <g:mpn>${sku}</g:mpn>
-  <g:identifier_exists>${p.sku ? 'yes' : 'no'}</g:identifier_exists>
+  <g:mpn>${escapeXml(extra.sku || extra.id)}</g:mpn>
+  <g:identifier_exists>${extra.sku ? 'yes' : 'no'}</g:identifier_exists>
   <g:product_type>${category}</g:product_type>
   <g:google_product_category>Home &amp; Garden</g:google_product_category>
   <g:shipping>
@@ -109,6 +116,52 @@ export async function GET() {
     <g:price>0.00 MXN</g:price>
   </g:shipping>
 </item>`
+    }
+
+    const items = products
+      .flatMap((p) => {
+        const id = String(p._id)
+        const link = `${base}/productos/${id}`
+        const variants = Array.isArray(p.variants) ? p.variants : []
+
+        // Sin variantes: un solo item, como siempre.
+        if (!variants.length) {
+          if (!p.image) return []
+          return [itemXml(p, {
+            id,
+            title: p.name || '',
+            link,
+            image: p.image,
+            gallery: Array.isArray(p.gallery) ? p.gallery : [],
+            inStock: hayStock(p.stock),
+            sku: p.sku || '',
+            color: p.color || '',
+          })]
+        }
+
+        // Con variantes: un item por variante, agrupados por item_group_id.
+        const usados = new Set()
+        return variants
+          .map((v, idx) => {
+            const image = v.image || v.images?.[0] || p.image
+            if (!image) return null // Google exige imagen
+            let vid = slugify(v.value)
+            vid = vid && !usados.has(vid) ? `${id}-${vid}` : `${id}-${idx}`
+            usados.add(vid.slice(id.length + 1))
+            const otras = (Array.isArray(v.images) ? v.images : []).filter((x) => x && x !== image)
+            return itemXml(p, {
+              id: vid,
+              groupId: id,
+              title: v.value ? `${p.name || ''} - ${v.value}` : (p.name || ''),
+              link: `${link}?color=${encodeURIComponent(v.value || '')}`,
+              image,
+              gallery: otras.length ? otras : (Array.isArray(p.gallery) ? p.gallery : []),
+              inStock: v.available !== false && hayStock(v.stock),
+              sku: v.sku || p.sku || '',
+              color: v.value || '',
+            })
+          })
+          .filter(Boolean)
       })
       .join('\n')
 

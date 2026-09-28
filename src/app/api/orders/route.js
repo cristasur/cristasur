@@ -13,7 +13,7 @@ import dbConnect from '@/lib/mongodb'
 import crypto from 'crypto'
 import Order from '@/models/Order'
 import Product from '@/models/Product'
-import { unitPriceFor, saleStep, snapToStep, availableUnits } from '@/lib/pricing'
+import { unitPriceFor, saleStep, snapToStep, toStock } from '@/lib/pricing'
 import Coupon from '@/models/Coupon'
 import { getCurrentUser } from '@/lib/auth'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
@@ -76,7 +76,8 @@ export async function POST(request) {
       ? await Product.find({ _id: { $in: productIds } })
           // Hace falta todo esto para recalcular precio, múltiplo y stock
           // sin confiar en nada de lo que mande el navegador.
-          .select('_id name price wholesalePrice wholesaleMinQty hundredPrice hundredMinQty qtyStep stock variants')
+          // sku + variants: el SKU y la variante se toman de la base, no del carrito.
+          .select('_id name sku price wholesalePrice wholesaleMinQty hundredPrice hundredMinQty qtyStep stock variants')
           .lean()
       : []
     const priceMap = {}
@@ -99,6 +100,29 @@ export async function POST(request) {
           return { ...rest, unitPrice: Math.max(0, it._clientPrice) }
         }
 
+        // 0. Variante: se busca en la base. El SKU y la variante que manda el
+        //    navegador no se guardan tal cual; se usan sólo para localizarla.
+        //    Si el producto tiene variantes y no se encuentra la elegida, la
+        //    línea se descarta (no se puede surtir "algún color").
+        //    Si el producto NO tiene variantes, se ignora cualquier variante enviada.
+        const dbVariants = Array.isArray(dbP.variants) ? dbP.variants : []
+        let dbV = null
+        if (dbVariants.length) {
+          const norm = (x) => String(x || '').trim().toLowerCase()
+          const wantValue = norm(it.variantValue)
+          const wantLabel = norm(it.variantLabel)
+          dbV = wantValue
+            ? dbVariants.find(
+                (v) => norm(v.value) === wantValue && (!wantLabel || norm(v.label) === wantLabel)
+              ) || null
+            : null
+          if (!dbV) {
+            const etiqueta = String(dbVariants[0]?.label || 'variante').toLowerCase()
+            ajustes.push(`${dbP.name}: elige un ${etiqueta}`)
+            return null
+          }
+        }
+
         // 1. Múltiplo de venta: si el producto va de 4 en 4, no se
         //    aceptan 5 piezas aunque el carrito las haya dejado pasar.
         const step = saleStep(dbP)
@@ -107,8 +131,11 @@ export async function POST(request) {
           ajustes.push(`${dbP.name}: ${it.qty} → ${qty} (se vende de ${step} en ${step})`)
         }
 
-        // 2. Stock: nunca se acepta más de lo que hay.
-        const disponibles = availableUnits(dbP, it.variantLabel, it.variantValue)
+        // 2. Stock: nunca se acepta más de lo que hay. Con variantes manda el
+        //    stock de ESA variante (null = sin control, available:false = agotada).
+        const disponibles = dbV
+          ? (dbV.available === false ? 0 : toStock(dbV.stock))
+          : toStock(dbP.stock)
         if (disponibles === 0) {
           ajustes.push(`${dbP.name}: sin existencias`)
           return null
@@ -131,6 +158,10 @@ export async function POST(request) {
         const { _clientPrice, ...rest } = it
         return {
           ...rest,
+          // Identidad de la línea tomada de la base, no del navegador.
+          sku: dbV?.sku || dbP.sku || '',
+          variantLabel: dbV ? String(dbV.label || '') : '',
+          variantValue: dbV ? String(dbV.value || '') : '',
           qty,
           unitPrice: Math.max(0, unitPrice),
           wholesaleApplied: unitPrice < (Number(dbP.price) || 0),
@@ -140,7 +171,7 @@ export async function POST(request) {
       .filter((x) => x.qty > 0 && x.unitPrice >= 0)
 
     if (!cleanItems.length) {
-      return NextResponse.json({ error: 'Carrito inválido' }, { status: 400 })
+      return NextResponse.json({ error: 'Carrito inválido', ajustes }, { status: 400 })
     }
 
     const subtotal = cleanItems.reduce((acc, x) => acc + x.unitPrice * x.qty, 0)
@@ -206,6 +237,8 @@ export async function POST(request) {
       ok: true,
       orderId: order._id,
       cookieToken: order.cookieToken,
+      // Cambios que hizo el servidor al carrito (cantidades, stock, variante faltante).
+      ajustes,
     })
   } catch (err) {
     console.error('POST /api/orders', err)

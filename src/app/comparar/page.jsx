@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { useCompare } from '@/components/CompareProvider'
-import { useCart } from '@/components/CartProvider'
+import AddToCartButton from '@/components/AddToCartButton'
+import { stockState } from '@/lib/pricing'
 
 function formatPrice(n) {
   return new Intl.NumberFormat('es-MX', {
@@ -60,9 +61,11 @@ function CellValue({ attr, product }) {
     ) : <span className="text-slate-400">—</span>
   }
   if (attr === 'stock') {
-    if (product.stock === undefined || product.stock === null) return <span className="text-slate-400">Ilimitado</span>
-    if (product.stock === 0) return <span className="text-rose-600 font-semibold">Sin stock</span>
-    return <span className="text-emerald-700 font-semibold">{product.stock} disponibles</span>
+    // Stock real considerando variantes (el padre trae null en el modelo simétrico).
+    const st = stockState(product)
+    if (st.agotado) return <span className="text-rose-600 font-semibold">Sin stock</span>
+    if (st.unidades === null) return <span className="text-slate-400">Disponible</span>
+    return <span className="text-emerald-700 font-semibold">{st.unidades} disponibles</span>
   }
   if (attr === 'description') {
     return product.description ? (
@@ -75,7 +78,6 @@ function CellValue({ attr, product }) {
 
 export default function CompararPage() {
   const { compareItems, removeFromCompare, clearCompare } = useCompare()
-  const { addItem } = useCart()
 
   if (compareItems.length === 0) {
     return (
@@ -137,20 +139,26 @@ export default function CompararPage() {
                       {product.name}
                     </Link>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => addItem({
-                          productId: product._id,
-                          name: product.name,
-                          price: product.price,
-                          wholesalePrice: product.wholesalePrice,
-                          wholesaleMinQty: product.wholesaleMinQty,
-                          image: product.image,
-                          categoryIds: product.categories?.map((c) => c._id || c) || [],
-                        })}
-                        className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-colors"
-                      >
-                        Agregar al carrito
-                      </button>
+                      {/* Con variantes: el cliente elige color/talla en la ficha.
+                          Sin variantes: el botón compartido arma la línea completa
+                          (SKU, múltiplo de venta, tope de existencias). Antes se
+                          agregaba a mano sin color, SKU ni qtyStep. */}
+                      {Array.isArray(product.variants) && product.variants.length > 0 ? (
+                        <Link
+                          href={`/productos/${product._id}`}
+                          className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-colors"
+                        >
+                          Elegir opción
+                        </Link>
+                      ) : (
+                        <AddToCartButton
+                          product={product}
+                          qty={Number(product.qtyStep) > 1 ? Math.floor(Number(product.qtyStep)) : 1}
+                          compact
+                          disabled={stockState(product).agotado}
+                          label={stockState(product).agotado ? 'Sin stock' : 'Agregar'}
+                        />
+                      )}
                       <button
                         onClick={() => removeFromCompare(product._id)}
                         className="px-2 py-1.5 rounded-lg border border-slate-200 hover:border-rose-300 hover:text-rose-600 text-slate-500 text-xs transition-colors"

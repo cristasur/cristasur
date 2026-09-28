@@ -3,25 +3,13 @@
 // (y opcionalmente una variante ya seleccionada).
 import { useState } from 'react'
 import { useCart } from './CartProvider'
-import { availableUnits } from '@/lib/pricing'
+import { availableUnits, defaultEffectiveVariant } from '@/lib/pricing'
 import Icon from './Icon'
 
-// Decide qué variante mandar al carrito cuando el cliente NO eligió ninguna
-// explícitamente (caso típico: clic en "Añadir" desde una card del catálogo).
-//
-// Modelo simétrico: si el producto tiene variantes, TODAS son opciones reales
-// y vendibles. Elegimos la primera disponible. El producto padre nunca es una
-// opción vendible por sí mismo.
-function defaultEffectiveVariant(p) {
-  if (!Array.isArray(p?.variants) || p.variants.length === 0) return null
-  const firstAvailable = p.variants.find((v) => {
-    if (v?.available === false) return false
-    const s = Number(v?.stock)
-    // stock null = sin control de inventario → se considera disponible
-    return !Number.isFinite(s) || s > 0
-  })
-  return firstAvailable || p.variants[0]
-}
+// La lógica de "variante por defecto" vive en @/lib/pricing para que la
+// tarjeta del catálogo muestre la foto y el SKU de la MISMA variante que
+// este botón manda al carrito. Se re-exporta por compatibilidad.
+export { defaultEffectiveVariant }
 
 export default function AddToCartButton({
   product,

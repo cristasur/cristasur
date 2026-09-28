@@ -18,6 +18,46 @@ const COMMON_COLORS = [
 
 const COMMON_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'Único']
 
+// ── Variantes al cargar un producto ─────────────────────────────
+//
+// Solo se conservan los campos del modelo (label, value, sku, barcode,
+// available, stock, image, images). Los precios por variante ya no
+// existen: el precio es siempre el del producto.
+//
+// Productos del formato viejo (color "Azul" arriba + variante "Rojo"):
+// el azul se muestra como la primera variante, con las fotos del
+// producto, y el campo Color queda vacío. Al guardar ya quedan bien.
+function variantesLimpias(initial) {
+  return (Array.isArray(initial?.variants) ? initial.variants : []).map((v) => ({
+    label: v.label || 'Color',
+    value: v.value || '',
+    sku: v.sku || '',
+    barcode: v.barcode || '',
+    available: v.available !== false,
+    stock: v.stock ?? null,
+    image: v.image || '',
+    images: Array.isArray(v.images) && v.images.length ? v.images : v.image ? [v.image] : [],
+  }))
+}
+function colorBaseLegado(initial) {
+  const c = (initial?.color || '').trim()
+  const vs = variantesLimpias(initial)
+  if (!c || !vs.some((v) => /color/i.test(v.label))) return ''
+  return vs.some((v) => v.value.trim().toLowerCase() === c.toLowerCase()) ? '' : c
+}
+function variantesIniciales(initial) {
+  const vs = variantesLimpias(initial)
+  const base = colorBaseLegado(initial)
+  if (!base) return vs
+  const fotos = [initial?.image, ...(initial?.gallery || [])].filter(Boolean).slice(0, 10)
+  return [{ label: 'Color', value: base, sku: initial?.sku || '', barcode: '', available: true,
+    stock: null, image: fotos[0] || '', images: fotos }, ...vs]
+}
+function colorInicial(initial) {
+  const vs = variantesLimpias(initial)
+  return vs.some((v) => /color/i.test(v.label)) ? '' : (initial?.color || '')
+}
+
 export default function ProductForm({ categories, brands = [], materials = [], initial, lines = []}) {
   const router = useRouter()
   const isEdit = Boolean(initial?._id)
@@ -40,19 +80,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     featured: initial?.featured || false,
     active: initial?.active ?? true,
     sku: initial?.sku || '',
-    variants: Array.isArray(initial?.variants)
-      ? initial.variants.map((v) => ({
-          ...v,
-          // Garantizar que images exista: si no tiene galería propia y tiene image, la usamos como base
-          images: Array.isArray(v.images) && v.images.length > 0
-            ? v.images
-            : v.image ? [v.image] : [],
-          wholesalePrice:  v.wholesalePrice  ?? '',
-          wholesaleMinQty: v.wholesaleMinQty ?? '',
-          bulkPrice:       v.bulkPrice       ?? v.hundredPrice    ?? '',
-          bulkMinQty:      v.bulkMinQty      ?? v.hundredMinQty   ?? '',
-        }))
-      : [],
+    variants: variantesIniciales(initial),
     status: initial?.status || 'published',
     publishAt: initial?.publishAt || '',
     tags: Array.isArray(initial?.tags) ? initial.tags : [],
@@ -66,7 +94,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     specs: Array.isArray(initial?.specs) ? initial.specs : [],
     highlights: Array.isArray(initial?.highlights) ? initial.highlights : [],
     usage: initial?.usage || '',
-    color: initial?.color || '',
+    color: colorInicial(initial),
     weight: initial?.weight ?? '',
     length: initial?.length ?? '',
     width:  initial?.width  ?? '',
@@ -413,13 +441,28 @@ export default function ProductForm({ categories, brands = [], materials = [], i
   function addVariant() {
     // Solo los campos que el modelo conserva. Precio y caja se heredan
     // del padre SIEMPRE (ver REGLA DE ORO en models/Product.js).
-    setForm((f) => ({
-      ...f,
-      variants: [
-        ...f.variants,
-        { label: 'Color', value: '', sku: '', barcode: '', available: true, stock: null, image: '', images: [] },
-      ],
-    }))
+    //
+    // Si el campo "Color" de arriba está lleno, ese color es una opción
+    // más: se convierte en la primera variante, con las fotos del
+    // producto. Así nunca vuelve a pasar lo de "la hielera azul que en
+    // la ficha solo tiene la bolita roja".
+    setForm((f) => {
+      const nueva = { label: 'Color', value: '', sku: '', barcode: '', available: true, stock: null, image: '', images: [] }
+      const base = (f.color || '').trim()
+      if (base && !f.variants.some((v) => (v.value || '').trim().toLowerCase() === base.toLowerCase())) {
+        const fotos = [f.image, ...(f.gallery || [])].filter(Boolean).slice(0, 10)
+        return {
+          ...f,
+          color: '',
+          variants: [
+            { ...nueva, value: base, sku: f.sku || '', image: fotos[0] || '', images: fotos },
+            ...f.variants,
+            nueva,
+          ],
+        }
+      }
+      return { ...f, variants: [...f.variants, nueva] }
+    })
   }
   function updateVariant(idx, key, val) {
     setForm((f) => ({
@@ -941,17 +984,29 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         </div>
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Color (opcional)</span>
-          <input
-            list="color-suggestions"
-            value={form.color}
-            onChange={(e) => update('color', e.target.value)}
-            placeholder="Ej: Rojo, Azul marino, Transparente"
-            className={input}
-          />
-          <datalist id="color-suggestions">
-            {COMMON_COLORS.map((c) => <option key={c} value={c} />)}
-          </datalist>
-          <span className="text-xs text-slate-500">Escribe o selecciona un color de la lista.</span>
+          {(() => {
+            const hayVarColor = form.variants.some((v) => /color/i.test(v.label || ''))
+            return (
+              <>
+                <input
+                  list="color-suggestions"
+                  value={hayVarColor ? '' : form.color}
+                  onChange={(e) => update('color', e.target.value)}
+                  placeholder={hayVarColor ? 'Se define en cada variante (abajo)' : 'Ej: Rojo, Azul marino, Transparente'}
+                  disabled={hayVarColor}
+                  className={`${input} ${hayVarColor ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+                />
+                <datalist id="color-suggestions">
+                  {COMMON_COLORS.map((c) => <option key={c} value={c} />)}
+                </datalist>
+                <span className={`text-xs ${hayVarColor ? 'text-amber-700' : 'text-slate-500'}`}>
+                  {hayVarColor
+                    ? 'Este producto viene en varios colores: cada color es una variante (sección Variantes).'
+                    : 'Solo si viene en UN color. Si viene en varios, usa la sección Variantes: al añadir la primera, este color se pasa solo como variante.'}
+                </span>
+              </>
+            )
+          })()}
         </label>
       </div>
 
@@ -1808,8 +1863,12 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             (Color: Azul y Color: Rojo). El campo "Color" de arriba se deja vacío.
           </p>
           <p className="text-slate-500">
-            Cada variante necesita su <b>SKU</b>, su <b>peso de caja</b> y sus
-            <b> medidas</b> para poder cotizar envíos automáticamente.
+            Si ya llenaste el campo "Color" de arriba, al darle <b>+ Añadir variante</b> ese color
+            se convierte solo en la primera variante, con las fotos del producto.
+          </p>
+          <p className="text-slate-500">
+            Precio y medidas de caja son los del producto. Si un color cuesta distinto, no es
+            variante: es otro producto (enlázalo con "Línea").
           </p>
         </div>
 
@@ -1960,6 +2019,19 @@ export default function ProductForm({ categories, brands = [], materials = [], i
                         )}
                       </div>
                     </div>
+
+                    {/* ── SKU de la variante ── */}
+                    <label className="block">
+                      <span className="text-xs font-semibold text-slate-600 block mb-1">
+                        SKU de este color <span className="font-normal text-slate-400">(opcional; si se deja vacío usa el del producto)</span>
+                      </span>
+                      <input
+                        value={v.sku || ''}
+                        onChange={(e) => updateVariant(i, 'sku', e.target.value)}
+                        placeholder={form.sku || 'Ej: HIE48-AZ'}
+                        className="w-full sm:w-64 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-brand-400 bg-white font-mono placeholder:text-slate-300"
+                      />
+                    </label>
 
                     {/* ── Código de barras ── */}
                     <label className="block">

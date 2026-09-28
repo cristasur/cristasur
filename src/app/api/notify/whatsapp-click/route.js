@@ -16,6 +16,18 @@ function getAdminEmails() {
   return [] // Si no está configurado, no enviar (no crashear)
 }
 
+// Escapa texto que manda el navegador antes de meterlo al HTML del correo.
+// Sin esto, un nombre o variante con etiquetas se inyectaría en el correo.
+function esc(v) {
+  return String(v ?? '')
+    .slice(0, 300)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export async function POST(req) {
   // Rate limit: máx 20 notificaciones por IP por hora
   // (legítimamente un usuario podría ver varios productos seguidos)
@@ -30,7 +42,11 @@ export async function POST(req) {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const { productName, productId, sku, price, qty, variant, productUrl } = body
+    const { productName, productId, sku, price, variant } = body
+    // Cantidad: sólo un entero positivo.
+    const qty = Math.max(1, Math.floor(Number(body?.qty) || 1))
+    // Enlace: sólo http(s); cualquier otra cosa (javascript:, data:) se descarta.
+    const productUrl = /^https?:\/\//i.test(String(body?.productUrl || '')) ? String(body.productUrl) : ''
 
     const now = new Date().toLocaleString('es-MX', {
       timeZone: 'America/Merida',
@@ -38,9 +54,9 @@ export async function POST(req) {
       timeStyle: 'short',
     })
 
-    const variantLine = variant ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px">Variante</td><td style="padding:6px 0;font-weight:600;font-size:14px">${variant}</td></tr>` : ''
-    const skuLine = sku ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px">SKU</td><td style="padding:6px 0;font-size:14px;color:#94a3b8">${sku}</td></tr>` : ''
-    const urlLine = productUrl ? `<p style="margin-top:20px"><a href="${productUrl}" style="background:#1e40af;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">Ver producto →</a></p>` : ''
+    const variantLine = variant ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px">Variante</td><td style="padding:6px 0;font-weight:600;font-size:14px">${esc(variant)}</td></tr>` : ''
+    const skuLine = sku ? `<tr><td style="padding:6px 0;color:#64748b;font-size:14px">SKU</td><td style="padding:6px 0;font-size:14px;color:#94a3b8">${esc(sku)}</td></tr>` : ''
+    const urlLine = productUrl ? `<p style="margin-top:20px"><a href="${esc(productUrl)}" style="background:#1e40af;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">Ver producto →</a></p>` : ''
 
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#f8fafc;border-radius:12px;overflow:hidden">
@@ -50,11 +66,11 @@ export async function POST(req) {
         </div>
         <div style="padding:24px 28px;background:white">
           <table style="width:100%;border-collapse:collapse">
-            <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:40%">Producto</td><td style="padding:6px 0;font-weight:700;font-size:15px;color:#0f172a">${productName || 'Sin nombre'}</td></tr>
+            <tr><td style="padding:6px 0;color:#64748b;font-size:14px;width:40%">Producto</td><td style="padding:6px 0;font-weight:700;font-size:15px;color:#0f172a">${esc(productName || 'Sin nombre')}</td></tr>
             ${skuLine}
             ${variantLine}
-            <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Cantidad</td><td style="padding:6px 0;font-weight:600;font-size:14px">${qty || 1} pieza${(qty || 1) > 1 ? 's' : ''}</td></tr>
-            <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Precio unitario</td><td style="padding:6px 0;font-weight:700;font-size:16px;color:#16a34a">${price || '—'}</td></tr>
+            <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Cantidad</td><td style="padding:6px 0;font-weight:600;font-size:14px">${qty} pieza${qty > 1 ? 's' : ''}</td></tr>
+            <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Precio unitario</td><td style="padding:6px 0;font-weight:700;font-size:16px;color:#16a34a">${esc(price || '—')}</td></tr>
             <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Hora (Mérida)</td><td style="padding:6px 0;font-size:13px;color:#64748b">${now}</td></tr>
           </table>
           ${urlLine}
@@ -72,7 +88,7 @@ export async function POST(req) {
     await resend.emails.send({
       from: 'CRISTASUR Leads <notificaciones@cristasur.com>',
       to: adminEmails,
-      subject: `📲 Lead WhatsApp: ${productName || 'Producto'}`,
+      subject: `📲 Lead WhatsApp: ${String(productName || 'Producto').replace(/[\r\n]+/g, ' ').slice(0, 120)}`,
       html,
     })
 

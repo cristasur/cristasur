@@ -58,7 +58,16 @@ async function loadData(slug, sp) {
     ],
   }
   if (featured) filter.featured = true
-  if (inStock) filter.stock = { $gt: 0 }
+  // "Solo con stock": stock null = sin control de inventario = disponible.
+  // Con variantes, el padre no lleva stock; basta con que UNA variante se pueda vender.
+  if (inStock) {
+    filter.$and.push({
+      $or: [
+        { 'variants.0': { $exists: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] },
+        { variants: { $elemMatch: { available: { $ne: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] } } },
+      ],
+    })
+  }
   if (onSale) filter.$expr = { $gt: ['$comparePrice', '$price'] }
 
   if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
@@ -83,7 +92,9 @@ async function loadData(slug, sp) {
 
   if (colorTerm) {
     const safe = colorTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    filter.color = { $regex: safe, $options: 'i' }
+    const reg = { $regex: safe, $options: 'i' }
+    // Con el modelo simétrico el padre no tiene color: vive en las variantes.
+    filter.$and.push({ $or: [{ color: reg }, { 'variants.value': reg }] })
   }
 
   if (q) {
@@ -98,11 +109,13 @@ async function loadData(slug, sp) {
       { name: { $regex: safe, $options: 'i' } },
       { description: { $regex: safe, $options: 'i' } },
       { color: { $regex: safe, $options: 'i' } },
+      { 'variants.value': { $regex: safe, $options: 'i' } },
     ]
     if (matchingBrands.length) {
       orClauses.push({ brand: { $in: matchingBrands.map((b) => b._id) } })
     }
-    filter.$or = orClauses
+    // Dentro de $and para no chocar con otros $or.
+    filter.$and.push({ $or: orClauses })
   }
 
   // ── Facetas (atributos de la ficha técnica) ──────────────
@@ -240,7 +253,7 @@ export default async function CategoryLanding({ params, searchParams }) {
 
         <div>
           {products.length > 0 ? (
-            <ProductGrid products={products} />
+            <ProductGrid products={products} colorFilter={initialFilters.color.trim()} />
           ) : (
             <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-500">
               No encontramos productos con esos filtros. Probá aflojar criterios o

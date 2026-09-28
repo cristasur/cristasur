@@ -30,6 +30,7 @@ import FavoriteButton from './FavoriteButton'
 import {
   priceTiers, unitPriceFor, activeTier, maxTierDiscount,
   saleStep, snapToStep, stockState, formatMXN, formatMXNShort,
+  defaultEffectiveVariant, findVariantByColor,
 } from '@/lib/pricing'
 
 // Alturas reservadas. Tocar aquí si cambian los tamaños de fuente.
@@ -48,22 +49,41 @@ export default function ProductCard({ product, colorFilter }) {
   const [copied, setCopied] = useState(false)
 
   // Variante que coincide con el filtro de color activo, si lo hay.
+  // Solo se consideran variantes VENDIBLES (no agotadas ni marcadas como no
+  // disponibles) y se prefiere la coincidencia exacta antes que "contiene":
+  // así el filtro "Azul" no agrega "Azul marino" si "Azul" existe.
   const matchedVariant = useMemo(() => {
-    if (!colorFilter || !Array.isArray(product.variants) || !product.variants.length) return null
-    const safe = colorFilter.toLowerCase().trim()
-    return product.variants.find((v) => v.value?.toLowerCase().includes(safe)) || null
+    if (!colorFilter) return null
+    return findVariantByColor(product.variants, colorFilter, { soloVendibles: true })
   }, [colorFilter, product.variants])
+
+  // Variante que REALMENTE agregará el botón de la tarjeta: la del filtro de
+  // color o, si no hay, la misma que elige AddToCartButton por defecto.
+  // La foto y el SKU de la tarjeta salen de aquí para que el cliente vea
+  // exactamente lo que va a llegar al carrito.
+  const cardVariant = useMemo(
+    () => matchedVariant || defaultEffectiveVariant(product),
+    [matchedVariant, product]
+  )
+  const cardSku = String(cardVariant?.sku || product.sku || '').trim()
 
   const href = colorFilter && matchedVariant
     ? `/productos/${product._id}?color=${encodeURIComponent(colorFilter)}`
     : `/productos/${product._id}`
 
-  const primaryImage = matchedVariant?.image || product.image
-  const images = useMemo(() => [
-    primaryImage,
-    ...((matchedVariant?.images || []).filter((i) => i && i !== primaryImage)),
-    ...((product.gallery || []).filter((g) => g && g !== primaryImage)),
-  ].filter(Boolean), [primaryImage, matchedVariant, product.gallery])
+  const primaryImage = cardVariant?.image || cardVariant?.images?.[0] || product.image
+  const images = useMemo(() => {
+    const seen = new Set()
+    return [
+      primaryImage,
+      ...(cardVariant?.images || []),
+      ...(product.gallery || []),
+    ].filter((u) => {
+      if (!u || seen.has(u)) return false
+      seen.add(u)
+      return true
+    })
+  }, [primaryImage, cardVariant, product.gallery])
 
   // Stock real considerando variantes: el padre siempre trae null en el
   // modelo simétrico, así que leerlo directo marcaba como disponible un
@@ -94,7 +114,7 @@ export default function ProductCard({ product, colorFilter }) {
 
   async function copySku() {
     try {
-      await navigator.clipboard.writeText(product.sku)
+      await navigator.clipboard.writeText(cardSku)
       setCopied(true)
       setTimeout(() => setCopied(false), 1600)
     } catch {
@@ -211,14 +231,14 @@ export default function ProductCard({ product, colorFilter }) {
             </div>
           ) : <span />}
 
-          {product.sku ? (
+          {cardSku ? (
             <button
               type="button"
               onClick={copySku}
               title="Copiar SKU"
               className="flex items-center gap-1 text-[10.5px] text-slate-400 hover:text-brand-700 transition-colors shrink-0"
             >
-              <span className="font-mono">{copied ? '¡Copiado!' : product.sku}</span>
+              <span className="font-mono">{copied ? '¡Copiado!' : cardSku}</span>
               {!copied && (
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -366,9 +386,9 @@ export default function ProductCard({ product, colorFilter }) {
 
           <AddToCartButton
             product={product}
-            // Si el catálogo está filtrado por color, se agrega ESA variante:
-            // sin esto se agregaba la primera del arreglo y llegaba otro color.
-            variant={matchedVariant}
+            // Si el catálogo está filtrado por color, se agrega ESA variante;
+            // si no, la variante por defecto. Es la misma que muestra la foto.
+            variant={cardVariant}
             qty={qty}
             compact
             disabled={outOfStock}

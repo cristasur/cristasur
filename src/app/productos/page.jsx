@@ -27,7 +27,16 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
     ],
   }
   if (featured === '1') filter.featured = true
-  if (inStock === '1') filter.stock = { $gt: 0 }
+  // "Solo con stock": stock null = sin control de inventario = disponible.
+  // Con variantes, el padre no lleva stock; basta con que UNA variante se pueda vender.
+  if (inStock === '1') {
+    filter.$and.push({
+      $or: [
+        { 'variants.0': { $exists: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] },
+        { variants: { $elemMatch: { available: { $ne: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] } } },
+      ],
+    })
+  }
   if (onSale === '1') filter.$expr = { $gt: ['$comparePrice', '$price'] }
 
   if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
@@ -79,6 +88,8 @@ async function loadData({ q, category, featured, minPrice, maxPrice, inStock, on
       { name: { $regex: safe, $options: 'i' } },
       { description: { $regex: safe, $options: 'i' } },
       { color: { $regex: safe, $options: 'i' } },
+      // Con el modelo simétrico el color vive en las variantes.
+      { 'variants.value': { $regex: safe, $options: 'i' } },
     ]
     if (brandIds.length) orClauses.push({ brand: { $in: brandIds } })
     // Agregar al $and para no sobreescribir el $or de publishAt/status

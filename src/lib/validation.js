@@ -319,7 +319,9 @@ export function validateProductPayload(body) {
     const yaEsta = variants.some(
       (v) => String(v?.value || '').trim().toLowerCase() === color.trim().toLowerCase()
     )
-    if (!yaEsta && variants.length < MAX_VARIANTS) {
+    if (!yaEsta && variants.length >= MAX_VARIANTS) {
+      errors.push(`El color "${color}" de arriba no cabe como variante (máximo ${MAX_VARIANTS}). Quita una variante o vacía el campo Color.`)
+    } else if (!yaEsta) {
       const fotos = [image, ...gallery].filter(Boolean)
       variants.unshift({
         label: 'Color',

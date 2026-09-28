@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import Icon from '@/components/Icon'
 import { useCart } from '@/components/CartProvider'
+import { availableUnits, stockState } from '@/lib/pricing'
 
 function formatMXN(n) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0 }).format(n || 0)
@@ -26,9 +27,15 @@ export default function MayoreoGrid({ products, categories }) {
     })
   }, [products, q, cat])
 
+  // Solo para productos SIN variantes. Los que tienen variantes se mandan a
+  // la ficha para que el cliente elija color/talla: antes se inventaba una
+  // variante falsa "Mayoreo VIP" que no existe en el producto, rompía el
+  // tope de existencias y llegaba al pedido sin SKU.
   function addToCartMayoreo(p) {
     const hasWholesale = p.wholesalePrice && Number(p.wholesalePrice) > 0
     const unit = hasWholesale ? Number(p.wholesalePrice) : Number(p.price)
+    // Múltiplo de venta del producto, igual que AddToCartButton.
+    const qtyStep = Number(p.qtyStep) >= 1 ? Math.floor(Number(p.qtyStep)) : 1
     addItem(
       {
         productId: String(p._id),
@@ -38,14 +45,20 @@ export default function MayoreoGrid({ products, categories }) {
         price: unit,
         wholesalePrice: null,
         wholesaleMinQty: null,
+        hundredPrice: null,
+        hundredMinQty: null,
+        qtyStep,
+        sku: String(p.sku || '').trim(),
         image: p.image || '',
         variantLabel: '',
-        variantValue: hasWholesale ? 'Mayoreo VIP' : '',
+        variantValue: '',
         categoryIds: Array.isArray(p.categories)
           ? p.categories.map((c) => String(c?._id || c))
           : [],
+        // Tope de existencias de la línea (null = sin control de inventario).
+        maxStock: availableUnits(p, '', ''),
       },
-      1
+      qtyStep
     )
     setOpen(true)
   }
@@ -77,6 +90,9 @@ export default function MayoreoGrid({ products, categories }) {
           const hasWholesale = p.wholesalePrice && Number(p.wholesalePrice) > 0
           const price = hasWholesale ? Number(p.wholesalePrice) : Number(p.price)
           const saving = hasWholesale ? Number(p.price) - Number(p.wholesalePrice) : 0
+          const conVariantes = Array.isArray(p.variants) && p.variants.length > 0
+          // Stock real considerando variantes (stock null = sin control).
+          const agotado = stockState(p).agotado
           return (
             <article
               key={p._id}
@@ -121,19 +137,30 @@ export default function MayoreoGrid({ products, categories }) {
                 </div>
               </Link>
               <div className="px-3 pb-3 mt-auto">
-                <button
-                  onClick={() => addToCartMayoreo(p)}
-                  disabled={p.stock === 0}
-                  className={
-                    'w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-bold ' +
-                    (p.stock === 0
-                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                      : 'bg-amber-500 hover:bg-amber-600 text-white')
-                  }
-                >
-                  <Icon name="cart" className="w-4 h-4" />
-                  {p.stock === 0 ? 'Sin stock' : 'Añadir al carrito'}
-                </button>
+                {conVariantes && !agotado ? (
+                  // Con variantes no se agrega desde aquí: se elige en la ficha.
+                  <Link
+                    href={`/productos/${p._id}`}
+                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    <Icon name="cart" className="w-4 h-4" />
+                    Elegir opción
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => addToCartMayoreo(p)}
+                    disabled={agotado}
+                    className={
+                      'w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-bold ' +
+                      (agotado
+                        ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                        : 'bg-amber-500 hover:bg-amber-600 text-white')
+                    }
+                  >
+                    <Icon name="cart" className="w-4 h-4" />
+                    {agotado ? 'Sin stock' : 'Añadir al carrito'}
+                  </button>
+                )}
               </div>
             </article>
           )

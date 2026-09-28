@@ -8,6 +8,7 @@
 // ============================================================
 import { useState, useEffect, useRef } from 'react'
 import { parseInstagram } from '@/lib/instagram'
+import { upload as subirABlob } from '@vercel/blob/client'
 
 const TIPOS = {
   carrusel:    'Carrusel de productos',
@@ -82,7 +83,7 @@ function nombreItem(tipo, i) {
 
 /** Medida recomendada de la imagen del item. */
 function medidaItem(tipo, i) {
-  if (tipo === 'reels') return '1080 × 1350 px (vertical)'
+  if (tipo === 'reels') return '1080 × 1350 px (vertical). Si no pones, se usa el video'
   if (tipo === 'colecciones') return '1200 × 1200 px'
   if (tipo === 'mosaico') return i === 0 ? '900 × 1000 px' : '700 × 500 px'
   if (tipo === 'promos') return i < 2 ? '1200 × 600 px' : '1200 × 500 px'
@@ -157,6 +158,106 @@ function CampoImagen({ label, medida, url, onUrl, onError }) {
   )
 }
 
+// ── Video: subir mp4 y sacar la portada de un cuadro ────────
+// El video va directo del navegador a Vercel Blob (no pasa por el
+// servidor). Para la portada se dibuja el cuadro elegido en un
+// canvas y se sube como imagen normal.
+function CampoVideo({ url, onUrl, onPortada, onError }) {
+  const inputRef = useRef()
+  const videoRef = useRef()
+  const [subiendo, setSubiendo] = useState(0)     // % de avance, 0 = nada
+  const [dur, setDur] = useState(0)
+  const [t, setT] = useState(0)
+  const [sacando, setSacando] = useState(false)
+
+  async function alElegir(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 150 * 1024 * 1024) return onError('El video pesa más de 150 MB. Recórtalo o comprímelo.')
+    setSubiendo(1)
+    try {
+      const limpio = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+/, '') || 'video.mp4'
+      const blob = await subirABlob(`portada/videos/${limpio}`, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload/video',
+        contentType: file.type || 'video/mp4',
+        onUploadProgress: (ev) => setSubiendo(Math.max(1, Math.round(ev.percentage))),
+      })
+      onUrl(blob.url)
+    } catch (err) {
+      onError(err.message || 'No se pudo subir el video')
+    } finally {
+      setSubiendo(0)
+    }
+  }
+
+  async function usarCuadro() {
+    const v = videoRef.current
+    if (!v || !v.videoWidth) return onError('Espera a que cargue el video.')
+    setSacando(true)
+    try {
+      // Recorte vertical 4:5 centrado, como se ve en la tienda
+      const w = v.videoWidth, h = v.videoHeight
+      let cw = w, ch = Math.round(w * 1.25)
+      if (ch > h) { ch = h; cw = Math.round(h / 1.25) }
+      const escala = Math.min(1, 1080 / cw)
+      const c = document.createElement('canvas')
+      c.width = Math.round(cw * escala)
+      c.height = Math.round(ch * escala)
+      c.getContext('2d').drawImage(v, (w - cw) / 2, (h - ch) / 2, cw, ch, 0, 0, c.width, c.height)
+      const blob = await new Promise((ok, mal) => c.toBlob((b) => (b ? ok(b) : mal(new Error('No se pudo leer el cuadro'))), 'image/jpeg', 0.9))
+      onPortada(await subirImagen(new File([blob], 'portada-reel.jpg', { type: 'image/jpeg' })))
+    } catch (err) {
+      onError(err.name === 'SecurityError'
+        ? 'El navegador no dejó copiar el cuadro de este video. Sube la portada como imagen.'
+        : err.message)
+    } finally {
+      setSacando(false)
+    }
+  }
+
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-slate-200 p-3">
+      <label className="block text-xs font-semibold text-slate-600 mb-2">
+        Video propio (opcional) <span className="font-normal text-slate-400">· MP4 vertical, máx 150 MB. En la tienda se reproduce solo y sin sonido, como MAHA.</span>
+      </label>
+      {url ? (
+        <div className="flex flex-col sm:flex-row gap-3">
+          <video ref={videoRef} src={url} crossOrigin="anonymous" muted playsInline preload="auto"
+            onLoadedMetadata={(e) => { setDur(e.currentTarget.duration || 0); e.currentTarget.currentTime = Math.min(0.5, e.currentTarget.duration || 0) }}
+            className="w-32 aspect-[4/5] object-cover rounded-lg bg-black shrink-0" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div>
+              <span className="flex justify-between text-xs text-slate-500 mb-1">
+                <span>Elige el cuadro para la portada</span><span>{t.toFixed(1)} s</span>
+              </span>
+              <input type="range" min="0" max={dur || 0} step="0.1" value={t} disabled={!dur}
+                onChange={(e) => { const v = Number(e.target.value); setT(v); if (videoRef.current) videoRef.current.currentTime = v }}
+                className="w-full accent-brand-600" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={usarCuadro} disabled={sacando || !dur}
+                className="px-3 py-1.5 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 disabled:opacity-50">
+                {sacando ? 'Guardando…' : 'Usar este cuadro como portada'}
+              </button>
+              <button type="button" onClick={() => inputRef.current?.click()}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50">Cambiar video</button>
+              <button type="button" onClick={() => onUrl('')} className="px-2 text-xs text-red-600 hover:underline">Quitar</button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={subiendo > 0}
+          className="w-full rounded-lg border-2 border-dashed border-slate-200 hover:border-brand-400 bg-slate-50 py-4 text-sm text-slate-500">
+          {subiendo > 0 ? `Subiendo video… ${subiendo}%` : 'Subir video desde la compu'}
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={alElegir} />
+    </div>
+  )
+}
+
 // ── Selector de categoría (subcategorías con sangría) ───────
 function SelectCategoria({ categorias, value, onChange, vacio = 'Sin categoría' }) {
   const padres = categorias.filter((c) => !c.parent)
@@ -224,7 +325,8 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
           )}
           {tipo === 'reels' && (
             <>
-              <Campo label="Video MP4 propio (opcional)" value={item.videoUrl} onChange={f('videoUrl')} placeholder="https://…/video.mp4" />
+              <CampoVideo url={item.videoUrl} onUrl={f('videoUrl')} onError={onError}
+                onPortada={(img) => set({ ...item, image: img })} />
               <div className="sm:col-span-2">
                 <Campo label="Texto (opcional)" value={item.text} onChange={f('text')} area
                   ayuda="Si lo dejas vacío se usa el texto del reel en Instagram." />

@@ -37,7 +37,7 @@ const ItemSchema = new mongoose.Schema(
   {
     title:      { type: String, trim: true, default: '', maxlength: 140 },
     subtitle:   { type: String, trim: true, default: '', maxlength: 200 },
-    text:       { type: String, trim: true, default: '', maxlength: 1200 },
+    text:       { type: String, trim: true, default: '', maxlength: 2200 },
     image:      { type: String, trim: true, default: '' },
     href:       { type: String, trim: true, default: '' },
     videoUrl:   { type: String, trim: true, default: '' },

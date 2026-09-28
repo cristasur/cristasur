@@ -60,6 +60,40 @@ function IconoInstagram({ className = 'w-5 h-5' }) {
   )
 }
 
+// ── Portada automática de un reel de Instagram ─────────────
+// Si no hay portada ni video propio, se muestra el reproductor de
+// Instagram en miniatura (su primer cuadro), sin encabezado y sin
+// que se pueda tocar: el clic lo recibe el cuadro y abre la ventana.
+// Se dibuja a 400 px de ancho y se escala al tamaño del cuadro.
+const ANCHO_IG = 400
+function PortadaInstagram({ code, kind }) {
+  const caja = useRef(null)
+  const [escala, setEscala] = useState(0)
+
+  useEffect(() => {
+    const el = caja.current
+    if (!el) return
+    const medir = () => setEscala(el.clientWidth / ANCHO_IG)
+    medir()
+    const ro = new ResizeObserver(medir)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  return (
+    <div ref={caja} className="absolute inset-0 overflow-hidden bg-slate-900 pointer-events-none" aria-hidden="true">
+      {escala > 0 && (
+        <iframe
+          src={`https://www.instagram.com/${kind || 'reel'}/${code}/embed/`}
+          title="" tabIndex={-1} loading="lazy" scrolling="no"
+          className="absolute left-0 border-0 origin-top-left"
+          style={{ width: ANCHO_IG, height: 54 + ANCHO_IG * 1.25 + 200, top: -54 * escala, transform: `scale(${escala})` }}
+        />
+      )}
+    </div>
+  )
+}
+
 // ── Ventana del reel ───────────────────────────────────────
 function VisorReel({ items, index, onClose, onGo }) {
   const it = items[index]
@@ -231,7 +265,7 @@ export default function ReelsStrip({ items = [] }) {
           return (
             <div
               key={it._id || i}
-              className="snap-start shrink-0 w-[calc((100%-0.75rem)/2.2)] sm:w-[calc((100%-2rem)/3.2)] md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)]"
+              className="snap-start shrink-0 w-[calc((100%-0.75rem)/1.6)] sm:w-[calc((100%-2rem)/2.5)] md:w-[calc((100%-3rem)/3.4)] lg:w-[calc((100%-4rem)/4.3)]"
             >
               <button type="button" onClick={() => setAbierto(i)} aria-label={`Ver: ${label}`}
                 className="group relative block w-full aspect-[4/5] rounded-2xl overflow-hidden bg-slate-100 text-left focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300">
@@ -251,6 +285,8 @@ export default function ReelsStrip({ items = [] }) {
                     referrerPolicy="no-referrer"
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                   />
+                ) : it.igCode ? (
+                  <PortadaInstagram code={it.igCode} kind={it.igKind} />
                 ) : (
                   // Sin portada: tarjeta de marca con el inicio del texto.
                   <div className="absolute inset-0 bg-gradient-to-br from-brand-700 via-brand-600 to-accent-500 p-4 flex flex-col justify-end text-white">
@@ -266,8 +302,9 @@ export default function ReelsStrip({ items = [] }) {
                   </div>
                 )}
 
-                <span className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/85 backdrop-blur text-slate-900 grid place-items-center shadow pointer-events-none transition-transform group-hover:scale-110">
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 translate-x-[1px]" fill="currentColor" aria-hidden="true">
+                {/* Botón de play al centro */}
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/90 backdrop-blur text-slate-900 grid place-items-center shadow-lg pointer-events-none transition-transform duration-300 group-hover:scale-110">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 translate-x-[2px]" fill="currentColor" aria-hidden="true">
                     <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
                   </svg>
                 </span>

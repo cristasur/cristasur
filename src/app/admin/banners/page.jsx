@@ -10,6 +10,8 @@
 // celular solo si TODOS los banners activos la tienen (ver Hero.jsx).
 // ============================================================
 import { useState, useEffect, useRef } from 'react'
+import EditorEncuadre from './EditorEncuadre'
+import { estiloEncuadre } from '@/lib/encuadre'
 
 async function subirImagen(file) {
   const fd = new FormData()
@@ -89,6 +91,7 @@ export default function AdminBannersPage() {
   const [imageUrl, setImageUrl] = useState('')
   const [imageMobileUrl, setImageMobileUrl] = useState('')
   const [subiendoCel, setSubiendoCel] = useState(null) // id del banner al que se le sube versión de celular
+  const [encuadrando, setEncuadrando] = useState(null) // banner abierto en el editor de encuadre
   const celRef = useRef()
   const celPara = useRef(null)
 
@@ -278,6 +281,17 @@ export default function AdminBannersPage() {
         </form>
       </div>
 
+      {encuadrando && (
+        <EditorEncuadre
+          banner={encuadrando}
+          onCerrar={() => setEncuadrando(null)}
+          onGuardar={async (cambios) => {
+            await actualizar(encuadrando._id, cambios)
+            setEncuadrando(null)
+          }}
+        />
+      )}
+
       {/* ── Lista de banners ────────────────────────────── */}
       <input ref={celRef} type="file" accept="image/*" className="hidden" onChange={alElegirCelular} />
       <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">
@@ -297,11 +311,11 @@ export default function AdminBannersPage() {
                 {/* Miniaturas: compu y celular */}
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="w-32 h-[51px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200" title="Compu">
-                    <img src={b.image} alt={b.title || 'Banner'} className="w-full h-full object-cover" />
+                    <img src={b.image} alt={b.title || 'Banner'} className="w-full h-full object-cover" style={estiloEncuadre(b.pos)} />
                   </div>
                   <div className="w-[51px] h-[51px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center" title="Celular">
                     {b.imageMobile
-                      ? <img src={b.imageMobile} alt="Versión celular" className="w-full h-full object-cover" />
+                      ? <img src={b.imageMobile} alt="Versión celular" className="w-full h-full object-cover" style={estiloEncuadre(b.posMobile)} />
                       : <span className="text-[10px] text-slate-400 text-center leading-tight">sin<br />celular</span>}
                   </div>
                 </div>
@@ -326,6 +340,12 @@ export default function AdminBannersPage() {
 
                 {/* Acciones */}
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setEncuadrando(b)}
+                    className="px-3 py-1 text-xs font-semibold rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100"
+                  >
+                    Ajustar encuadre
+                  </button>
                   <button
                     onClick={() => pedirCelular(b._id)}
                     disabled={subiendoCel === b._id}

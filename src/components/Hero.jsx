@@ -20,6 +20,7 @@
 // ============================================================
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { normalizarEncuadre } from '@/lib/encuadre'
 
 const AUTOPLAY_MS = 6000
 const SWIPE_MIN_PX = 50
@@ -85,13 +86,24 @@ export default function Hero({ banners = [] }) {
           }}
         >
           {slides.map((slide, i) => {
+            // Encuadre elegido en el panel. En celular se usa el suyo solo
+            // si de verdad se está mostrando la imagen de celular.
+            const pc = normalizarEncuadre(slide.pos)
+            const cel = conCelular ? normalizarEncuadre(slide.posMobile) : pc
+            const vars = {
+              '--bx': `${pc.x}%`, '--by': `${pc.y}%`, '--bz': pc.zoom,
+              '--bxm': `${cel.x}%`, '--bym': `${cel.y}%`, '--bzm': cel.zoom,
+            }
             const img = (
               <picture className="block w-full h-full">
                 {conCelular && <source media="(max-width: 767px)" srcSet={slide.imageMobile} />}
                 <img
                   src={slide.image}
                   alt={slide.title || 'Promoción CRISTASUR'}
-                  className="w-full h-full object-cover select-none"
+                  className="w-full h-full object-cover select-none
+                    [object-position:var(--bxm)_var(--bym)] [transform:scale(var(--bzm))] [transform-origin:var(--bxm)_var(--bym)]
+                    md:[object-position:var(--bx)_var(--by)] md:[transform:scale(var(--bz))] md:[transform-origin:var(--bx)_var(--by)]"
+                  style={vars}
                   draggable={false}
                   // El primer banner es el LCP de la home.
                   fetchPriority={i === 0 ? 'high' : 'low'}
@@ -105,7 +117,7 @@ export default function Hero({ banners = [] }) {
                 key={slide._id || i}
                 // Compu: 2000×800 siempre. Celular: cuadrado si todos los
                 // banners traen su versión de celular (ver arriba).
-                className={`min-w-full ${conCelular ? 'aspect-square md:aspect-[2000/800]' : 'aspect-[2000/800]'}`}
+                className={`min-w-full overflow-hidden ${conCelular ? 'aspect-square md:aspect-[2000/800]' : 'aspect-[2000/800]'}`}
                 aria-hidden={i !== current}
               >
                 {slide.href ? (

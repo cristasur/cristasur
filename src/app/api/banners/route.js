@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Banner from '@/models/Banner'
 import { getCurrentUser } from '@/lib/auth'
+import { normalizarEncuadre } from '@/lib/encuadre'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,9 @@ export async function POST(request) {
     }
     await dbConnect()
     const body = await request.json().catch(() => ({}))
+    // Encuadre: se guarda siempre dentro de rango (ver lib/encuadre.js).
+    if (body.pos) body.pos = normalizarEncuadre(body.pos)
+    if (body.posMobile) body.posMobile = normalizarEncuadre(body.posMobile)
     if (!body.image) return NextResponse.json({ error: 'Falta la imagen' }, { status: 400 })
 
     const banner = await Banner.create(body)

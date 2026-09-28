@@ -8,6 +8,9 @@ import mongoose from 'mongoose'
 const BannerSchema = new mongoose.Schema(
   {
     image:    { type: String, required: true, trim: true },   // URL Vercel Blob
+    // Versión para celular (cuadrada, 1080×1080). Opcional: si falta,
+    // en celular se usa la de compu. Ver Hero.jsx para la regla.
+    imageMobile: { type: String, trim: true, default: '' },
     title:    { type: String, trim: true, default: '' },      // texto opcional encima
     subtitle: { type: String, trim: true, default: '' },
     href:     { type: String, trim: true, default: '' },      // link al hacer click

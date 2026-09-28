@@ -9,9 +9,14 @@
 // Si no hay banners activos, el componente no renderiza nada
 // (la home arranca directo con las categorías).
 //
-// Medida recomendada de imagen: 2000 × 800 px (relación 2.5:1).
-// Se recorta con object-cover, así que lo importante debe ir
-// centrado para que no se pierda en móvil.
+// Medidas:
+//   Compu:   2000 × 800 px  (2.5 : 1)
+//   Celular: 1080 × 1080 px (cuadrada), opcional
+//
+// En celular, el carrusel se vuelve cuadrado y usa la versión de
+// celular SOLO si todos los banners la tienen. Si uno solo no la
+// tiene, se queda todo en 2.5 : 1 con las imágenes de compu: un
+// carrusel que cambia de altura entre slides brinca y se ve roto.
 // ============================================================
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -22,6 +27,7 @@ const SWIPE_MIN_PX = 50
 export default function Hero({ banners = [] }) {
   const slides = Array.isArray(banners) ? banners : []
   const total = slides.length
+  const conCelular = total > 0 && slides.every((s) => s.imageMobile)
 
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -80,23 +86,26 @@ export default function Hero({ banners = [] }) {
         >
           {slides.map((slide, i) => {
             const img = (
-              <img
-                src={slide.image}
-                alt={slide.title || 'Promoción CRISTASUR'}
-                className="w-full h-full object-cover select-none"
-                draggable={false}
-                // El primer banner es el LCP de la home.
-                fetchPriority={i === 0 ? 'high' : 'low'}
-                loading={i === 0 ? 'eager' : 'lazy'}
-              />
+              <picture className="block w-full h-full">
+                {conCelular && <source media="(max-width: 767px)" srcSet={slide.imageMobile} />}
+                <img
+                  src={slide.image}
+                  alt={slide.title || 'Promoción CRISTASUR'}
+                  className="w-full h-full object-cover select-none"
+                  draggable={false}
+                  // El primer banner es el LCP de la home.
+                  fetchPriority={i === 0 ? 'high' : 'low'}
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                />
+              </picture>
             )
 
             return (
               <div
                 key={slide._id || i}
-                // Proporción fija 2000×800 en todos los tamaños: así el banner
-                // se ve completo en celular y no se recorta el texto lateral.
-                className="min-w-full aspect-[2000/800]"
+                // Compu: 2000×800 siempre. Celular: cuadrado si todos los
+                // banners traen su versión de celular (ver arriba).
+                className={`min-w-full ${conCelular ? 'aspect-square md:aspect-[2000/800]' : 'aspect-[2000/800]'}`}
                 aria-hidden={i !== current}
               >
                 {slide.href ? (

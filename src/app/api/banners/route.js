@@ -1,4 +1,4 @@
-// GET  /api/banners  — público, solo activos
+// GET  /api/banners  — público, solo activos (?all=1 con sesión de admin: todos)
 // POST /api/banners  — admin
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
@@ -7,10 +7,17 @@ import { getCurrentUser } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request) {
   try {
     await dbConnect()
-    const banners = await Banner.find({ active: true })
+    // ?all=1 lo usa el panel: ahí se necesitan también los inactivos,
+    // si no, un banner desactivado desaparece y ya no se puede prender.
+    let filtro = { active: true }
+    if (new URL(request.url).searchParams.get('all') === '1') {
+      const user = await getCurrentUser()
+      if (user && ['admin', 'editor'].includes(user.role)) filtro = {}
+    }
+    const banners = await Banner.find(filtro)
       .sort({ order: 1, createdAt: 1 })
       .lean()
     return NextResponse.json({ banners: JSON.parse(JSON.stringify(banners)) })

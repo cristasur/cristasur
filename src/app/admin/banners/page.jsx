@@ -1,8 +1,83 @@
 'use client'
 // ============================================================
 // /admin/banners — Gestión de slides del carrusel hero
+//
+// Cada banner lleva dos imágenes:
+//   Compu   2000 × 800  (obligatoria)
+//   Celular 1080 × 1080 (opcional)
+//
+// En celular el carrusel se vuelve cuadrado y usa la versión de
+// celular solo si TODOS los banners activos la tienen (ver Hero.jsx).
 // ============================================================
 import { useState, useEffect, useRef } from 'react'
+
+async function subirImagen(file) {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('folder', 'banners')
+  const res = await fetch('/api/upload', { method: 'POST', body: fd })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Error al subir')
+  return data.url
+}
+
+/** Recuadro para subir una imagen, con vista previa. */
+function CajaImagen({ titulo, medida, ayuda, url, onUrl, obligatoria, cuadrada, onError }) {
+  const ref = useRef()
+  const [preview, setPreview] = useState('')
+  const [subiendo, setSubiendo] = useState(false)
+
+  useEffect(() => { if (!url) { setPreview(''); if (ref.current) ref.current.value = '' } }, [url])
+
+  async function alElegir(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPreview(URL.createObjectURL(file))
+    setSubiendo(true)
+    try {
+      onUrl(await subirImagen(file))
+    } catch (err) {
+      onError(err.message)
+      setPreview('')
+    } finally {
+      setSubiendo(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-slate-700 mb-2">
+        {titulo} {obligatoria ? <span className="text-red-500">*</span> : <span className="text-slate-400 font-normal">(opcional)</span>}
+      </label>
+      <div
+        onClick={() => ref.current?.click()}
+        className={`relative cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 transition overflow-hidden bg-slate-50 ${cuadrada ? 'aspect-square' : 'aspect-[2000/800]'}`}
+      >
+        {preview ? (
+          <img src={preview} alt="Vista previa" className="w-full h-full object-cover" />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-1.5 text-slate-400 p-3 text-center">
+            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="text-sm">Haz click para subir</span>
+            <span className="text-xs font-semibold text-slate-500">{medida}</span>
+            <span className="text-xs text-slate-400">{ayuda}</span>
+          </div>
+        )}
+        {subiendo && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+            <span className="text-sm font-semibold text-brand-600">Subiendo…</span>
+          </div>
+        )}
+        {url && !subiendo && (
+          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">✓ Lista</div>
+        )}
+      </div>
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={alElegir} />
+    </div>
+  )
+}
 
 export default function AdminBannersPage() {
   const [banners, setBanners] = useState([])
@@ -10,12 +85,12 @@ export default function AdminBannersPage() {
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState('')
 
-  // Form nuevo banner
-  const [form, setForm]         = useState({ title: '', subtitle: '', href: '', cta: '', order: 0 })
-  const [preview, setPreview]   = useState('')   // URL local para previsualizar
-  const [imageUrl, setImageUrl] = useState('')   // URL Blob definitiva
-  const [uploading, setUploading] = useState(false)
-  const fileRef = useRef()
+  const [form, setForm] = useState({ title: '', subtitle: '', href: '', cta: '', order: 0 })
+  const [imageUrl, setImageUrl] = useState('')
+  const [imageMobileUrl, setImageMobileUrl] = useState('')
+  const [subiendoCel, setSubiendoCel] = useState(null) // id del banner al que se le sube versión de celular
+  const celRef = useRef()
+  const celPara = useRef(null)
 
   async function load() {
     setLoading(true)
@@ -32,44 +107,22 @@ export default function AdminBannersPage() {
 
   useEffect(() => { load() }, [])
 
-  async function handleFile(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setPreview(URL.createObjectURL(file))
-    setUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('folder', 'banners')
-      const res  = await fetch('/api/upload', { method: 'POST', body: fd })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error al subir')
-      setImageUrl(data.url)
-    } catch (err) {
-      setError(err.message)
-      setPreview('')
-    } finally {
-      setUploading(false)
-    }
-  }
-
   async function handleCreate(e) {
     e.preventDefault()
-    if (!imageUrl) { setError('Sube una imagen primero'); return }
+    if (!imageUrl) { setError('Sube la imagen para compu primero'); return }
     setSaving(true)
     setError('')
     try {
       const res = await fetch('/api/banners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, image: imageUrl }),
+        body: JSON.stringify({ ...form, image: imageUrl, imageMobile: imageMobileUrl }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al guardar')
       setForm({ title: '', subtitle: '', href: '', cta: '', order: 0 })
-      setPreview('')
       setImageUrl('')
-      if (fileRef.current) fileRef.current.value = ''
+      setImageMobileUrl('')
       await load()
     } catch (err) {
       setError(err.message)
@@ -78,11 +131,11 @@ export default function AdminBannersPage() {
     }
   }
 
-  async function toggleActive(banner) {
-    await fetch(`/api/banners/${banner._id}`, {
+  async function actualizar(id, cambios) {
+    await fetch(`/api/banners/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ active: !banner.active }),
+      body: JSON.stringify(cambios),
     })
     load()
   }
@@ -93,21 +146,32 @@ export default function AdminBannersPage() {
     load()
   }
 
-  async function handleOrder(id, order) {
-    await fetch(`/api/banners/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order: Number(order) }),
-    })
-    load()
+  // Subir o cambiar la versión de celular de un banner que ya existe.
+  function pedirCelular(id) { celPara.current = id; celRef.current?.click() }
+  async function alElegirCelular(e) {
+    const file = e.target.files?.[0]
+    const id = celPara.current
+    e.target.value = ''
+    if (!file || !id) return
+    setSubiendoCel(id)
+    try {
+      await actualizar(id, { imageMobile: await subirImagen(file) })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubiendoCel(null)
+    }
   }
+
+  const activos = banners.filter((b) => b.active)
+  const sinCelular = activos.filter((b) => !b.imageMobile)
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-black text-slate-900">Banners del carrusel</h1>
         <p className="text-slate-500 text-sm mt-1">
-          Gestiona los slides que aparecen en la portada. El slide principal con texto siempre es el primero.
+          Los slides que aparecen en la portada. Cada uno lleva una imagen para compu y, de preferencia, otra para celular.
         </p>
       </div>
 
@@ -115,46 +179,38 @@ export default function AdminBannersPage() {
         <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>
       )}
 
+      {activos.length > 0 && (
+        sinCelular.length === 0 ? (
+          <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">
+            ✓ Todos los banners activos tienen versión de celular: en celular el carrusel se ve cuadrado, con letra grande.
+          </div>
+        ) : (
+          <div className="mb-4 p-3 rounded-lg bg-amber-50 text-amber-800 text-sm">
+            <b>{sinCelular.length} {sinCelular.length === 1 ? 'banner activo no tiene' : 'banners activos no tienen'} versión de celular.</b>{' '}
+            Mientras falte en alguno, en celular se usan las imágenes de compu (se ven chiquitas).
+            Súbela con el botón <b>“Versión celular”</b> de cada uno.
+          </div>
+        )
+      )}
+
       {/* ── Formulario nuevo banner ─────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-card p-6 mb-8">
         <h2 className="font-bold text-slate-900 mb-4">Añadir nuevo banner</h2>
         <form onSubmit={handleCreate} className="space-y-4">
 
-          {/* Subida de imagen */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Imagen del banner <span className="text-red-500">*</span>
-            </label>
-            <div
-              onClick={() => fileRef.current?.click()}
-              className="relative cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 transition overflow-hidden bg-slate-50"
-              style={{ minHeight: 180 }}
-            >
-              {preview ? (
-                <img src={preview} alt="Preview" className="w-full object-cover" style={{ maxHeight: 240 }} />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-44 gap-2 text-slate-400">
-                  <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span className="text-sm">Haz click para subir imagen</span>
-                  <span className="text-xs">JPG, PNG o WebP · máx 8MB</span>
-                  <span className="text-xs text-slate-300">Recomendado: 2000 × 800 px (lo importante al centro)</span>
-                </div>
-              )}
-              {uploading && (
-                <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                  <span className="text-sm font-semibold text-brand-600">Subiendo imagen…</span>
-                </div>
-              )}
-              {imageUrl && !uploading && (
-                <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                  ✓ Lista
-                </div>
-              )}
-            </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <div className="grid md:grid-cols-[2.5fr_1fr] gap-4 items-start">
+            <CajaImagen
+              titulo="Imagen para compu" medida="2000 × 800 px"
+              ayuda="Horizontal. Lo importante al centro."
+              url={imageUrl} onUrl={setImageUrl} obligatoria onError={setError}
+            />
+            <CajaImagen
+              titulo="Imagen para celular" medida="1080 × 1080 px"
+              ayuda="Cuadrada. Texto grande, pocas palabras."
+              url={imageMobileUrl} onUrl={setImageMobileUrl} cuadrada onError={setError}
+            />
           </div>
+          <p className="text-xs text-slate-400">JPG, PNG o WebP · máx 8MB. De preferencia menos de 400 KB para que la portada cargue rápido.</p>
 
           {/* Campos opcionales */}
           <div className="grid sm:grid-cols-2 gap-4">
@@ -213,7 +269,7 @@ export default function AdminBannersPage() {
             </div>
             <button
               type="submit"
-              disabled={saving || uploading || !imageUrl}
+              disabled={saving || !imageUrl}
               className="mt-5 px-6 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Guardando…' : 'Añadir banner'}
@@ -223,10 +279,11 @@ export default function AdminBannersPage() {
       </div>
 
       {/* ── Lista de banners ────────────────────────────── */}
+      <input ref={celRef} type="file" accept="image/*" className="hidden" onChange={alElegirCelular} />
       <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
           <h2 className="font-bold text-slate-900">Banners actuales</h2>
-          <p className="text-xs text-slate-400 mt-0.5">El slide principal de bienvenida siempre aparece primero automáticamente.</p>
+          <p className="text-xs text-slate-400 mt-0.5">Se muestran en el orden del número (de menor a mayor).</p>
         </div>
 
         {loading ? (
@@ -236,14 +293,21 @@ export default function AdminBannersPage() {
         ) : (
           <div className="divide-y divide-slate-100">
             {banners.map((b) => (
-              <div key={b._id} className="flex items-center gap-4 p-4">
-                {/* Miniatura */}
-                <div className="shrink-0 w-32 h-16 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
-                  <img src={b.image} alt={b.title || 'Banner'} className="w-full h-full object-cover" />
+              <div key={b._id} className="flex flex-wrap items-center gap-4 p-4">
+                {/* Miniaturas: compu y celular */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="w-32 h-[51px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200" title="Compu">
+                    <img src={b.image} alt={b.title || 'Banner'} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="w-[51px] h-[51px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center" title="Celular">
+                    {b.imageMobile
+                      ? <img src={b.imageMobile} alt="Versión celular" className="w-full h-full object-cover" />
+                      : <span className="text-[10px] text-slate-400 text-center leading-tight">sin<br />celular</span>}
+                  </div>
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-[140px]">
                   <div className="font-semibold text-slate-900 truncate">{b.title || <span className="text-slate-400 font-normal italic">Sin título</span>}</div>
                   {b.subtitle && <div className="text-sm text-slate-500 truncate">{b.subtitle}</div>}
                   {b.href && <div className="text-xs text-brand-600 truncate">{b.href}</div>}
@@ -256,14 +320,31 @@ export default function AdminBannersPage() {
                     defaultValue={b.order}
                     min={0}
                     className="w-16 px-2 py-1 rounded border border-slate-200 text-sm text-center"
-                    onBlur={e => handleOrder(b._id, e.target.value)}
+                    onBlur={e => actualizar(b._id, { order: Number(e.target.value) })}
                   />
                 </div>
 
                 {/* Acciones */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <button
-                    onClick={() => toggleActive(b)}
+                    onClick={() => pedirCelular(b._id)}
+                    disabled={subiendoCel === b._id}
+                    className={`px-3 py-1 text-xs font-semibold rounded-lg ${b.imageMobile
+                      ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}`}
+                  >
+                    {subiendoCel === b._id ? 'Subiendo…' : b.imageMobile ? 'Cambiar celular' : 'Versión celular'}
+                  </button>
+                  {b.imageMobile && (
+                    <button
+                      onClick={() => { if (confirm('¿Quitar la versión de celular de este banner?')) actualizar(b._id, { imageMobile: '' }) }}
+                      className="px-3 py-1 text-xs font-semibold rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100"
+                    >
+                      Quitar celular
+                    </button>
+                  )}
+                  <button
+                    onClick={() => actualizar(b._id, { active: !b.active })}
                     className={`px-3 py-1 text-xs font-semibold rounded-lg ${
                       b.active
                         ? 'bg-green-50 text-green-700 hover:bg-green-100'

@@ -163,7 +163,36 @@ function CampoImagen({ label, medida, url, onUrl, onError }) {
 // El video va directo del navegador a Vercel Blob (no pasa por el
 // servidor). Para la portada se dibuja el cuadro elegido en un
 // canvas y se sube como imagen normal.
-function CampoVideo({ url, onUrl, onPortada, onError }) {
+// Saca un cuadro del video ANTES de subirlo (del archivo local, así
+// el navegador no pone trabas) y lo regresa como archivo JPG.
+function portadaDeArchivo(file, segundo = 0.5) {
+  return new Promise((ok) => {
+    const url = URL.createObjectURL(file)
+    const v = document.createElement('video')
+    v.muted = true
+    v.playsInline = true
+    v.preload = 'auto'
+    const fin = (res) => { URL.revokeObjectURL(url); ok(res) }
+    const timer = setTimeout(() => fin(null), 15000)
+    v.onloadedmetadata = () => { v.currentTime = Math.min(segundo, (v.duration || 1) / 2) }
+    v.onseeked = () => {
+      try {
+        const escala = Math.min(1, 1080 / v.videoWidth)
+        const c = document.createElement('canvas')
+        c.width = Math.round(v.videoWidth * escala)
+        c.height = Math.round(v.videoHeight * escala)
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height)
+        c.toBlob((b) => { clearTimeout(timer); fin(b ? new File([b], 'portada-reel.jpg', { type: 'image/jpeg' }) : null) }, 'image/jpeg', 0.88)
+      } catch { clearTimeout(timer); fin(null) }
+    }
+    v.onerror = () => { clearTimeout(timer); fin(null) }
+    v.src = url
+  })
+}
+
+function CampoVideo({ url, onCambio, onError }) {
+  const onUrl = (v) => onCambio({ videoUrl: v })
+  const onPortada = (img) => onCambio({ image: img })
   const inputRef = useRef()
   const videoRef = useRef()
   const [subiendo, setSubiendo] = useState(0)     // % de avance, 0 = nada
@@ -178,6 +207,8 @@ function CampoVideo({ url, onUrl, onPortada, onError }) {
     if (file.size > 150 * 1024 * 1024) return onError('El video pesa más de 150 MB. Recórtalo o comprímelo.')
     setSubiendo(1)
     try {
+      // Portada automática: primer medio segundo del video.
+      const portadaP = portadaDeArchivo(file).then((f) => (f ? subirImagen(f).catch(() => '') : ''))
       const limpio = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+/, '') || 'video.mp4'
       const blob = await subirABlob(`portada/videos/${limpio}`, file, {
         access: 'public',
@@ -185,7 +216,8 @@ function CampoVideo({ url, onUrl, onPortada, onError }) {
         contentType: file.type || 'video/mp4',
         onUploadProgress: (ev) => setSubiendo(Math.max(1, Math.round(ev.percentage))),
       })
-      onUrl(blob.url)
+      const portada = await portadaP
+      onCambio(portada ? { videoUrl: blob.url, image: portada } : { videoUrl: blob.url })
     } catch (err) {
       onError(err.message || 'No se pudo subir el video')
     } finally {
@@ -470,8 +502,14 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
           )}
           {tipo === 'reels' && (
             <>
-              <CampoVideo url={item.videoUrl} onUrl={f('videoUrl')} onError={onError}
-                onPortada={(img) => set({ ...item, image: img })} />
+              {parseInstagram(item.href) && !item.image && !item.videoUrl && (
+                <div className="sm:col-span-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
+                  <b>Este reel aún no tiene portada ni video.</b> Instagram no deja que la página los tome sola.
+                  Opciones: sube el video aquí abajo (la portada sale sola del video), sube una portada,
+                  o en tu compu corre <code className="bg-white px-1 rounded">node scripts/traer-reels.js</code>.
+                </div>
+              )}
+              <CampoVideo url={item.videoUrl} onError={onError} onCambio={(c) => set({ ...item, ...c })} />
               <EncuadreReel video={item.videoUrl} imagen={item.image} pos={item.pos} onPos={f('pos')} />
               <div className="sm:col-span-2">
                 <Campo label="Texto (opcional)" value={item.text} onChange={f('text')} area
@@ -730,6 +768,10 @@ function resumen(s) {
   }
   const n = s.items?.length || 0
   const partes = [`${n} ${n === 1 ? 'elemento' : 'elementos'}`]
+  if (s.type === 'reels') {
+    const sinPortada = (s.items || []).filter((it) => !it.image && !it.videoUrl).length
+    if (sinPortada) partes.push(`${sinPortada} sin portada`)
+  }
   if (IMAGEN_OBLIGATORIA.includes(s.type)) {
     const sinFoto = (s.items || []).filter((it) => !it.image).length
     if (sinFoto) partes.push(`${sinFoto} sin imagen`)

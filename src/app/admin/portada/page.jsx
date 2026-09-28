@@ -18,6 +18,18 @@ const TIPOS = {
   resenas:     'Reseñas',
 }
 
+// Descripción e ícono de cada tipo, para el panel "Agregar bloque"
+// y para identificar cada fila de la lista.
+const INFO = {
+  carrusel:    { ic: '▭▭▭', txt: 'Productos en fila que avanzan a la derecha. Por categoría, más vendidos, destacados o nuevos.' },
+  reels:       { ic: '▯▯▯', txt: 'Videos o fotos verticales de tus redes, con link a Instagram o TikTok.' },
+  colecciones: { ic: '☰ ▣', txt: 'Lista de colecciones a la izquierda y foto grande a la derecha.' },
+  mosaico:     { ic: '▣ ▪▪', txt: 'Un cuadro grande y hasta 4 chicos con foto y link.' },
+  promos:      { ic: '％', txt: 'Dos promociones con sello de descuento y banner de marca opcional.' },
+  porque:      { ic: '★', txt: 'Las razones para comprarte: precios, sucursales, envíos…' },
+  resenas:     { ic: '❝', txt: 'Opiniones de clientes con estrellas y calificación de Google.' },
+}
+
 const FUENTES = {
   categoria:   'Por categoría',
   masVendidos: 'Más vendidos',
@@ -533,30 +545,45 @@ export default function AdminPortadaPage() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <div className="mb-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl font-black text-slate-900">Portada de la tienda</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1 max-w-2xl">
             Los bloques que se ven en la página de inicio, en este orden. Muévelos con las flechas, apágalos mientras no tengan fotos y edita su contenido.
           </p>
         </div>
-        <div className="relative">
+        <div className="flex gap-2 shrink-0">
+          <a href="/" target="_blank" rel="noopener noreferrer"
+            className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50">
+            Ver tienda ↗
+          </a>
           <button onClick={() => setMenu((m) => !m)}
-            className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">
-            + Agregar bloque
+            className={`px-4 py-2 rounded-lg text-sm font-semibold ${menu ? 'bg-slate-800 text-white' : 'bg-brand-600 hover:bg-brand-700 text-white'}`}>
+            {menu ? '× Cerrar' : '+ Agregar bloque'}
           </button>
-          {menu && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-20">
-              {Object.entries(TIPOS).map(([k, v]) => (
-                <button key={k} onClick={() => agregar(k)}
-                  className="block w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-800">
-                  {v}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Panel para elegir qué bloque agregar (en línea, sin menú flotante) */}
+      {menu && (
+        <div className="mb-6 bg-white rounded-2xl border border-slate-100 shadow-card p-4">
+          <div className="text-sm font-bold text-slate-900 mb-3">¿Qué bloque quieres agregar?</div>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            {Object.entries(TIPOS).map(([k, v]) => (
+              <button key={k} onClick={() => agregar(k)}
+                className="group text-left rounded-xl border border-slate-200 p-3 hover:border-brand-400 hover:bg-brand-50/50 transition">
+                <div className="flex items-center gap-2">
+                  <span className="w-9 h-9 shrink-0 rounded-lg bg-brand-50 text-brand-700 text-xs font-black flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition">
+                    {INFO[k]?.ic}
+                  </span>
+                  <span className="font-semibold text-slate-900 text-sm">{v}</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2 leading-snug">{INFO[k]?.txt}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{error}</div>}
       {aviso && <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">{aviso}</div>}
@@ -580,26 +607,45 @@ export default function AdminPortadaPage() {
         <div className="space-y-3">
           {secciones.map((s, i) => (
             <div key={s._id}
-              className={`bg-white rounded-xl border shadow-card p-4 flex flex-wrap items-center gap-4 ${s.active ? 'border-slate-100' : 'border-slate-200 opacity-70'}`}>
-              <div className="flex flex-col gap-1">
-                <button onClick={() => mover(i, -1)} disabled={i === 0 || ocupado}
-                  className="w-8 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30" title="Subir">↑</button>
-                <button onClick={() => mover(i, 1)} disabled={i === secciones.length - 1 || ocupado}
-                  className="w-8 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30" title="Bajar">↓</button>
+              className={`rounded-xl border shadow-card p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 ${s.active ? 'bg-white border-slate-100' : 'bg-slate-50 border-dashed border-slate-300'}`}>
+              {/* Orden */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="w-7 text-center text-sm font-black text-slate-300">{i + 1}</span>
+                <div className="flex flex-col gap-1">
+                  <button onClick={() => mover(i, -1)} disabled={i === 0 || ocupado}
+                    className="w-8 h-7 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30" title="Subir" aria-label="Subir">↑</button>
+                  <button onClick={() => mover(i, 1)} disabled={i === secciones.length - 1 || ocupado}
+                    className="w-8 h-7 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-30" title="Bajar" aria-label="Bajar">↓</button>
+                </div>
               </div>
-              <div className="flex-1 min-w-[200px]">
-                <div className="text-xs font-semibold text-brand-700 uppercase tracking-wide">{TIPOS[s.type] || s.type}</div>
-                <div className="font-bold text-slate-900">{s.title || <span className="text-slate-400 font-normal">Sin título</span>}</div>
-                <div className="text-xs text-slate-500 mt-0.5">{resumen(s)}</div>
+              {/* Tipo + datos */}
+              <span className={`hidden sm:flex w-11 h-11 shrink-0 rounded-xl text-xs font-black items-center justify-center ${s.active ? 'bg-brand-50 text-brand-700' : 'bg-slate-200 text-slate-500'}`}>
+                {INFO[s.type]?.ic}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className={`text-[11px] font-bold uppercase tracking-wider ${s.active ? 'text-brand-700' : 'text-slate-400'}`}>{TIPOS[s.type] || s.type}</div>
+                <div className={`font-bold truncate ${s.active ? 'text-slate-900' : 'text-slate-500'}`}>
+                  {s.title || <span className="text-slate-400 font-normal">Sin título</span>}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5 truncate">{resumen(s)}</div>
               </div>
-              <button onClick={() => alternar(s)} disabled={ocupado}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold ${s.active ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
-                {s.active ? 'Activo' : 'Inactivo'}
-              </button>
-              <button onClick={() => setEditando(s)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50">Editar</button>
-              <button onClick={() => eliminar(s)} disabled={ocupado}
-                className="px-3 py-1.5 rounded-lg border border-red-200 text-sm text-red-600 hover:bg-red-50">Eliminar</button>
+              {/* Acciones */}
+              <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                <button onClick={() => alternar(s)} disabled={ocupado} role="switch" aria-checked={s.active}
+                  title={s.active ? 'Se ve en la tienda. Clic para apagar.' : 'No se ve en la tienda. Clic para prender.'}
+                  className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-slate-100">
+                  <span className={`relative w-9 h-5 rounded-full transition ${s.active ? 'bg-green-500' : 'bg-slate-300'}`}>
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${s.active ? 'left-[18px]' : 'left-0.5'}`} />
+                  </span>
+                  <span className={`text-xs font-bold w-12 text-left ${s.active ? 'text-green-700' : 'text-slate-500'}`}>{s.active ? 'Visible' : 'Oculto'}</span>
+                </button>
+                <button onClick={() => setEditando(s)}
+                  className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700">Editar</button>
+                <button onClick={() => eliminar(s)} disabled={ocupado} aria-label="Eliminar" title="Eliminar"
+                  className="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" /></svg>
+                </button>
+              </div>
             </div>
           ))}
         </div>

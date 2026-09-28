@@ -262,7 +262,10 @@ function CampoVideo({ url, onUrl, onPortada, onError }) {
 // ── Foto de perfil (reseñas): subir y encuadrar en el círculo ─
 // Arrastra la foto dentro del círculo y acerca con el zoom. Se
 // guarda como item.pos {x, y, zoom}, igual que los banners.
-function FotoPerfil({ url, pos, onUrl, onPos, onError, nombre }) {
+function FotoPerfil({ url, pos, onCambio, onError, nombre }) {
+  // Un solo cambio a la vez (foto + encuadre juntos); si se mandan
+  // por separado el segundo pisa al primero y la foto se pierde.
+  const onPos = (v) => onCambio({ pos: v })
   const input = useRef()
   const caja = useRef()
   const arrastre = useRef(null)
@@ -275,8 +278,8 @@ function FotoPerfil({ url, pos, onUrl, onPos, onError, nombre }) {
     if (!file) return
     setSubiendo(true)
     try {
-      onUrl(await subirImagen(file))
-      onPos({ ...ENCUADRE_CENTRO })
+      const nueva = await subirImagen(file)
+      onCambio({ image: nueva, pos: { ...ENCUADRE_CENTRO } })
     } catch (err) {
       onError(err.message)
     } finally {
@@ -329,7 +332,7 @@ function FotoPerfil({ url, pos, onUrl, onPos, onError, nombre }) {
             {url ? 'Cambiar foto' : 'Subir foto'}
           </button>
           {url && <button type="button" onClick={() => cambiar(ENCUADRE_CENTRO)} className="text-xs text-slate-500 hover:underline">Centrar</button>}
-          {url && <button type="button" onClick={() => { onUrl(''); onPos(null) }} className="text-xs text-red-600 hover:underline">Quitar</button>}
+          {url && <button type="button" onClick={() => onCambio({ image: '', pos: null })} className="text-xs text-red-600 hover:underline">Quitar</button>}
         </div>
       </div>
       <input ref={input} type="file" accept="image/*" className="hidden" onChange={alElegir} />
@@ -443,7 +446,7 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
       {tipo === 'resenas' ? (
         <>
           <FotoPerfil url={item.image} pos={item.pos} nombre={item.author} onError={onError}
-            onUrl={f('image')} onPos={f('pos')} />
+            onCambio={(c) => set({ ...item, ...c })} />
           <Campo label="Nombre" value={item.author} onChange={f('author')} placeholder="Ej: María G." />
           <Campo label="Ciudad" value={item.place} onChange={f('place')} placeholder="Ej: Mérida" />
           <div>

@@ -97,8 +97,66 @@ const ANCHOS = {
   grande:  'w-[calc((100%-0.75rem)/1.6)] sm:w-[calc((100%-2rem)/2.4)] md:w-[calc((100%-3rem)/3.3)] lg:w-[calc((100%-5rem)/4.3)]',
 }
 
+// ── Quitar bordes negros automáticamente ──────────────────
+// Algunos videos traen franjas negras "pegadas" a los lados. Se
+// revisa la portada: si las orillas son negras, se acerca lo justo
+// para taparlas. Solo aplica si en el panel no se ajustó el encuadre.
+const cacheZoom = new Map()
+
+async function zoomSinBordes(url) {
+  if (!url) return 1
+  if (cacheZoom.has(url)) return cacheZoom.get(url)
+  let zoom = 1
+  try {
+    const blob = await (await fetch(url, { mode: 'cors' })).blob()
+    const bmp = await createImageBitmap(blob)
+    const W = 90, H = Math.max(40, Math.round((90 * bmp.height) / bmp.width))
+    const c = document.createElement('canvas')
+    c.width = W; c.height = H
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(bmp, 0, 0, W, H)
+    const { data } = ctx.getImageData(0, 0, W, H)
+    const oscura = (x) => {
+      let max = 0
+      for (let y = Math.floor(H * 0.1); y < H * 0.9; y++) {
+        const i = (y * W + x) * 4
+        max = Math.max(max, (data[i] + data[i + 1] + data[i + 2]) / 3)
+        if (max > 40) return false
+      }
+      return true
+    }
+    let izq = 0, der = 0
+    while (izq < W / 3 && oscura(izq)) izq++
+    while (der < W / 3 && oscura(W - 1 - der)) der++
+    const borde = Math.max(izq, der) / W
+    if (borde > 0.02) zoom = Math.min(1.8, 1 / (1 - 2 * borde) + 0.02)
+  } catch {
+    zoom = 1
+  }
+  cacheZoom.set(url, zoom)
+  return zoom
+}
+
+const esCentro = (p) => !p || (Number(p.zoom || 1) === 1 && Number(p.x ?? 50) === 50 && Number(p.y ?? 50) === 50)
+
+/** Encuadre final: el del panel si lo hay; si no, el automático. */
+function useEncuadres(items) {
+  const [auto, setAuto] = useState({})
+  useEffect(() => {
+    let vivo = true
+    items.forEach((it, i) => {
+      if (!esCentro(it.pos) || !it.image) return
+      zoomSinBordes(it.image).then((z) => {
+        if (vivo && z > 1) setAuto((a) => ({ ...a, [i]: { x: 50, y: 50, zoom: z } }))
+      })
+    })
+    return () => { vivo = false }
+  }, [items])
+  return (i) => (esCentro(items[i]?.pos) ? auto[i] || items[i]?.pos : items[i]?.pos)
+}
+
 // ── Ventana del reel ───────────────────────────────────────
-function VisorReel({ items, index, onClose, onGo }) {
+function VisorReel({ items, index, onClose, onGo, encuadre }) {
   const it = items[index]
   const hayVarios = items.length > 1
 
@@ -150,7 +208,23 @@ function VisorReel({ items, index, onClose, onGo }) {
         <div className="relative bg-black shrink-0 w-full h-[62vh] md:h-full md:w-auto md:aspect-[9/16] overflow-hidden">
           {it.videoUrl ? (
             <video key={it.videoUrl} src={it.videoUrl} poster={it.image || undefined} controls autoPlay playsInline
-              className="absolute inset-0 w-full h-full object-cover bg-black" style={estiloEncuadre(it.pos)} />
+              className="absolute inset-0 w-full h-full object-cover bg-black" style={estiloEncuadre(encuadre(index))} />
+          ) : it.image ? (
+            // Sin video propio (Instagram no deja insertar este reel,
+            // p. ej. por la música): portada + botón para verlo allá.
+            <a href={it.href || PERFIL} target="_blank" rel="noopener noreferrer" className="group absolute inset-0">
+              <img src={it.image} alt={it.title || ''} className="absolute inset-0 w-full h-full object-cover" style={estiloEncuadre(encuadre(index))} />
+              <span className="absolute inset-0 grid place-items-center">
+                <span className="flex flex-col items-center gap-3">
+                  <span className="w-16 h-16 rounded-full bg-white/90 text-slate-900 grid place-items-center shadow-xl transition-transform group-hover:scale-110">
+                    <svg viewBox="0 0 24 24" className="w-7 h-7 translate-x-[2px]" fill="currentColor" aria-hidden="true">
+                      <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
+                    </svg>
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-black/60 text-white text-sm font-semibold">Ver video en Instagram</span>
+                </span>
+              </span>
+            </a>
           ) : embed ? (
             // Se recorta el encabezado de 54 px del reproductor de Instagram.
             <iframe key={embed} src={embed} title={it.title || 'Reel de Instagram'} loading="lazy"
@@ -220,6 +294,7 @@ export default function ReelsStrip({ items = [], tamano = 'mediano' }) {
   const [canPrev, setCanPrev] = useState(false)
   const [canNext, setCanNext] = useState(false)
   const [abierto, setAbierto] = useState(-1)
+  const encuadre = useEncuadres(items)
 
   const update = useCallback(() => {
     const el = trackRef.current
@@ -274,12 +349,12 @@ export default function ReelsStrip({ items = [], tamano = 'mediano' }) {
                 className="group relative block w-full aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300">
                 {it.videoUrl ? (
                   <div className="absolute inset-0 overflow-hidden transition-transform duration-500 group-hover:scale-[1.03]">
-                    <VideoCuadro src={it.videoUrl} poster={it.image} pos={it.pos} />
+                    <VideoCuadro src={it.videoUrl} poster={it.image} pos={encuadre(i)} />
                   </div>
                 ) : it.image ? (
                   <div className="absolute inset-0 overflow-hidden transition-transform duration-500 group-hover:scale-[1.03]">
                     <img src={it.image} alt={label} loading="lazy" referrerPolicy="no-referrer"
-                      className="absolute inset-0 w-full h-full object-cover" style={estiloEncuadre(it.pos)} />
+                      className="absolute inset-0 w-full h-full object-cover" style={estiloEncuadre(encuadre(i))} />
                   </div>
                 ) : (
                   // Sin portada todavía: cuadro neutro con el ícono de Instagram.
@@ -304,7 +379,7 @@ export default function ReelsStrip({ items = [], tamano = 'mediano' }) {
         </button>
       )}
 
-      {abierto >= 0 && <VisorReel items={items} index={abierto} onClose={cerrar} onGo={pasar} />}
+      {abierto >= 0 && <VisorReel items={items} index={abierto} onClose={cerrar} onGo={pasar} encuadre={encuadre} />}
     </div>
   )
 }

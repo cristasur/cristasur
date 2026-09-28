@@ -14,6 +14,7 @@
 // USO:
 //   node scripts/traer-reels.js            → solo los que no tienen video
 //   node scripts/traer-reels.js --todos    → vuelve a traer todos
+//   node scripts/traer-reels.js --encuadrar → solo quita bordes negros (zoom automático)
 // Cada que agregues reels nuevos en el panel, córrelo otra vez.
 // ============================================================
 require('dotenv').config({ path: '.env.local' })
@@ -24,6 +25,7 @@ const fs = require('fs')
 const path = require('path')
 
 const TODOS = process.argv.includes('--todos')
+const ENCUADRAR = process.argv.includes('--encuadrar') // solo recalcula el zoom anti-bordes
 // Respaldo: URLs sacadas desde un navegador (Instagram a veces no le
 // contesta completo a un script). Caducan en unos días.
 const RESPALDO = (() => {
@@ -84,6 +86,29 @@ async function bajar(url) {
   return Buffer.from(await r.arrayBuffer())
 }
 
+// Zoom para tapar franjas negras laterales pegadas en el video
+// (se mide en la portada). 1 = no hace falta.
+async function zoomSinBordes(buffer) {
+  try {
+    const sharp = require('sharp')
+    const W = 90
+    const { data, info } = await sharp(buffer).resize({ width: W }).greyscale().raw().toBuffer({ resolveWithObject: true })
+    const H = info.height
+    const oscura = (x) => {
+      for (let y = Math.floor(H * 0.1); y < H * 0.9; y++) if (data[y * W + x] > 40) return false
+      return true
+    }
+    let izq = 0, der = 0
+    while (izq < W / 3 && oscura(izq)) izq++
+    while (der < W / 3 && oscura(W - 1 - der)) der++
+    const borde = Math.max(izq, der) / W
+    return borde > 0.02 ? Math.round(Math.min(1.8, 1 / (1 - 2 * borde) + 0.02) * 100) / 100 : 1
+  } catch {
+    return 1
+  }
+}
+const sinEncuadre = (p) => !p || (Number(p.zoom || 1) === 1 && Number(p.x ?? 50) === 50 && Number(p.y ?? 50) === 50)
+
 async function subir(ruta, buffer, contentType) {
   const b = await put(ruta, buffer, {
     access: 'public', contentType, addRandomSuffix: false, allowOverwrite: true,
@@ -94,7 +119,7 @@ async function subir(ruta, buffer, contentType) {
 
 async function main() {
   if (!process.env.MONGODB_URI) { console.error('Falta MONGODB_URI en .env.local'); process.exit(1) }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!ENCUADRAR && !process.env.BLOB_READ_WRITE_TOKEN) {
     console.error('Falta BLOB_READ_WRITE_TOKEN en .env.local (Vercel → Storage → tu Blob store → pestaña .env.local).')
     process.exit(1)
   }
@@ -109,6 +134,13 @@ async function main() {
     for (const it of items) {
       const ig = parse(it.href)
       if (!ig) continue
+      if (ENCUADRAR) {
+        if (it.image && sinEncuadre(it.pos)) {
+          const z = await zoomSinBordes(await bajar(it.image))
+          if (z > 1) { it.pos = { x: 50, y: 50, zoom: z }; console.log(`• ${ig.code} … bordes negros: zoom ${Math.round(z * 100)}%`); listos++ }
+        }
+        continue
+      }
       if (!TODOS && it.videoUrl && it.image) continue
       process.stdout.write(`• ${ig.code} … `)
       try {
@@ -118,7 +150,14 @@ async function main() {
         d.video = d.video || r.video || ''
         d.portada = d.portada || r.portada || ''
         if (!d.video && !d.portada) throw new Error('Instagram no dio el video ni la portada')
-        if (d.portada) it.image = await subir(`portada/reels/${ig.code}.jpg`, await bajar(d.portada), 'image/jpeg')
+        if (d.portada) {
+          const buf = await bajar(d.portada)
+          it.image = await subir(`portada/reels/${ig.code}.jpg`, buf, 'image/jpeg')
+          if (sinEncuadre(it.pos)) {
+            const z = await zoomSinBordes(buf)
+            if (z > 1) it.pos = { x: 50, y: 50, zoom: z }
+          }
+        }
         if (d.video) it.videoUrl = await subir(`portada/reels/${ig.code}.mp4`, await bajar(d.video), 'video/mp4')
         if (!String(it.text || '').trim() && d.caption) it.text = d.caption
         console.log(`ok${d.video ? ' (video + portada)' : ' (solo portada)'}`)

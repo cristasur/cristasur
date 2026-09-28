@@ -139,7 +139,7 @@ export default function AdminBannersPage() {
                   </svg>
                   <span className="text-sm">Haz click para subir imagen</span>
                   <span className="text-xs">JPG, PNG o WebP · máx 8MB</span>
-                  <span className="text-xs text-slate-300">Recomendado: 1440 × 500 px</span>
+                  <span className="text-xs text-slate-300">Recomendado: 2000 × 800 px (lo importante al centro)</span>
                 </div>
               )}
               {uploading && (

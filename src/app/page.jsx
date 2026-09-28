@@ -123,8 +123,10 @@ async function loadSectionsData(sections, publicMatch) {
       // Portada y texto de cada reel de Instagram (caché 6 h).
       return Promise.all(
         (s.items || []).map((it) => {
+          // Solo si el reel aún no tiene portada ni video propios
+          // (lo normal es que scripts/traer-reels.js ya los haya puesto).
           const ig = parseInstagram(it.href)
-          return ig ? datosInstagram(ig.code, ig.kind) : Promise.resolve({})
+          return ig && !it.image && !it.videoUrl ? datosInstagram(ig.code, ig.kind) : Promise.resolve({})
         })
       )
     }

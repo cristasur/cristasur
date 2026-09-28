@@ -61,7 +61,7 @@ export async function datosInstagram(code, kind = 'reel') {
   if (!code) return {}
   try {
     const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 4000)
+    const t = setTimeout(() => ctrl.abort(), 2500)
     const res = await fetch(`https://www.instagram.com/${kind}/${code}/embed/captioned/`, {
       signal: ctrl.signal,
       headers: {

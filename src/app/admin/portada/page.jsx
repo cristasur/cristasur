@@ -337,6 +337,67 @@ function FotoPerfil({ url, pos, onUrl, onPos, onError, nombre }) {
   )
 }
 
+// ── Encuadre de un reel (cuadro vertical 3:4) ───────────────
+// Arrastra el video/foto y usa el zoom para quitar bordes negros
+// o acercar. Se ve igual que en la tienda.
+function EncuadreReel({ video, imagen, pos, onPos }) {
+  const caja = useRef()
+  const arrastre = useRef(null)
+  const p = normalizarEncuadre(pos || ENCUADRE_CENTRO)
+  const cambiar = (c) => onPos(normalizarEncuadre({ ...p, ...c }))
+  if (!video && !imagen) return null
+
+  function abajo(e) {
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    arrastre.current = { x: e.clientX, y: e.clientY, inicio: p }
+  }
+  function mover(e) {
+    if (!arrastre.current || !caja.current) return
+    const r = caja.current.getBoundingClientRect()
+    const k = 1.6 / arrastre.current.inicio.zoom
+    cambiar({
+      x: arrastre.current.inicio.x - ((e.clientX - arrastre.current.x) / r.width) * 100 * k,
+      y: arrastre.current.inicio.y - ((e.clientY - arrastre.current.y) / r.height) * 100 * k,
+    })
+  }
+  const soltar = () => { arrastre.current = null }
+
+  return (
+    <div className="sm:col-span-2 flex flex-col sm:flex-row gap-4 p-3 rounded-xl border border-slate-200">
+      <div ref={caja} onPointerDown={abajo} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}
+        className="relative w-36 aspect-[3/4] shrink-0 rounded-2xl overflow-hidden bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none">
+        {video
+          ? <video src={video} poster={imagen || undefined} muted loop autoPlay playsInline
+              className="w-full h-full object-cover pointer-events-none" style={estiloEncuadre(p)} />
+          : <img src={imagen} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none" style={estiloEncuadre(p)} />}
+      </div>
+      <div className="flex-1 min-w-0 space-y-3">
+        <div className="text-xs font-semibold text-slate-600">
+          Encuadre en la tienda <span className="font-normal text-slate-400">· arrastra el cuadro para moverlo; con el zoom quitas bordes negros.</span>
+        </div>
+        <label className="block">
+          <span className="flex justify-between text-[11px] text-slate-500"><span>Zoom (más grande / más chico)</span><span>{Math.round(p.zoom * 100)}%</span></span>
+          <input type="range" min="1" max="2.5" step="0.05" value={p.zoom}
+            onChange={(e) => cambiar({ zoom: e.target.value })} className="w-full accent-brand-600" />
+        </label>
+        <label className="block">
+          <span className="flex justify-between text-[11px] text-slate-500"><span>Izquierda ↔ Derecha</span><span>{Math.round(p.x)}%</span></span>
+          <input type="range" min="0" max="100" step="1" value={p.x}
+            onChange={(e) => cambiar({ x: e.target.value })} className="w-full accent-brand-600" />
+        </label>
+        <label className="block">
+          <span className="flex justify-between text-[11px] text-slate-500"><span>Arriba ↕ Abajo</span><span>{Math.round(p.y)}%</span></span>
+          <input type="range" min="0" max="100" step="1" value={p.y}
+            onChange={(e) => cambiar({ y: e.target.value })} className="w-full accent-brand-600" />
+        </label>
+        <button type="button" onClick={() => onPos({ ...ENCUADRE_CENTRO })} className="text-xs font-semibold text-slate-500 hover:underline">
+          Restablecer
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Selector de categoría (subcategorías con sangría) ───────
 function SelectCategoria({ categorias, value, onChange, vacio = 'Sin categoría' }) {
   const padres = categorias.filter((c) => !c.parent)
@@ -408,6 +469,7 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
             <>
               <CampoVideo url={item.videoUrl} onUrl={f('videoUrl')} onError={onError}
                 onPortada={(img) => set({ ...item, image: img })} />
+              <EncuadreReel video={item.videoUrl} imagen={item.image} pos={item.pos} onPos={f('pos')} />
               <div className="sm:col-span-2">
                 <Campo label="Texto (opcional)" value={item.text} onChange={f('text')} area
                   ayuda="Si lo dejas vacío se usa el texto del reel en Instagram." />
@@ -564,6 +626,21 @@ function EditorSeccion({ inicial, categorias, onCerrar, onGuardado }) {
                 <Campo label="Texto" value={s.data.texto} onChange={setData('texto')} area />
               </div>
               <Campo label="Enlace del botón" value={s.data.botonHref} onChange={setData('botonHref')} placeholder="/quienes-somos" />
+            </div>
+          )}
+
+          {/* Reels: tamaño de los cuadros */}
+          {tipo === 'reels' && (
+            <div className="p-4 rounded-xl bg-slate-50">
+              <label className="block text-xs font-semibold text-slate-600 mb-2">Tamaño de los cuadros en la tienda</label>
+              <div className="inline-flex rounded-lg bg-white border border-slate-200 p-1 text-sm font-semibold">
+                {[['chico', 'Chicos'], ['mediano', 'Medianos'], ['grande', 'Grandes']].map(([v, l]) => (
+                  <button key={v} type="button" onClick={() => setData('tamano')(v)}
+                    className={`px-4 py-1.5 rounded-md ${(s.data?.tamano || 'mediano') === v ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

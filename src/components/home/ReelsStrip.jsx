@@ -14,6 +14,7 @@
 // ============================================================
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Icon from '@/components/Icon'
+import { estiloEncuadre } from '@/lib/encuadre'
 
 const CUENTA = 'cristasurmx'
 const PERFIL = `https://www.instagram.com/${CUENTA}/`
@@ -63,7 +64,7 @@ function IconoInstagram({ className = 'w-5 h-5' }) {
 // ── Video del cuadro ───────────────────────────────────────
 // Como MAHA: se reproduce solo, sin sonido y en bucle, sin nada
 // encima. Solo corre mientras está en pantalla (ahorra datos).
-function VideoCuadro({ src, poster }) {
+function VideoCuadro({ src, poster, pos }) {
   const ref = useRef(null)
   const [visto, setVisto] = useState(false)
 
@@ -85,8 +86,15 @@ function VideoCuadro({ src, poster }) {
   return (
     <video ref={ref} src={visto ? src : undefined} poster={poster || undefined}
       muted loop playsInline preload="none" aria-hidden="true"
-      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+      className="absolute inset-0 w-full h-full object-cover" style={estiloEncuadre(pos)} />
   )
+}
+
+// Ancho de cada cuadro según el tamaño elegido en el panel.
+const ANCHOS = {
+  chico:   'w-[calc((100%-0.75rem)/2.6)] sm:w-[calc((100%-2rem)/4.3)] md:w-[calc((100%-3rem)/5.3)] lg:w-[calc((100%-5rem)/6.5)]',
+  mediano: 'w-[calc((100%-0.75rem)/2.2)] sm:w-[calc((100%-2rem)/3.3)] md:w-[calc((100%-3rem)/4.3)] lg:w-[calc((100%-5rem)/5.5)]',
+  grande:  'w-[calc((100%-0.75rem)/1.6)] sm:w-[calc((100%-2rem)/2.4)] md:w-[calc((100%-3rem)/3.3)] lg:w-[calc((100%-5rem)/4.3)]',
 }
 
 // ── Ventana del reel ───────────────────────────────────────
@@ -142,7 +150,7 @@ function VisorReel({ items, index, onClose, onGo }) {
         <div className="relative bg-black shrink-0 w-full h-[62vh] md:h-full md:w-auto md:aspect-[9/16] overflow-hidden">
           {it.videoUrl ? (
             <video key={it.videoUrl} src={it.videoUrl} poster={it.image || undefined} controls autoPlay playsInline
-              className="absolute inset-0 w-full h-full object-cover bg-black" />
+              className="absolute inset-0 w-full h-full object-cover bg-black" style={estiloEncuadre(it.pos)} />
           ) : embed ? (
             // Se recorta el encabezado de 54 px del reproductor de Instagram.
             <iframe key={embed} src={embed} title={it.title || 'Reel de Instagram'} loading="lazy"
@@ -207,7 +215,7 @@ function VisorReel({ items, index, onClose, onGo }) {
 }
 
 // ── Fila de reels ──────────────────────────────────────────
-export default function ReelsStrip({ items = [] }) {
+export default function ReelsStrip({ items = [], tamano = 'mediano' }) {
   const trackRef = useRef(null)
   const [canPrev, setCanPrev] = useState(false)
   const [canNext, setCanNext] = useState(false)
@@ -260,15 +268,19 @@ export default function ReelsStrip({ items = [] }) {
           return (
             <div
               key={it._id || i}
-              className="snap-start shrink-0 w-[calc((100%-0.75rem)/2.2)] sm:w-[calc((100%-2rem)/3.3)] md:w-[calc((100%-3rem)/4.3)] lg:w-[calc((100%-5rem)/5.5)]"
+              className={`snap-start shrink-0 ${ANCHOS[tamano] || ANCHOS.mediano}`}
             >
               <button type="button" onClick={() => setAbierto(i)} aria-label={`Ver: ${label}`}
                 className="group relative block w-full aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300">
                 {it.videoUrl ? (
-                  <VideoCuadro src={it.videoUrl} poster={it.image} />
+                  <div className="absolute inset-0 overflow-hidden transition-transform duration-500 group-hover:scale-[1.03]">
+                    <VideoCuadro src={it.videoUrl} poster={it.image} pos={it.pos} />
+                  </div>
                 ) : it.image ? (
-                  <img src={it.image} alt={label} loading="lazy" referrerPolicy="no-referrer"
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+                  <div className="absolute inset-0 overflow-hidden transition-transform duration-500 group-hover:scale-[1.03]">
+                    <img src={it.image} alt={label} loading="lazy" referrerPolicy="no-referrer"
+                      className="absolute inset-0 w-full h-full object-cover" style={estiloEncuadre(it.pos)} />
+                  </div>
                 ) : (
                   // Sin portada todavía: cuadro neutro con el ícono de Instagram.
                   <div className="absolute inset-0 bg-slate-100 grid place-items-center text-slate-300">

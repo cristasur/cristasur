@@ -67,7 +67,7 @@ function renderSection(s) {
       return (
         <SectionShell>
           <SectionHeader title={s.title || 'Contenido reciente'} subtitle={s.subtitle} href={s.href} linkLabel="Ver más" />
-          <ReelsStrip items={reels} />
+          <ReelsStrip items={reels} tamano={s.data?.tamano} />
         </SectionShell>
       )
     }

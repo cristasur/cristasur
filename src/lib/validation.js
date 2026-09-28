@@ -311,6 +311,28 @@ export function validateProductPayload(body) {
   const tieneVariantesDeColor = variants.some(
     (v) => String(v?.label || '').toLowerCase().includes('color')
   )
+  // Antes aquí el color del padre se BORRABA en silencio, y con él se
+  // perdía esa opción: la hielera azul con variante roja se guardaba
+  // como "solo roja". Ahora el color del padre se CONVIERTE en la
+  // primera variante, con las fotos del producto, si no existe ya.
+  if (tieneVariantesDeColor && color) {
+    const yaEsta = variants.some(
+      (v) => String(v?.value || '').trim().toLowerCase() === color.trim().toLowerCase()
+    )
+    if (!yaEsta && variants.length < MAX_VARIANTS) {
+      const fotos = [image, ...gallery].filter(Boolean)
+      variants.unshift({
+        label: 'Color',
+        value: color,
+        sku,
+        barcode: '',
+        available: true,
+        stock: null,
+        image: fotos[0] || '',
+        images: fotos.slice(0, 10),
+      })
+    }
+  }
   const colorFinal = tieneVariantesDeColor ? '' : color
 
   return {

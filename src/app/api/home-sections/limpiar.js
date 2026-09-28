@@ -5,6 +5,7 @@
 // (No es una ruta: Next solo toma route.js como endpoint.)
 // ============================================================
 import mongoose from 'mongoose'
+import { normalizarEncuadre } from '@/lib/encuadre'
 
 export const TIPOS = ['carrusel', 'reels', 'colecciones', 'mosaico', 'promos', 'porque', 'resenas']
 const FUENTES = ['categoria', 'masVendidos', 'destacados', 'nuevos']
@@ -24,6 +25,7 @@ function limpiarItem(it = {}) {
   out.category = idOrNull(it.category)
   const s = Math.round(Number(it.stars))
   out.stars = Number.isFinite(s) ? Math.min(5, Math.max(1, s)) : 5
+  out.pos = it.pos && typeof it.pos === 'object' ? normalizarEncuadre(it.pos) : null
   if (it._id && mongoose.Types.ObjectId.isValid(it._id)) out._id = it._id
   return out
 }

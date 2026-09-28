@@ -47,6 +47,8 @@ const ItemSchema = new mongoose.Schema(
     author:     { type: String, trim: true, default: '', maxlength: 80 },
     place:      { type: String, trim: true, default: '', maxlength: 80 },
     stars:      { type: Number, min: 1, max: 5, default: 5 },
+    // Encuadre de la foto (reseñas: foto de perfil). {x, y, zoom}
+    pos:        { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { _id: true }
 )

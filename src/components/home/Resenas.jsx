@@ -12,6 +12,21 @@
 // ============================================================
 import { useState } from 'react'
 import Icon from '@/components/Icon'
+import { estiloEncuadre } from '@/lib/encuadre'
+
+// Si no se capturó link, se abre la ficha de la Matriz en Google Maps.
+const MAPS_MATRIZ = 'https://maps.app.goo.gl/Cy1Va8jFSt4GvVmr7'
+
+function LogoGoogle({ className = 'w-8 h-8' }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+      <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+    </svg>
+  )
+}
 
 function Stars({ value = 5, className = 'w-4 h-4' }) {
   const v = Math.max(0, Math.min(5, Number(value) || 0))
@@ -53,8 +68,10 @@ function ReviewCard({ item, highlighted, onClick }) {
       </svg>
       <blockquote className="mt-2 text-slate-700 leading-relaxed flex-1 line-clamp-6">{item.text}</blockquote>
       <figcaption className="mt-6 flex items-center gap-3">
-        <span className="w-10 h-10 rounded-full bg-brand-600 text-white font-black grid place-items-center shrink-0" aria-hidden="true">
-          {initial}
+        <span className="relative w-11 h-11 rounded-full overflow-hidden bg-brand-600 text-white font-black grid place-items-center shrink-0" aria-hidden="true">
+          {item.image
+            ? <img src={item.image} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" style={estiloEncuadre(item.pos)} />
+            : initial}
         </span>
         <div className="leading-tight min-w-0">
           <div className="font-bold text-slate-900 truncate">{item.author || 'Cliente CRISTASUR'}</div>
@@ -75,7 +92,6 @@ export default function Resenas({ items = [], data = {} }) {
   const nextI = (idx + 1) % n
 
   const rating = Number(data.rating) || 0
-  const showSummary = rating > 0 || data.reviewsUrl || data.writeUrl
 
   const arrowCls =
     'w-11 h-11 rounded-full bg-white text-slate-900 border border-slate-200 grid place-items-center hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors'
@@ -124,44 +140,38 @@ export default function Resenas({ items = [], data = {} }) {
         )}
       </div>
 
-      {/* Resumen estilo Google */}
-      {showSummary && (
-        <div className="mt-10 rounded-2xl border border-slate-200 bg-slate-50 p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
-          <div className="flex items-center gap-4">
-            {rating > 0 && (
-              <div className="text-5xl font-black text-slate-900 tabular-nums leading-none">{rating.toFixed(1)}</div>
-            )}
-            <div>
-              {rating > 0 && <Stars value={rating} className="w-5 h-5" />}
-              <div className="mt-1 text-sm text-slate-600">Reseñas de nuestras sucursales en Google</div>
+      {/* Sello de Google: todo el recuadro lleva a las reseñas */}
+      <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a
+          href={data.reviewsUrl || MAPS_MATRIZ}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group inline-flex items-center gap-4 rounded-2xl bg-white border border-slate-200 shadow-card px-5 py-4 hover:border-slate-300 hover:shadow-card-hover transition-all"
+        >
+          <LogoGoogle className="w-10 h-10 shrink-0" />
+          <div className="leading-tight">
+            <div className="text-sm font-bold text-slate-900">Reseñas en Google</div>
+            <div className="mt-1 flex items-center gap-2">
+              {rating > 0 && <span className="text-lg font-black text-slate-900 tabular-nums">{rating.toFixed(1)}</span>}
+              <Stars value={rating || 5} className="w-4 h-4" />
             </div>
           </div>
-          <div className="md:ml-auto flex flex-wrap gap-2">
-            {data.reviewsUrl && (
-              <a
-                href={data.reviewsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-300 hover:border-slate-900 text-slate-900 text-sm font-bold px-5 py-2.5 transition-colors"
-              >
-                Ver reseñas
-                <Icon name="arrow" className="w-4 h-4" />
-              </a>
-            )}
-            {data.writeUrl && (
-              <a
-                href={data.writeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-slate-900 hover:bg-brand-700 text-white text-sm font-bold px-5 py-2.5 transition-colors"
-              >
-                <Icon name="edit" className="w-4 h-4" />
-                Dejar una reseña
-              </a>
-            )}
-          </div>
-        </div>
-      )}
+          <span className="ml-2 text-sm font-semibold text-brand-700 inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+            Ver reseñas <Icon name="arrow" className="w-4 h-4" />
+          </span>
+        </a>
+        {data.writeUrl && (
+          <a
+            href={data.writeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 hover:bg-brand-700 text-white text-sm font-bold px-5 py-3 transition-colors"
+          >
+            <Icon name="edit" className="w-4 h-4" />
+            Dejar una reseña
+          </a>
+        )}
+      </div>
     </div>
   )
 }

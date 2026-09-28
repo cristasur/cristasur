@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { parseInstagram } from '@/lib/instagram'
 import { upload as subirABlob } from '@vercel/blob/client'
+import { estiloEncuadre, normalizarEncuadre, ENCUADRE_CENTRO } from '@/lib/encuadre'
 
 const TIPOS = {
   carrusel:    'Carrusel de productos',
@@ -258,6 +259,84 @@ function CampoVideo({ url, onUrl, onPortada, onError }) {
   )
 }
 
+// ── Foto de perfil (reseñas): subir y encuadrar en el círculo ─
+// Arrastra la foto dentro del círculo y acerca con el zoom. Se
+// guarda como item.pos {x, y, zoom}, igual que los banners.
+function FotoPerfil({ url, pos, onUrl, onPos, onError, nombre }) {
+  const input = useRef()
+  const caja = useRef()
+  const arrastre = useRef(null)
+  const [subiendo, setSubiendo] = useState(false)
+  const p = normalizarEncuadre(pos || ENCUADRE_CENTRO)
+
+  async function alElegir(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setSubiendo(true)
+    try {
+      onUrl(await subirImagen(file))
+      onPos({ ...ENCUADRE_CENTRO })
+    } catch (err) {
+      onError(err.message)
+    } finally {
+      setSubiendo(false)
+    }
+  }
+
+  const cambiar = (c) => onPos(normalizarEncuadre({ ...p, ...c }))
+  function abajo(e) {
+    if (!url) return
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    arrastre.current = { x: e.clientX, y: e.clientY, inicio: p }
+  }
+  function mover(e) {
+    if (!arrastre.current || !caja.current) return
+    const r = caja.current.getBoundingClientRect()
+    const k = 1.6 / arrastre.current.inicio.zoom
+    cambiar({
+      x: arrastre.current.inicio.x - ((e.clientX - arrastre.current.x) / r.width) * 100 * k,
+      y: arrastre.current.inicio.y - ((e.clientY - arrastre.current.y) / r.height) * 100 * k,
+    })
+  }
+  const soltar = () => { arrastre.current = null }
+
+  const inicial = (nombre || 'C').trim().charAt(0).toUpperCase()
+
+  return (
+    <div className="sm:col-span-2 flex items-center gap-4 p-3 rounded-xl border border-slate-200">
+      <div ref={caja}
+        onPointerDown={abajo} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}
+        className={`relative w-24 h-24 shrink-0 rounded-full overflow-hidden bg-brand-600 select-none touch-none ring-4 ring-slate-100 ${url ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+        {url
+          ? <img src={url} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none" style={estiloEncuadre(p)} />
+          : <span className="absolute inset-0 grid place-items-center text-white text-3xl font-black">{inicial}</span>}
+        {subiendo && <span className="absolute inset-0 bg-white/80 grid place-items-center text-xs font-semibold text-brand-700">Subiendo…</span>}
+      </div>
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="text-xs font-semibold text-slate-600">
+          Foto de perfil <span className="font-normal text-slate-400">· opcional. {url ? 'Arrástrala para encuadrarla.' : 'Si no pones, sale la inicial.'}</span>
+        </div>
+        {url && (
+          <label className="block">
+            <span className="flex justify-between text-[11px] text-slate-500"><span>Zoom</span><span>{Math.round(p.zoom * 100)}%</span></span>
+            <input type="range" min="1" max="2.5" step="0.05" value={p.zoom}
+              onChange={(e) => cambiar({ zoom: e.target.value })} className="w-full accent-brand-600" />
+          </label>
+        )}
+        <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={() => input.current?.click()} className="text-xs font-semibold text-brand-700 hover:underline">
+            {url ? 'Cambiar foto' : 'Subir foto'}
+          </button>
+          {url && <button type="button" onClick={() => cambiar(ENCUADRE_CENTRO)} className="text-xs text-slate-500 hover:underline">Centrar</button>}
+          {url && <button type="button" onClick={() => { onUrl(''); onPos(null) }} className="text-xs text-red-600 hover:underline">Quitar</button>}
+        </div>
+      </div>
+      <input ref={input} type="file" accept="image/*" className="hidden" onChange={alElegir} />
+    </div>
+  )
+}
+
 // ── Selector de categoría (subcategorías con sangría) ───────
 function SelectCategoria({ categorias, value, onChange, vacio = 'Sin categoría' }) {
   const padres = categorias.filter((c) => !c.parent)
@@ -302,6 +381,8 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
 
       {tipo === 'resenas' ? (
         <>
+          <FotoPerfil url={item.image} pos={item.pos} nombre={item.author} onError={onError}
+            onUrl={f('image')} onPos={f('pos')} />
           <Campo label="Nombre" value={item.author} onChange={f('author')} placeholder="Ej: María G." />
           <Campo label="Ciudad" value={item.place} onChange={f('place')} placeholder="Ej: Mérida" />
           <div>
@@ -311,7 +392,7 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
             </select>
           </div>
           <div className="sm:col-span-2">
-            <Campo label="Reseña" value={item.text} onChange={f('text')} area />
+            <Campo label="Comentario" value={item.text} onChange={f('text')} area />
           </div>
         </>
       ) : (
@@ -491,7 +572,8 @@ function EditorSeccion({ inicial, categorias, onCerrar, onGuardado }) {
             <div className="grid sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50">
               <Campo label="Calificación promedio" type="number" value={s.data.rating}
                 onChange={(v) => setData('rating')(v === '' ? '' : Number(v))} ayuda="Ej. 4.8" />
-              <Campo label="Link a reseñas en Google" value={s.data.reviewsUrl} onChange={setData('reviewsUrl')} placeholder="https://g.page/…" />
+              <Campo label="Link a reseñas en Google" value={s.data.reviewsUrl} onChange={setData('reviewsUrl')} placeholder="https://maps.app.goo.gl/…"
+                ayuda="En Google Maps abre tu negocio → Compartir → Copiar vínculo." />
               <Campo label='Link "Escribir reseña"' value={s.data.writeUrl} onChange={setData('writeUrl')} placeholder="https://g.page/…/review" />
               {s.data.ejemplo && (
                 <label className="sm:col-span-3 flex items-center gap-2 text-sm text-amber-800 bg-amber-50 rounded-lg p-2">

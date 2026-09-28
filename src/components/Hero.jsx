@@ -11,12 +11,12 @@
 //
 // Medidas:
 //   Compu:   2000 × 800 px  (2.5 : 1)
-//   Celular: 1080 × 1080 px (cuadrada), opcional
+//   Celular: 1080 × 1920 px (vertical 9:16), opcional
 //
-// En celular, el carrusel se vuelve cuadrado y usa la versión de
-// celular SOLO si todos los banners la tienen. Si uno solo no la
-// tiene, se queda todo en 2.5 : 1 con las imágenes de compu: un
-// carrusel que cambia de altura entre slides brinca y se ve roto.
+// En celular el banner ocupa casi toda la pantalla inicial (de
+// orilla a orilla, alto fijo = pantalla menos el menú). Cada banner
+// usa su versión de celular si la tiene; si no, la de compu recortada
+// con su encuadre de celular. Como el alto es fijo, no brinca.
 // ============================================================
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -28,7 +28,6 @@ const SWIPE_MIN_PX = 50
 export default function Hero({ banners = [] }) {
   const slides = Array.isArray(banners) ? banners : []
   const total = slides.length
-  const conCelular = total > 0 && slides.every((s) => s.imageMobile)
 
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -65,10 +64,10 @@ export default function Hero({ banners = [] }) {
   if (total === 0) return null
 
   return (
-    <section className="max-w-7xl mx-auto px-4 pt-5 md:pt-8">
+    <section className="md:max-w-7xl md:mx-auto md:px-4 md:pt-8">
       {/* ── Rectángulo del carrusel ─────────────────── */}
       <div
-        className="relative overflow-hidden rounded-2xl bg-slate-100 shadow-card"
+        className="relative overflow-hidden md:rounded-2xl bg-slate-100 md:shadow-card"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={onTouchStart}
@@ -89,14 +88,14 @@ export default function Hero({ banners = [] }) {
             // Encuadre elegido en el panel. En celular se usa el suyo solo
             // si de verdad se está mostrando la imagen de celular.
             const pc = normalizarEncuadre(slide.pos)
-            const cel = conCelular ? normalizarEncuadre(slide.posMobile) : pc
+            const cel = normalizarEncuadre(slide.posMobile)
             const vars = {
               '--bx': `${pc.x}%`, '--by': `${pc.y}%`, '--bz': pc.zoom,
               '--bxm': `${cel.x}%`, '--bym': `${cel.y}%`, '--bzm': cel.zoom,
             }
             const img = (
               <picture className="block w-full h-full">
-                {conCelular && <source media="(max-width: 767px)" srcSet={slide.imageMobile} />}
+                {slide.imageMobile && <source media="(max-width: 767px)" srcSet={slide.imageMobile} />}
                 <img
                   src={slide.image}
                   alt={slide.title || 'Promoción CRISTASUR'}
@@ -115,9 +114,10 @@ export default function Hero({ banners = [] }) {
             return (
               <div
                 key={slide._id || i}
-                // Compu: 2000×800 siempre. Celular: cuadrado si todos los
-                // banners traen su versión de celular (ver arriba).
-                className={`min-w-full overflow-hidden ${conCelular ? 'aspect-square md:aspect-[2000/800]' : 'aspect-[2000/800]'}`}
+                // Compu: 2000×800 siempre.
+                // Celular: alto de pantalla menos menú (64 px) y barra de
+                // categorías (48 px), dejando asomar un poco lo de abajo.
+                className="min-w-full overflow-hidden h-[calc(100svh-9rem)] min-h-[420px] max-h-[860px] md:h-auto md:min-h-0 md:max-h-none md:aspect-[2000/800]"
                 aria-hidden={i !== current}
               >
                 {slide.href ? (

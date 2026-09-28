@@ -20,7 +20,9 @@ const ATAJOS = [
 ]
 
 export default function EditorEncuadre({ banner, onGuardar, onCerrar }) {
-  const tieneCel = Boolean(banner.imageMobile)
+  // En celular siempre hay algo que encuadrar: su imagen vertical o,
+  // si no tiene, la de compu recortada.
+  const tieneCel = true
   const [vista, setVista] = useState('pc')
   const [pos, setPos] = useState({
     pc: normalizarEncuadre(banner.pos),
@@ -59,7 +61,7 @@ export default function EditorEncuadre({ banner, onGuardar, onCerrar }) {
     }
   }
 
-  const imagen = vista === 'cel' ? banner.imageMobile : banner.image
+  const imagen = vista === 'cel' ? (banner.imageMobile || banner.image) : banner.image
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onCerrar}>
@@ -82,15 +84,15 @@ export default function EditorEncuadre({ banner, onGuardar, onCerrar }) {
             <button onClick={() => tieneCel && setVista('cel')} disabled={!tieneCel}
               title={tieneCel ? '' : 'Este banner no tiene imagen de celular'}
               className={`px-4 py-1.5 rounded-md ${vista === 'cel' ? 'bg-white shadow text-slate-900' : 'text-slate-500'} disabled:opacity-40`}>
-              Celular (cuadrado)
+              Celular (vertical)
             </button>
           </div>
 
           {/* Vista previa, mismo recuadro que la portada */}
-          <div className={vista === 'cel' ? 'max-w-sm mx-auto' : ''}>
+          <div className={vista === 'cel' ? 'max-w-[260px] mx-auto' : ''}>
             <div
               ref={caja}
-              className={`relative overflow-hidden rounded-2xl bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none ${vista === 'cel' ? 'aspect-square' : 'aspect-[2000/800]'}`}
+              className={`relative overflow-hidden rounded-2xl bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none ${vista === 'cel' ? 'aspect-[9/16]' : 'aspect-[2000/800]'}`}
               onPointerDown={alPresionar}
               onPointerMove={alMover}
               onPointerUp={alSoltar}

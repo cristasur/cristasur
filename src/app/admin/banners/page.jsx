@@ -4,7 +4,7 @@
 //
 // Cada banner lleva dos imágenes:
 //   Compu   2000 × 800  (obligatoria)
-//   Celular 1080 × 1080 (opcional)
+//   Celular 1080 × 1920 vertical (opcional)
 //
 // En celular el carrusel se vuelve cuadrado y usa la versión de
 // celular solo si TODOS los banners activos la tienen (ver Hero.jsx).
@@ -53,7 +53,7 @@ function CajaImagen({ titulo, medida, ayuda, url, onUrl, obligatoria, cuadrada, 
       </label>
       <div
         onClick={() => ref.current?.click()}
-        className={`relative cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 transition overflow-hidden bg-slate-50 ${cuadrada ? 'aspect-square' : 'aspect-[2000/800]'}`}
+        className={`relative cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 transition overflow-hidden bg-slate-50 ${cuadrada ? 'aspect-[9/16] max-w-[220px] mx-auto' : 'aspect-[2000/800]'}`}
       >
         {preview ? (
           <img src={preview} alt="Vista previa" className="w-full h-full object-cover" />
@@ -185,12 +185,12 @@ export default function AdminBannersPage() {
       {activos.length > 0 && (
         sinCelular.length === 0 ? (
           <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">
-            ✓ Todos los banners activos tienen versión de celular: en celular el carrusel se ve cuadrado, con letra grande.
+            ✓ Todos los banners activos tienen versión de celular: en celular el banner ocupa casi toda la pantalla, con letra grande.
           </div>
         ) : (
           <div className="mb-4 p-3 rounded-lg bg-amber-50 text-amber-800 text-sm">
             <b>{sinCelular.length} {sinCelular.length === 1 ? 'banner activo no tiene' : 'banners activos no tienen'} versión de celular.</b>{' '}
-            Mientras falte en alguno, en celular se usan las imágenes de compu (se ven chiquitas).
+            En celular el banner ocupa casi toda la pantalla; sin versión de celular se recorta la imagen de compu (ajústala con “Ajustar encuadre” → Celular), pero se ve mucho mejor con una vertical propia.
             Súbela con el botón <b>“Versión celular”</b> de cada uno.
           </div>
         )
@@ -208,8 +208,8 @@ export default function AdminBannersPage() {
               url={imageUrl} onUrl={setImageUrl} obligatoria onError={setError}
             />
             <CajaImagen
-              titulo="Imagen para celular" medida="1080 × 1080 px"
-              ayuda="Cuadrada. Texto grande, pocas palabras."
+              titulo="Imagen para celular" medida="1080 × 1920 px"
+              ayuda="Vertical. Texto grande al centro, pocas palabras."
               url={imageMobileUrl} onUrl={setImageMobileUrl} cuadrada onError={setError}
             />
           </div>

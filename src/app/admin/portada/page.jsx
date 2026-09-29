@@ -453,6 +453,46 @@ function SelectCategoria({ categorias, value, onChange, vacio = 'Sin categoría'
 }
 
 // ── Editor de un item según el tipo ─────────────────────────
+// Encuadre de la foto de fondo de una reseña: la vista previa tiene
+// la misma forma que la tarjeta y la tarjeta blanca va encima a la derecha.
+function FondoResena({ url, pos, onPos }) {
+  const caja = useRef()
+  const arr = useRef(null)
+  const p = normalizarEncuadre(pos || ENCUADRE_CENTRO)
+  const cambiar = (c) => onPos(normalizarEncuadre({ ...p, ...c }))
+  function abajo(e) {
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    arr.current = { x: e.clientX, y: e.clientY, inicio: p }
+  }
+  function mover(e) {
+    if (!arr.current || !caja.current) return
+    const r = caja.current.getBoundingClientRect()
+    const k = 1.6 / arr.current.inicio.zoom
+    cambiar({
+      x: arr.current.inicio.x - ((e.clientX - arr.current.x) / r.width) * 100 * k,
+      y: arr.current.inicio.y - ((e.clientY - arr.current.y) / r.height) * 100 * k,
+    })
+  }
+  return (
+    <div className="mt-3 flex flex-wrap gap-4 items-start">
+      <div ref={caja} onPointerDown={abajo} onPointerMove={mover}
+        onPointerUp={() => { arr.current = null }} onPointerCancel={() => { arr.current = null }}
+        className="relative w-72 aspect-[3/2] rounded-xl overflow-hidden bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none">
+        <img src={url} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none" style={estiloEncuadre(p)} />
+        <div className="absolute right-3 top-3 bottom-3 w-[55%] rounded-lg bg-white/90 pointer-events-none grid place-items-center text-[10px] text-slate-400">texto</div>
+      </div>
+      <div className="flex-1 min-w-[160px] space-y-2">
+        <p className="text-[11px] text-slate-500">Arrastra la foto para acomodarla. La parte izquierda es la que se ve.</p>
+        <label className="block">
+          <span className="flex justify-between text-[11px] text-slate-500"><span>Zoom</span><span>{Math.round(p.zoom * 100)}%</span></span>
+          <input type="range" min={1} max={2.5} step={0.05} value={p.zoom} onChange={(e) => cambiar({ zoom: e.target.value })} className="w-full accent-brand-600" />
+        </label>
+        <button type="button" onClick={() => onPos(null)} className="text-xs text-slate-500 hover:underline">Centrar</button>
+      </div>
+    </div>
+  )
+}
+
 function EditorItem({ tipo, i, item, set, categorias, onError }) {
   const f = (k) => (v) => set({ ...item, [k]: v })
   const img = CON_IMAGEN.includes(tipo)
@@ -489,6 +529,11 @@ function EditorItem({ tipo, i, item, set, categorias, onError }) {
           </div>
           <div className="sm:col-span-2">
             <Campo label="Comentario" value={item.text} onChange={f('text')} area />
+          </div>
+          <div className="sm:col-span-2">
+            <CampoImagen label="Foto de fondo de la tarjeta (opcional)" medida="1200×800, horizontal"
+              url={item.bg} onUrl={(u) => set({ ...item, bg: u, bgPos: null })} onError={onError} />
+            {item.bg && <FondoResena url={item.bg} pos={item.bgPos} onPos={(p) => set({ ...item, bgPos: p })} />}
           </div>
         </>
       ) : (

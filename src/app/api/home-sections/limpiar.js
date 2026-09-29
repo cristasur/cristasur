@@ -10,7 +10,7 @@ import { normalizarEncuadre } from '@/lib/encuadre'
 export const TIPOS = ['carrusel', 'reels', 'colecciones', 'mosaico', 'promos', 'porque', 'resenas']
 const FUENTES = ['categoria', 'masVendidos', 'destacados', 'nuevos']
 const TEXTOS = ['title', 'subtitle', 'image', 'href']
-const TEXTOS_ITEM = ['title', 'subtitle', 'text', 'image', 'href', 'videoUrl', 'badge', 'badgeLabel', 'author', 'place']
+const TEXTOS_ITEM = ['title', 'subtitle', 'text', 'image', 'href', 'videoUrl', 'badge', 'badgeLabel', 'author', 'place', 'bg']
 
 const txt = (v) => (v === null || v === undefined ? '' : String(v).trim())
 
@@ -26,6 +26,7 @@ function limpiarItem(it = {}) {
   const s = Math.round(Number(it.stars))
   out.stars = Number.isFinite(s) ? Math.min(5, Math.max(1, s)) : 5
   out.pos = it.pos && typeof it.pos === 'object' ? normalizarEncuadre(it.pos) : null
+  out.bgPos = it.bgPos && typeof it.bgPos === 'object' ? normalizarEncuadre(it.bgPos) : null
   if (it._id && mongoose.Types.ObjectId.isValid(it._id)) out._id = it._id
   return out
 }

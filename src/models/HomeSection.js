@@ -28,7 +28,7 @@
 //                image (foto del equipo), items[]: title + text
 //                (cada razón).
 //   resenas      Reseñas / experiencias. items[]: author, place,
-//                text, stars (1-5). data.rating (ej. 4.8),
+//                text, stars (1-5), bg (foto de fondo). data.rating (ej. 4.8),
 //                data.reviewsUrl (link a Google), data.writeUrl.
 // ============================================================
 import mongoose from 'mongoose'
@@ -49,6 +49,9 @@ const ItemSchema = new mongoose.Schema(
     stars:      { type: Number, min: 1, max: 5, default: 5 },
     // Encuadre de la foto (reseñas: foto de perfil). {x, y, zoom}
     pos:        { type: mongoose.Schema.Types.Mixed, default: null },
+    // Reseñas: foto de fondo de la tarjeta y su encuadre.
+    bg:         { type: String, trim: true, default: '' },
+    bgPos:      { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { _id: true }
 )

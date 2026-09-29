@@ -112,10 +112,11 @@ function renderSection(s) {
       const reviews = items.filter((it) => it?.text)
       if (!reviews.length) return null
       return (
-        <SectionShell>
-          <SectionHeader title={s.title || 'Lo que dicen nuestros clientes'} subtitle={s.subtitle} href={s.href} />
-          <Resenas items={reviews} data={s.data || {}} />
-        </SectionShell>
+        <div className="overflow-hidden">
+          <SectionShell>
+            <Resenas items={reviews} data={s.data || {}} title={s.title} subtitle={s.subtitle} />
+          </SectionShell>
+        </div>
       )
     }
     default:

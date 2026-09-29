@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // POST /api/products/labels
 // Genera un PDF imprimible con etiquetas de precio + QR.
@@ -30,6 +31,8 @@ function formatMXN(n) {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   const user = await getCurrentUser()
   if (!user) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {

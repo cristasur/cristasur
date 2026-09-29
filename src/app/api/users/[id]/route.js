@@ -1,3 +1,4 @@
+import { soloAdmin } from '@/lib/permisos'
 // ============================================================
 // PATCH  /api/users/:id   cambia rol o password
 // DELETE /api/users/:id   elimina usuario (no puedes borrarte a ti mismo)
@@ -13,6 +14,9 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function PATCH(request, { params }) {
+  const bloqueo = await soloAdmin()
+  if (bloqueo) return bloqueo
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -70,6 +74,9 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(_request, { params }) {
+  const bloqueo = await soloAdmin()
+  if (bloqueo) return bloqueo
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })

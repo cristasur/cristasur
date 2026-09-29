@@ -38,6 +38,7 @@ async function validateParent(parentId, selfId = null) {
 }
 
 export async function GET(_request, { params }) {
+  params = await params
   try {
     await dbConnect()
     const category = await findCategory(params.id)
@@ -50,6 +51,7 @@ export async function GET(_request, { params }) {
 }
 
 export async function PUT(request, { params }) {
+  params = await params
   const bloqueo = await soloStaff()
   if (bloqueo) return bloqueo
   try {
@@ -86,6 +88,7 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(_request, { params }) {
+  params = await params
   const bloqueo = await soloStaff()
   if (bloqueo) return bloqueo
   try {

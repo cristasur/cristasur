@@ -45,7 +45,7 @@ export async function verifyToken(token) {
 
 // Extrae el usuario actual desde la cookie (server components / route handlers)
 export async function getCurrentUser() {
-  const token = cookies().get(COOKIE_NAME)?.value
+  const token = (await cookies()).get(COOKIE_NAME)?.value
   return verifyToken(token)
 }
 

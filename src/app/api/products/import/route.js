@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // POST /api/products/import
 // Acepta:
@@ -59,6 +60,8 @@ function normalize(s) {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const url = new URL(request.url)
     const dryRun = url.searchParams.get('dryRun') === '1'

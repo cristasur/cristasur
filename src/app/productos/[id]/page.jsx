@@ -122,6 +122,7 @@ async function loadProduct(id) {
 
 // Open Graph para previews ricos en WhatsApp, Facebook, Twitter, etc.
 export async function generateMetadata({ params }) {
+  params = await params
   const data = await loadProduct(params.id)
   if (!data) return { title: 'Producto no encontrado · CRISTASUR' }
   const { product } = data
@@ -155,6 +156,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ProductDetail({ params, searchParams }) {
+  params = await params
+  searchParams = await searchParams
   const [data, session] = await Promise.all([loadProduct(params.id), getCurrentUser()])
   if (!data) notFound()
   const { product, lineSiblings, alsoBought } = data

@@ -45,6 +45,7 @@ async function loadDrafts(q, page) {
 }
 
 export default async function BorradoresPage({ searchParams }) {
+  searchParams = await searchParams
   const q = (searchParams?.q || '').trim()
   const page = Math.max(1, Number(searchParams?.page) || 1)
   const { drafts, total } = await loadDrafts(q, page)

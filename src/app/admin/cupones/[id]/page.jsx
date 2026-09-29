@@ -31,6 +31,7 @@ async function loadData(id) {
 }
 
 export default async function EditarCuponPage({ params }) {
+  params = await params
   const data = await loadData(params.id)
   if (!data) return notFound()
   const { coupon, categories, products } = data

@@ -19,6 +19,9 @@ import PresenceHeartbeat from '@/components/PresenceHeartbeat'
 import LayoutChrome from '@/components/LayoutChrome'
 import { LOCATIONS } from '@/lib/locations'
 
+// La navegación consulta el catálogo; no acceder a MongoDB al compilar.
+export const dynamic = 'force-dynamic'
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
 export const viewport = {

@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // POST /api/upload
 // Sube archivos a Vercel Blob (persistente entre deploys),
@@ -36,6 +37,8 @@ function detectImageType(buffer) {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const user = await getCurrentUser()
     if (!user) {

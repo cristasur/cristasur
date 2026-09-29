@@ -7,12 +7,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src tests",
     "seed": "node scripts/seed.js",
     "backup": "node scripts/backup.js",
     "add-blog": "node scripts/add-blog.js",
     "add-product": "node scripts/add-product.js",
-    "migrate:variants": "node scripts/migrate-variants.js"
+    "migrate:variants": "node scripts/migrate-variants.js",
+    "migrate:images": "node scripts/migrate-images-to-blob.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
@@ -21,20 +24,31 @@
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",
     "mongoose": "^8.8.0",
-    "next": "14.2.15",
+    "next": "15.5.26",
     "papaparse": "^5.5.3",
     "pdfkit": "^0.15.2",
     "qrcode": "^1.5.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "resend": "^6.12.3",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.5",
     "validator": "^13.12.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
     "dotenv": "^16.4.5",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.14"
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.26",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.14",
+    "vitest": "^5.0.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "$postcss"
+    }
   }
 }

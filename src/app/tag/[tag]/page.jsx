@@ -35,6 +35,7 @@ async function loadByTag(tag) {
 }
 
 export async function generateMetadata({ params }) {
+  params = await params
   const data = await loadByTag(params.tag)
   if (!data || !data.products.length) {
     return { title: 'Etiqueta no encontrada · CRISTASUR' }
@@ -47,6 +48,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function TagLanding({ params }) {
+  params = await params
   const data = await loadByTag(params.tag)
   if (!data) notFound()
   if (!data.products.length) notFound()

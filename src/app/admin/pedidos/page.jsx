@@ -20,6 +20,7 @@ async function loadOrders(searchParams) {
 }
 
 export default async function PedidosPage({ searchParams }) {
+  searchParams = await searchParams
   const [orders, user] = await Promise.all([loadOrders(searchParams), getCurrentUser()])
   return (
     <OrdersClient

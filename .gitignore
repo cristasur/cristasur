@@ -37,3 +37,6 @@ public/uploads/*
 # Reportes y respaldos de scripts (datos de la tienda)
 scripts/reportes/
 scripts/respaldos/
+
+# Respaldos con datos privados
+backups/

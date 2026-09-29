@@ -18,6 +18,8 @@ import { unitPriceFor, saleStep, snapToStep, toStock } from '@/lib/pricing'
 import Coupon from '@/models/Coupon'
 import { getCurrentUser } from '@/lib/auth'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
+import { verifyShippingQuote } from '@/lib/shipping-token'
+import { publicProductFilter } from '@/lib/public-products'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -44,10 +46,18 @@ export async function POST(request) {
 
     const body = await request.json().catch(() => ({}))
     const items = Array.isArray(body?.items) ? body.items : []
-    if (!items.length) {
+    if (!items.length || items.length > 200) {
       return NextResponse.json({ error: 'Carrito vacío' }, { status: 400 })
     }
 
+    if (items.some((it) => !isValidObjectId(it?.productId) || !Number.isSafeInteger(it?.qty) || it.qty < 1 || it.qty > 5000)) {
+      return NextResponse.json({ error: 'Productos o cantidades inválidos' }, { status: 400 })
+    }
+    // Una sola línea por producto y variante: impide saltar el límite de stock.
+    const keys = items.map((it) => `${it.productId}|${String(it.variantLabel || '').trim().toLowerCase()}|${String(it.variantValue || '').trim().toLowerCase()}`)
+    if (new Set(keys).size !== keys.length) {
+      return NextResponse.json({ error: 'Hay productos repetidos en el carrito' }, { status: 400 })
+    }
     // Validar items básico
     const rawItems = items
       .map((it) => ({
@@ -74,7 +84,7 @@ export async function POST(request) {
     // Obtener precios reales de la DB para todos los productos con ID
     const productIds = [...new Set(rawItems.map((x) => x.product).filter(Boolean))]
     const dbProducts = productIds.length
-      ? await Product.find({ _id: { $in: productIds } })
+      ? await Product.find({ ...publicProductFilter(), _id: { $in: productIds } })
           // Hace falta todo esto para recalcular precio, múltiplo y stock
           // sin confiar en nada de lo que mande el navegador.
           // sku + variants: el SKU y la variante se toman de la base, no del carrito.
@@ -83,6 +93,9 @@ export async function POST(request) {
       : []
     const priceMap = {}
     for (const p of dbProducts) priceMap[String(p._id)] = p
+    if (dbProducts.length !== productIds.length) {
+      return NextResponse.json({ error: 'Un producto ya no está disponible. Actualiza tu carrito.' }, { status: 409 })
+    }
 
     // ── Recálculo en el servidor ──────────────────────────────
     // Antes se aplicaba el precio de mayoreo según `wholesaleApplied`,
@@ -95,11 +108,7 @@ export async function POST(request) {
       .map((it) => {
         const dbP = it.product ? priceMap[it.product] : null
 
-        // Ítem sin producto en la base (personalizado): se respeta lo que llega.
-        if (!dbP) {
-          const { _clientPrice, ...rest } = it
-          return { ...rest, unitPrice: Math.max(0, it._clientPrice) }
-        }
+        if (!dbP) return null
 
         // 0. Variante: se busca en la base. El SKU y la variante que manda el
         //    navegador no se guardan tal cual; se usan sólo para localizarla.
@@ -175,6 +184,10 @@ export async function POST(request) {
     if (!cleanItems.length) {
       return NextResponse.json({ error: 'Carrito inválido', ajustes }, { status: 400 })
     }
+    const resolvedKeys = cleanItems.map((item) => `${item.product}|${item.variantLabel}|${item.variantValue}`)
+    if (new Set(resolvedKeys).size !== resolvedKeys.length) {
+      return NextResponse.json({ error: 'Hay variantes repetidas en el carrito' }, { status: 400 })
+    }
 
     const subtotal = cleanItems.reduce((acc, x) => acc + x.unitPrice * x.qty, 0)
 
@@ -206,9 +219,18 @@ export async function POST(request) {
       if (couponError) couponCode = ''
     }
 
-    // Envío del cotizador (se muestra y se suma; el precio lo dio la paquetería)
-    const shippingCost = Math.max(0, Math.min(Number(body?.shipping?.price) || 0, 100000))
-    const shippingLabel = String(body?.shipping?.label || '').slice(0, 120)
+    // Solo se admite una tarifa firmada, vigente y para estas cantidades.
+    let shippingCost = 0
+    let shippingLabel = ''
+    if (body.shipping) {
+      try {
+        const quote = await verifyShippingQuote(body.shipping.token, cleanItems)
+        shippingCost = quote.price
+        shippingLabel = quote.label
+      } catch {
+        return NextResponse.json({ error: 'El envío venció o el carrito cambió. Vuelve a cotizar.' }, { status: 409 })
+      }
+    }
     const total = Math.max(0, subtotal - discount) + shippingCost
 
     const order = await Order.create({

@@ -25,6 +25,8 @@ import { planPackages } from '@/lib/packing'
 import { quoteAllCarriers, enviaConfig, originIsComplete } from '@/lib/envia'
 import { rateLimit, clientIp } from '@/lib/rate-limit'
 import { stateFromPostalCode } from '@/lib/mexico'
+import { signShippingQuote } from '@/lib/shipping-token'
+import { publicProductFilter } from '@/lib/public-products'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -125,11 +127,11 @@ export async function POST(request) {
 
     // ── Datos reales desde la BD ──
     await dbConnect()
-    const docs = await Product.find({ _id: { $in: [...wanted.keys()] } })
+    const docs = await Product.find({ ...publicProductFilter(), _id: { $in: [...wanted.keys()] } })
       .select('name sku price qtyStep weight length width height pkgWeight pkgLength pkgWidth pkgHeight')
       .lean()
 
-    if (!docs.length) {
+    if (docs.length !== wanted.size) {
       return NextResponse.json(
         { ok: false, reason: 'not_found', error: 'No encontramos los productos del carrito.' },
         { status: 400 }
@@ -214,7 +216,11 @@ export async function POST(request) {
       ok: true,
       postalCode,
       estado: estado.name,
-      options,
+      options: await Promise.all(options.map(async (option) => ({
+        ...option, postalCode,
+        token: await signShippingQuote(option, postalCode,
+          [...wanted].map(([productId, qty]) => ({ productId, qty })), !cfg.isProd),
+      }))),
       totals,
       test: !cfg.isProd,
       notice: cfg.isProd

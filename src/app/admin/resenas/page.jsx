@@ -27,6 +27,7 @@ async function loadReviews(status) {
 }
 
 export default async function ResenasPage({ searchParams }) {
+  searchParams = await searchParams
   const status = searchParams?.status || 'pending'
   const reviews = await loadReviews(status)
   const counts = await countsByStatus()

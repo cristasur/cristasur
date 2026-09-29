@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // POST /api/products/bulk
 // Operaciones masivas sobre productos. Body:
@@ -124,6 +125,8 @@ function buildUpdate(op, params) {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

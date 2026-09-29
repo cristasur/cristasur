@@ -36,6 +36,7 @@ async function loadData() {
 }
 
 export default async function CuentaPage({ searchParams }) {
+  searchParams = await searchParams
   const data = await loadData()
   if (!data?.user) redirect('/cuenta/login')
   const { user, orders } = data

@@ -1,0 +1,22 @@
+name: Verificar proyecto
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      MONGODB_URI: mongodb://127.0.0.1:27017/build-only
+      JWT_SECRET: ci-placeholder-secret-at-least-32-characters
+      NEXT_PUBLIC_SITE_URL: https://example.test
+      RESEND_API_KEY: re_build_placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build

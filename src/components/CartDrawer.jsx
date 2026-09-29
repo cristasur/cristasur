@@ -85,7 +85,7 @@ function formatMXN(n) {
 }
 
 export default function CartDrawer() {
-  const { items, subtotal, savings, open, setOpen, updateQty, removeItem, clear, checkoutViaWhatsApp } =
+  const { items, subtotal, savings, open, setOpen, updateQty, removeItem, clear, checkoutViaWhatsApp, checkoutError, checkingOut } =
     useCart()
   const [couponCode, setCouponCode] = useState('')
   const [coupon, setCoupon] = useState(null)
@@ -346,12 +346,14 @@ export default function CartDrawer() {
               <span>Total</span>
               <span>{formatMXN(total)}</span>
             </div>
+            {checkoutError && <p role="alert" className="text-sm text-rose-700">{checkoutError}</p>}
             <button
+              disabled={checkingOut}
               onClick={() => checkoutViaWhatsApp(coupon, shipping)}
               className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold inline-flex items-center justify-center gap-2"
             >
               <Icon name="whatsapp" className="w-5 h-5" />
-              Pedir por WhatsApp
+              {checkingOut ? 'Validando pedido…' : 'Pedir por WhatsApp'}
             </button>
             <ShareCartButton items={items} />
             <button

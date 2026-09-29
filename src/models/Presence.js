@@ -16,7 +16,7 @@ const PresenceSchema = new mongoose.Schema(
     path: { type: String, default: '/' },
     userAgent: { type: String, default: '' },
     ip: { type: String, default: '' },
-    lastSeen: { type: Date, default: Date.now, index: true },
+    lastSeen: { type: Date, default: Date.now },
   },
   { timestamps: true }
 )

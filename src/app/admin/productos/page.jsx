@@ -44,6 +44,7 @@ async function loadCategories() {
 }
 
 export default async function AdminProductos({ searchParams }) {
+  searchParams = await searchParams
   const categoryId = searchParams?.category || ''
   const q = (searchParams?.q || '').trim()
   const hasFilter = !!(categoryId || q)

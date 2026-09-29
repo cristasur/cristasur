@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // GET  /api/products   (público, por defecto excluye borrados)
 //   ?category=<id|slug>
@@ -186,6 +187,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const body = await request.json().catch(() => ({}))
     const { errors, value } = validateProductPayload(body)

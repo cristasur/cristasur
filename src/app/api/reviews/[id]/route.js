@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // PATCH  /api/reviews/:id  -> { action: 'approve'|'reject'|'pending' }
 // DELETE /api/reviews/:id
@@ -26,6 +27,9 @@ async function refreshProductRating(productId) {
 export const dynamic = 'force-dynamic'
 
 export async function PATCH(request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -57,6 +61,9 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(_request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })

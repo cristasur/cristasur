@@ -14,6 +14,7 @@ import { getCurrentUser } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request, { params }) {
+  params = await params
   const bloqueo = await soloStaff()
   if (bloqueo) return bloqueo
   try {
@@ -31,6 +32,7 @@ export async function GET(_request, { params }) {
 }
 
 export async function PUT(request, { params }) {
+  params = await params
   const bloqueo = await soloStaff()
   if (bloqueo) return bloqueo
   try {
@@ -59,6 +61,7 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(_request, { params }) {
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })

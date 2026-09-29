@@ -14,6 +14,7 @@ async function permiso(roles) {
 }
 
 export async function PATCH(request, { params }) {
+  params = await params
   if (!(await permiso(['admin', 'editor']))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (!mongoose.Types.ObjectId.isValid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const { atendido } = await request.json().catch(() => ({}))
@@ -23,6 +24,7 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(_request, { params }) {
+  params = await params
   if (!(await permiso(['admin']))) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (!mongoose.Types.ObjectId.isValid(params.id)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   await dbConnect()

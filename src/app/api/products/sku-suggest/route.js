@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // GET /api/products/sku-suggest?prefix=COC
 // Devuelve un SKU disponible: <prefix>-<4 dígitos>, asegurando
@@ -22,6 +23,8 @@ function normalize(s) {
 }
 
 export async function GET(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 

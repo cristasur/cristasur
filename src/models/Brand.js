@@ -10,7 +10,7 @@ const BrandSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-BrandSchema.index({ slug: 1 })
+
 BrandSchema.index({ active: 1, order: 1 })
 
 export default mongoose.models.Brand || mongoose.model('Brand', BrandSchema)

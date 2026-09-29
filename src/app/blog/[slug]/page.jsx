@@ -35,6 +35,7 @@ async function fetchRelated(currentId) {
 }
 
 export async function generateMetadata({ params }) {
+  params = await params
   const post = await fetchPost(params.slug)
   if (!post) return {}
   return {
@@ -58,6 +59,7 @@ function formatDate(d) {
 }
 
 export default async function BlogPostPage({ params }) {
+  params = await params
   const post = await fetchPost(params.slug)
   if (!post) return notFound()
 

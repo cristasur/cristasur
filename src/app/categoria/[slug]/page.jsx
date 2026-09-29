@@ -45,6 +45,7 @@ async function loadData(slug, sp) {
 }
 
 export async function generateMetadata({ params }) {
+  params = await params
   await dbConnect()
   const category = await Category.findOne({ slug: params.slug, active: true }).lean()
   if (!category) return { title: 'Categoría no encontrada · CRISTASUR' }
@@ -58,6 +59,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function CategoryLanding({ params, searchParams }) {
+  params = await params
+  searchParams = await searchParams
   const data = await loadData(params.slug, searchParams || {})
   if (!data) notFound()
   const { category, children, parentCat, productos, total, pagina, paginas, facetas, filtros, marcados } = data

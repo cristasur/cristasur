@@ -84,16 +84,20 @@ const adminNoindexHeaders = [
 ]
 
 const nextConfig = {
+  // La raíz del proyecto es esta carpeta (en la compu hay otros
+  // package-lock.json arriba y Next se confundía).
+  outputFileTracingRoot: __dirname,
   reactStrictMode: true,
   poweredByHeader: false, // ocultamos "X-Powered-By: Next.js"
 
   // pdfkit y qrcode son CJS y cargan archivos en runtime; si Next intenta
   // empaquetarlos rompe la generación de PDFs. Los dejamos externos.
+  serverExternalPackages: ['pdfkit', 'qrcode'],
   experimental: {
-    serverComponentsExternalPackages: ['pdfkit', 'qrcode'],
+    cpus: 2,
     // Requerido en Next.js 14 para que instrumentation.js se ejecute
     // (donde inicializamos Sentry). En Next.js 15+ esto ya es default.
-    instrumentationHook: true,
+
   },
 
   // Dominios de imagen permitidos. Restringido a los que realmente usa la app:

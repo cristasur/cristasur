@@ -13,7 +13,8 @@ export const metadata = {
   description: 'Revisa los productos seleccionados y termina tu pedido por WhatsApp.',
 }
 
-export default function CarritoPage({ searchParams }) {
+export default async function CarritoPage({ searchParams }) {
+  searchParams = await searchParams
   const items = searchParams?.items || ''
   return <CartHydrate encoded={items} />
 }

@@ -44,6 +44,7 @@ function sanitizeContent(html) {
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request, { params }) {
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -59,6 +60,7 @@ export async function GET(_request, { params }) {
 }
 
 export async function PUT(request, { params }) {
+  params = await params
   try {
     const user = await getCurrentUser()
     if (!user || !['admin', 'editor'].includes(user.role)) {
@@ -94,6 +96,7 @@ export async function PUT(request, { params }) {
 }
 
 export async function PATCH(request, { params }) {
+  params = await params
   // Rate limit: máx 5 vistas por IP por post por 10 min (evita inflar contadores)
   const ip = clientIp(request)
   const rl = rateLimit(`view:${ip}:${params.id}`, 5, 10 * 60 * 1000)
@@ -120,6 +123,7 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  params = await params
   try {
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {

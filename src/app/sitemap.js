@@ -7,7 +7,7 @@ import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
 
-export const revalidate = 3600 // cachear 1 h
+export const dynamic = 'force-dynamic'
 
 function siteUrl() {
   return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'

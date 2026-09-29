@@ -13,6 +13,7 @@ import ProductForm from '../ProductForm'
 export const dynamic = 'force-dynamic'
 
 export default async function EditProductPage({ params }) {
+  params = await params
   if (!mongoose.Types.ObjectId.isValid(params.id)) notFound()
   await dbConnect()
   const lines = (await Product.distinct('line')).filter(Boolean).sort()

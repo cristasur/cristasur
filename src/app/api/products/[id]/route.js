@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // GET    /api/products/:id   - detalle (público)
 // PUT    /api/products/:id   - editar (admin/editor) + historial
@@ -16,6 +17,7 @@ import { getCurrentUser } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request, { params }) {
+  params = await params
   try {
     await dbConnect()
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
@@ -44,6 +46,9 @@ export async function GET(_request, { params }) {
 }
 
 export async function PUT(request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -114,6 +119,9 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -124,6 +132,7 @@ export async function DELETE(request, { params }) {
     if (user?.role === 'editor')
       return NextResponse.json({ error: 'Editor no puede eliminar' }, { status: 403 })
 
+    if (hard && user?.role !== 'admin') return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     if (hard) {
       const res = await Product.findByIdAndDelete(params.id)
       if (!res) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
@@ -170,6 +179,7 @@ export async function DELETE(request, { params }) {
 
 // PATCH con ?action=publish | ?action=restore | ?action=view | ?action=whatsapp | ?action=flag | ?action=featured | ?action=active
 export async function PATCH(request, { params }) {
+  params = await params
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -186,6 +196,9 @@ export async function PATCH(request, { params }) {
       await Product.updateOne({ _id: params.id }, { $inc: { whatsappClicks: 1 } })
       return NextResponse.json({ ok: true })
     }
+
+    const bloqueo = await soloStaff()
+    if (bloqueo) return bloqueo
 
     // Las acciones admin requieren auth (middleware ya la obliga en PATCH)
     const user = await getCurrentUser()

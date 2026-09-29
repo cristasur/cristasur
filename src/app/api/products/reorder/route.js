@@ -1,3 +1,4 @@
+import { soloStaff } from '@/lib/permisos'
 // ============================================================
 // PATCH /api/products/reorder
 // Body: { order: ["id1", "id2", "id3", ...] }
@@ -20,6 +21,8 @@ function isObjectId(s) {
 }
 
 export async function PATCH(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

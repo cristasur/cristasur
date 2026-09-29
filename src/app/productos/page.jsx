@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 export const metadata = { alternates: { canonical: '/productos' } }
 
 export default async function CatalogoPage({ searchParams = {} }) {
+  searchParams = await searchParams
   await dbConnect()
   const { productos, total, pagina, paginas, facetas, filtros, marcados } = await consultarCatalogo(searchParams)
 

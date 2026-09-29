@@ -29,7 +29,7 @@ async function main() {
   const backupRoot = path.join(process.cwd(), 'backups', stamp)
   await fsp.mkdir(backupRoot, { recursive: true })
 
-  const collections = ['products', 'categories', 'coupons', 'reviews', 'users', 'orders']
+  const collections = require('../src/lib/backup-collections.json')
   const db = mongoose.connection.db
 
   const summary = []
@@ -40,7 +40,7 @@ async function main() {
       await fsp.writeFile(file, JSON.stringify(docs, null, 2), 'utf8')
       summary.push(`  ${col}: ${docs.length} docs → ${file}`)
     } catch (e) {
-      summary.push(`  ${col}: ERROR ${e.message}`)
+      throw new Error(`No se pudo respaldar ${col}`, { cause: e })
     }
   }
 
@@ -74,7 +74,7 @@ async function main() {
     await fsp.writeFile(csvFile, csv, 'utf8')
     summary.push(`  products.csv → ${csvFile}`)
   } catch (e) {
-    summary.push(`  products.csv: ERROR ${e.message}`)
+    throw new Error('No se pudo respaldar products.csv', { cause: e })
   }
 
   // tar.gz de public/uploads
@@ -93,20 +93,24 @@ async function main() {
         child.on('error', reject)
       })
     } catch (e) {
-      summary.push(`  uploads.tar.gz: ERROR ${e.message}`)
+      throw new Error('No se pudo respaldar uploads.tar.gz', { cause: e })
     }
   } else {
     summary.push('  uploads.tar.gz: omitido (no existe public/uploads)')
   }
 
-  // Limpieza: borra backups con > 30 días
+  await fsp.writeFile(path.join(backupRoot, '_meta.json'), JSON.stringify({ stamp, collections, complete: true }, null, 2))
+
+  // Limpieza: borra backups con > 30 días, solo después de completar la copia.
   try {
     const root = path.join(process.cwd(), 'backups')
     const entries = await fsp.readdir(root, { withFileTypes: true })
     const cutoff = Date.now() - 30 * 24 * 3600 * 1000
     for (const e of entries) {
       if (!e.isDirectory()) continue
-      const dirPath = path.join(root, e.name)
+      const dirPath = path.resolve(root, e.name)
+      if (!dirPath.startsWith(path.resolve(root) + path.sep) || dirPath === path.resolve(backupRoot)) continue
+      if (!fs.existsSync(path.join(dirPath, '_meta.json'))) continue
       const stat = await fsp.stat(dirPath)
       if (stat.mtimeMs < cutoff) {
         await fsp.rm(dirPath, { recursive: true, force: true })

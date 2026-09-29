@@ -9,8 +9,9 @@
 // el precio mayoreo automáticamente al subtotal y al mensaje de
 // WhatsApp.
 // ============================================================
+import { requestOrder } from '@/lib/checkout-request'
 import { toStock } from '@/lib/pricing'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from 'react'
 
 const STORAGE_KEY = 'cristasur:cart:v1'
 const LAST_ORDER_KEY = 'cristasur:lastOrder:v1'
@@ -303,11 +304,18 @@ export default function CartProvider({ children }) {
     } catch {}
   }, [hydrated])
 
+  const [checkoutError, setCheckoutError] = useState('')
+  const [checkingOut, setCheckingOut] = useState(false)
+  const checkoutLock = useRef(false)
+
   // `shipping` es la opción de paquetería que el cliente eligió en el
   // cotizador del carrito. Opcional: si no cotizó, el flujo es el de antes.
   const checkoutViaWhatsApp = useCallback(
     async (couponInfo, shipping) => {
-      if (!items.length) return
+      if (!items.length || checkoutLock.current) return
+      checkoutLock.current = true
+      setCheckingOut(true)
+      setCheckoutError('')
 
       // La pestaña de WhatsApp se abre YA (en el clic) y luego se le pone la
       // dirección: si se abriera después de esperar al servidor, el navegador
@@ -328,43 +336,26 @@ export default function CartProvider({ children }) {
         }
       } catch {}
 
-      const envioEtiqueta = shipping
-        ? `${shipping.carrier} ${shipping.serviceName || shipping.service}${shipping.postalCode ? `, CP ${shipping.postalCode}` : ''}`
-        : ''
-
-      // 1) Se guarda el pedido y el SERVIDOR recalcula cantidades, precios,
-      //    cupón y total. El mensaje se arma con lo que regresó, así lo que
-      //    llega por WhatsApp es exactamente lo que quedó guardado.
-      let pedido = null
-      let ajustes = []
+      let pedido, ajustes
       try {
-        const ctrl = new AbortController()
-        const t = setTimeout(() => ctrl.abort(), 6000)
-        const r = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: ctrl.signal,
-          body: JSON.stringify({
-            items: items.map((x) => ({
-              productId: x.productId,
-              name: x.name,
-              image: x.image,
-              sku: x.sku || '',
-              variantLabel: x.variantLabel,
-              variantValue: x.variantValue,
-              qty: x.qty,
-              unitPrice: effectiveUnitPrice(x),
-            })),
-            couponCode: couponInfo?.code || '',
-            shipping: shipping ? { price: Number(shipping.price) || 0, label: envioEtiqueta } : null,
-            cookieToken: token,
-          }),
+        const data = await requestOrder({
+          items: items.map((x) => ({ productId: x.productId, name: x.name, image: x.image,
+            variantLabel: x.variantLabel, variantValue: x.variantValue, qty: x.qty })),
+          couponCode: couponInfo?.code || '',
+          shipping: shipping ? { token: shipping.token } : null,
+          cookieToken: token,
         })
-        clearTimeout(t)
-        const d = await r.json().catch(() => ({}))
-        if (r.ok && d?.pedido) { pedido = d.pedido; ajustes = d.ajustes || [] }
-        else if (Array.isArray(d?.ajustes)) ajustes = d.ajustes
-      } catch {}
+        pedido = data.pedido
+        ajustes = data.ajustes || []
+      } catch (error) {
+        ventana?.close()
+        setCheckoutError(error.message)
+        setOpen(true)
+        return
+      } finally {
+        checkoutLock.current = false
+        setCheckingOut(false)
+      }
 
       // 2) Mensaje de WhatsApp
       let lines, summary = '', finalTotal
@@ -381,21 +372,6 @@ export default function CartProvider({ children }) {
         finalTotal = Number(pedido.total) || 0
         if (ajustes.length) summary += `⚠️ Ajustes de la tienda: ${ajustes.join('; ')}\n`
         if (pedido.couponError && couponInfo?.code) summary += `⚠️ Cupón ${couponInfo.code}: ${pedido.couponError}\n`
-      } else {
-        // Sin respuesta del servidor: se manda lo del carrito (como antes).
-        lines = items.map((x) => {
-          const variant = x.variantValue ? ` (${x.variantLabel || 'Variante'}: ${x.variantValue})` : ''
-          const eff = effectiveUnitPrice(x)
-          const wholesale = isWholesaleActive(x) ? ' ⭐ Mayoreo' : ''
-          const skuStr = String(x.sku || '').trim()
-          const skuPart = skuStr ? `\n  SKU: ${skuStr}` : ''
-          return `▸ *${x.name}*${variant}${skuPart}\n  Cant: ${x.qty} × $${eff.toFixed(2)}${wholesale}\n  Subtotal: $${(eff * x.qty).toFixed(2)}`
-        })
-        if (savings > 0) summary += `💚 Ahorro mayoreo: -$${savings.toFixed(2)}\n`
-        if (couponInfo?.code) summary += `🏷️ Cupón ${couponInfo.code}: -$${Number(couponInfo.discount || 0).toFixed(2)}\n`
-        const shipCost = Number(shipping?.price) || 0
-        if (shipping) summary += `📦 Envío (${envioEtiqueta}): $${shipCost.toFixed(2)}\n`
-        finalTotal = (couponInfo?.total ?? subtotal) + shipCost
       }
       summary += `💰 *TOTAL: $${finalTotal.toFixed(2)}*\n`
 
@@ -483,6 +459,8 @@ export default function CartProvider({ children }) {
       updateQty,
       clear,
       checkoutViaWhatsApp,
+      checkoutError,
+      checkingOut,
       lastOrder,
       reorderFromSnapshot,
       dismissLastOrder,
@@ -498,7 +476,7 @@ export default function CartProvider({ children }) {
       removeItem,
       updateQty,
       clear,
-      checkoutViaWhatsApp,
+      checkoutViaWhatsApp, checkoutError, checkingOut,
       lastOrder,
       reorderFromSnapshot,
       dismissLastOrder,

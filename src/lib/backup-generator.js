@@ -8,23 +8,7 @@
 import dbConnect from './mongodb.js'
 import mongoose from 'mongoose'
 
-const COLLECTIONS = [
-  'products',
-  'categories',
-  'coupons',
-  'reviews',
-  'users',
-  'orders',
-  'brands',
-  'materials',
-  'banners',
-  'newsletters',
-  'posts',
-  'homesections',   // bloques de la portada (/admin/portada)
-  'pageimages',     // fotos de Conócenos y Contacto
-  'contactmessages',// mensajes del formulario de contacto
-  'presences', // opcional; muy volátil, útil para debug si algo raro pasa
-]
+import COLLECTIONS from './backup-collections.json'
 
 function nowStamp() {
   // 2026-09-20T03-00 (safe para nombres de carpeta)
@@ -60,7 +44,7 @@ export async function generateBackup() {
       })
       summary.push(`  ${col}: ${docs.length} docs (${(buffer.length / 1024).toFixed(1)} KB)`)
     } catch (e) {
-      summary.push(`  ${col}: SKIP (${e.message})`)
+      throw new Error(`Respaldo incompleto: no se pudo leer ${col}`, { cause: e })
     }
   }
 
@@ -95,7 +79,7 @@ export async function generateBackup() {
     })
     summary.push(`  products.csv: ${products.length} filas (${(buffer.length / 1024).toFixed(1)} KB)`)
   } catch (e) {
-    summary.push(`  products.csv: SKIP (${e.message})`)
+    throw new Error('Respaldo incompleto: no se pudo generar products.csv', { cause: e })
   }
 
   // 3) Metadata del backup (útil para saber cuándo y con qué versión se generó)

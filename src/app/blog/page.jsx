@@ -76,6 +76,7 @@ async function fetchPosts({ tipo, orden, q }) {
 }
 
 export default async function BlogPage({ searchParams }) {
+  searchParams = await searchParams
   const tipo   = searchParams?.tipo   || 'todos'
   const orden  = searchParams?.orden  || 'reciente'
   const q      = searchParams?.q      || ''

@@ -13,7 +13,7 @@
 // caída) NO se inventa un precio: se dice qué pasó y se invita a
 // cotizar por WhatsApp. Un número inventado cuesta dinero real.
 // ============================================================
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 function money(n) {
   return new Intl.NumberFormat('es-MX', {
@@ -26,6 +26,11 @@ export default function ShippingQuote({ items = [], onSelect, selected }) {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const cartKey = JSON.stringify(items.map((item) => [item.productId, item.qty]))
+  useEffect(() => {
+    setResult(null)
+    onSelect?.(null)
+  }, [cartKey, onSelect])
 
   const canQuote = cp.replace(/\D/g, '').length === 5 && items.length > 0
 
@@ -78,7 +83,11 @@ export default function ShippingQuote({ items = [], onSelect, selected }) {
       <form onSubmit={quote} className="flex gap-2">
         <input
           value={cp}
-          onChange={(e) => setCp(e.target.value.replace(/\D/g, '').slice(0, 5))}
+          onChange={(e) => {
+            setCp(e.target.value.replace(/\D/g, '').slice(0, 5))
+            setResult(null)
+            onSelect?.(null)
+          }}
           inputMode="numeric"
           placeholder="Código postal"
           aria-label="Código postal de entrega"
@@ -124,6 +133,7 @@ export default function ShippingQuote({ items = [], onSelect, selected }) {
               <button
                 key={id}
                 type="button"
+                disabled={result.test}
                 onClick={() => onSelect?.(isActive ? null : opt)}
                 className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg border text-left transition-colors ${
                   isActive

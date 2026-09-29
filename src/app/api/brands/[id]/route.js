@@ -17,6 +17,7 @@ function slugify(str) {
 }
 
 export async function PUT(request, { params }) {
+  params = await params
   try {
     const user = await getCurrentUser()
     if (!user || !['admin', 'editor'].includes(user.role)) {
@@ -45,6 +46,7 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
+  params = await params
   try {
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {

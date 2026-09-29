@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic'
 void Category
 
 export async function PUT(request, { params }) {
+  params = await params
   try {
     const user = await getCurrentUser()
     if (!user || !['admin', 'editor'].includes(user.role)) {
@@ -47,6 +48,7 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(_req, { params }) {
+  params = await params
   try {
     const user = await getCurrentUser()
     if (!user || user.role !== 'admin') {

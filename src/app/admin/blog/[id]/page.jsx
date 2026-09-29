@@ -18,11 +18,13 @@ async function loadPost(id) {
 }
 
 export async function generateMetadata({ params }) {
+  params = await params
   const post = await loadPost(params.id)
   return { title: post ? `Editar: ${post.title} · Admin` : 'Editar artículo · Admin' }
 }
 
 export default async function EditarPostPage({ params }) {
+  params = await params
   const post = await loadPost(params.id)
   if (!post) return notFound()
 

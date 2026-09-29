@@ -4,7 +4,7 @@
 //
 // Cada banner lleva dos imágenes:
 //   Compu   2000 × 800  (obligatoria)
-//   Celular 1080 × 1920 vertical (opcional)
+//   Celular 1080 × 1440 vertical 3:4 (opcional)
 //
 // En celular el carrusel se vuelve cuadrado y usa la versión de
 // celular solo si TODOS los banners activos la tienen (ver Hero.jsx).
@@ -53,7 +53,7 @@ function CajaImagen({ titulo, medida, ayuda, url, onUrl, obligatoria, cuadrada, 
       </label>
       <div
         onClick={() => ref.current?.click()}
-        className={`relative cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 transition overflow-hidden bg-slate-50 ${cuadrada ? 'aspect-[9/16] max-w-[220px] mx-auto' : 'aspect-[2000/800]'}`}
+        className={`relative cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-400 transition overflow-hidden bg-slate-50 ${cuadrada ? 'aspect-[3/4] max-w-[240px] mx-auto' : 'aspect-[2000/800]'}`}
       >
         {preview ? (
           <img src={preview} alt="Vista previa" className="w-full h-full object-cover" />
@@ -232,7 +232,7 @@ export default function AdminBannersPage() {
               url={imageUrl} onUrl={setImageUrl} obligatoria onError={setError}
             />
             <CajaImagen
-              titulo="Imagen para celular" medida="1080 × 1920 px"
+              titulo="Imagen para celular" medida="1080 × 1440 px (3:4)"
               ayuda="Vertical. Texto grande al centro, pocas palabras."
               url={imageMobileUrl} onUrl={setImageMobileUrl} cuadrada onError={setError}
             />
@@ -338,7 +338,7 @@ export default function AdminBannersPage() {
                   <div className="w-32 h-[51px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200" title="Compu">
                     <img src={b.image} alt={b.title || 'Banner'} className="w-full h-full object-cover" style={estiloEncuadre(b.pos)} />
                   </div>
-                  <div className="w-[51px] h-[51px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center" title="Celular">
+                  <div className="w-[39px] h-[52px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center" title="Celular">
                     {b.imageMobile
                       ? <img src={b.imageMobile} alt="Versión celular" className="w-full h-full object-cover" style={estiloEncuadre(b.posMobile)} />
                       : <span className="text-[10px] text-slate-400 text-center leading-tight">sin<br />celular</span>}

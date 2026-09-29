@@ -11,12 +11,12 @@
 //
 // Medidas:
 //   Compu:   2000 × 800 px  (2.5 : 1)
-//   Celular: 1080 × 1920 px (vertical 9:16), opcional
+//   Celular: 1080 × 1440 px (vertical 3:4), opcional
 //
-// En celular el banner ocupa casi toda la pantalla inicial (de
-// orilla a orilla, alto fijo = pantalla menos el menú). Cada banner
-// usa su versión de celular si la tiene; si no, la de compu recortada
-// con su encuadre de celular. Como el alto es fijo, no brinca.
+// En celular el banner va de orilla a orilla en proporción fija 3:4
+// (casi toda la pantalla inicial). Cada banner usa su versión de
+// celular si la tiene; si no, la de compu recortada con su encuadre
+// de celular. El panel muestra el mismo 3:4, así el encuadre es exacto.
 // ============================================================
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -116,9 +116,10 @@ export default function Hero({ banners = [] }) {
                 key={slide._id || i}
                 // Compu: de orilla a orilla, con la MISMA altura de antes
                 // (el 40% del ancho del contenido, máx. 80rem).
-                // Celular: alto de pantalla menos menú (64 px) y barra de
-                // categorías (48 px), dejando asomar un poco lo de abajo.
-                className="min-w-full overflow-hidden h-[calc(100vh-9rem)] supports-[height:100svh]:h-[calc(100svh-9rem)] md:supports-[height:100svh]:h-[calc((min(100vw,80rem)-2rem)*0.4)] min-h-[420px] max-h-[860px] md:h-[calc((min(100vw,80rem)-2rem)*0.4)] md:min-h-0 md:max-h-none"
+                // Celular: de orilla a orilla y SIEMPRE en proporción 3:4
+                // (1080×1440). Así se ve igual en todos los teléfonos y el
+                // encuadre del panel sale exacto.
+                className="min-w-full overflow-hidden aspect-[3/4] md:aspect-auto md:h-[calc((min(100vw,80rem)-2rem)*0.4)]"
                 aria-hidden={i !== current}
               >
                 {slide.href ? (

@@ -3,7 +3,7 @@
 // Editor de encuadre de un banner.
 //
 // Muestra el banner en el mismo recuadro que la portada (compu
-// 2000×800, celular cuadrado) y deja:
+// de tu pantalla, celular 3:4 igual que en los teléfonos) y deja:
 //   · arrastrar la imagen con mouse o dedo,
 //   · acercar/alejar con el zoom,
 //   · atajos de posición (esquinas, lados, centro).
@@ -101,15 +101,15 @@ export default function EditorEncuadre({ banner, onGuardar, onCerrar }) {
             <button onClick={() => tieneCel && setVista('cel')} disabled={!tieneCel}
               title={tieneCel ? '' : 'Este banner no tiene imagen de celular'}
               className={`px-4 py-1.5 rounded-md ${vista === 'cel' ? 'bg-white shadow text-slate-900' : 'text-slate-500'} disabled:opacity-40`}>
-              Celular (vertical)
+              Celular (3:4)
             </button>
           </div>
 
           {/* Vista previa, mismo recuadro que la portada */}
-          <div className={vista === 'cel' ? 'max-w-[260px] mx-auto' : ''}>
+          <div className={vista === 'cel' ? 'max-w-[320px] mx-auto' : ''}>
             <div
               ref={caja}
-              className={`relative overflow-hidden rounded-2xl bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none ${vista === 'cel' ? 'aspect-[9/16]' : ''}`}
+              className={`relative overflow-hidden rounded-2xl bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none ${vista === 'cel' ? 'aspect-[3/4]' : ''}`}
               style={vista === 'cel' ? undefined : { aspectRatio: ratioPc }}
               onPointerDown={alPresionar}
               onPointerMove={alMover}

@@ -13,6 +13,7 @@ import { estiloEncuadre } from '@/lib/encuadre'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
+  alternates: { canonical: '/quienes-somos' },
   title: 'Conócenos | CRISTASUR Mérida',
   description:
     'CRISTASUR, empresa 100% yucateca con más de 10 años equipando hogares, restaurantes y negocios con plásticos, vajilla y artículos para el hogar al mayoreo y menudeo.',

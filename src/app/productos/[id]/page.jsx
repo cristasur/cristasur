@@ -134,6 +134,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title,
+    alternates: { canonical: url },
     description,
     openGraph: {
       title,

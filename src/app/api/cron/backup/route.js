@@ -66,6 +66,17 @@ export async function GET(request) {
       `${(uploadedBytes / 1024).toFixed(1)} KB total → ${folder}/`
     )
 
+    // Si no se subió TODO, no se borra nada viejo y se avisa con error:
+    // un respaldo incompleto no debe pasar por bueno ni costar los anteriores.
+    const completo = files.length > 0 && uploadedCount === files.length
+    if (!completo) {
+      summary.push('Respaldo INCOMPLETO: no se borraron respaldos anteriores.')
+      return NextResponse.json(
+        { ok: false, error: 'Respaldo incompleto', stamp, folder, summary },
+        { status: 500 }
+      )
+    }
+
     // ── Limpieza: borrar backups con más de RETENTION_DAYS días ──
     try {
       const cutoff = Date.now() - RETENTION_DAYS * 24 * 3600 * 1000

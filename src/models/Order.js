@@ -32,6 +32,11 @@ const OrderSchema = new mongoose.Schema(
     discount: { type: Number, min: 0, default: 0 },
     total: { type: Number, min: 0, required: true },
     couponCode: { type: String, trim: true, uppercase: true, default: '' },
+    // El uso del cupón se cuenta UNA vez, cuando el pedido se confirma.
+    couponCounted: { type: Boolean, default: false },
+    // Envío elegido en el cotizador del carrito (informativo; va incluido en total)
+    shippingCost: { type: Number, min: 0, default: 0 },
+    shippingLabel: { type: String, trim: true, default: '' },
     customerName: { type: String, trim: true, default: '' },
     customerPhone: { type: String, trim: true, default: '' },
     customerEmail: { type: String, trim: true, default: '' },

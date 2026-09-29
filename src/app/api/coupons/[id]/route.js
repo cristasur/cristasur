@@ -3,6 +3,7 @@
 // PUT    /api/coupons/:id  (admin)
 // DELETE /api/coupons/:id  (admin)
 // ============================================================
+import { soloStaff } from '@/lib/permisos'
 import { NextResponse } from 'next/server'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
@@ -13,6 +14,8 @@ import { getCurrentUser } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(_request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -28,6 +31,8 @@ export async function GET(_request, { params }) {
 }
 
 export async function PUT(request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })

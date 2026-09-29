@@ -56,7 +56,8 @@ export const metadata = {
     'yucatán',
     'quintana roo',
   ],
-  alternates: { canonical: SITE_URL },
+  // Sin canonical global: cada página declara la suya (antes todas
+  // apuntaban a la portada y Google no sabía qué URL era cada producto).
   openGraph: {
     title: 'CRISTASUR',
     description: 'Plásticos y artículos económicos para hogar y negocio.',

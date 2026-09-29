@@ -8,6 +8,7 @@
 // El POST es público (no require auth), igual que /api/reviews.
 // El middleware /api/orders se whitelista en src/middleware.js.
 // ============================================================
+import { soloStaff, soloAdmin } from '@/lib/permisos'
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import crypto from 'crypto'
@@ -77,7 +78,7 @@ export async function POST(request) {
           // Hace falta todo esto para recalcular precio, múltiplo y stock
           // sin confiar en nada de lo que mande el navegador.
           // sku + variants: el SKU y la variante se toman de la base, no del carrito.
-          .select('_id name sku price wholesalePrice wholesaleMinQty hundredPrice hundredMinQty qtyStep stock variants')
+          .select('_id name sku price wholesalePrice wholesaleMinQty hundredPrice hundredMinQty qtyStep stock variants categories')
           .lean()
       : []
     const priceMap = {}
@@ -159,6 +160,7 @@ export async function POST(request) {
         return {
           ...rest,
           // Identidad de la línea tomada de la base, no del navegador.
+          name: String(dbP.name || it.name).slice(0, 200),
           sku: dbV?.sku || dbP.sku || '',
           variantLabel: dbV ? String(dbV.label || '') : '',
           variantValue: dbV ? String(dbV.value || '') : '',
@@ -175,15 +177,48 @@ export async function POST(request) {
     }
 
     const subtotal = cleanItems.reduce((acc, x) => acc + x.unitPrice * x.qty, 0)
-    const discount = Math.max(0, Number(body?.discount) || 0)
-    const total = Math.max(0, subtotal - discount)
+
+    // ── Cupón: se recalcula aquí, nunca se acepta el descuento del navegador ──
+    let couponCode = String(body?.couponCode || '').trim().toUpperCase().slice(0, 30)
+    let discount = 0
+    let couponError = ''
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode })
+      if (!coupon || !coupon.isUsable()) {
+        couponError = 'El cupón ya no es válido'
+      } else if (coupon.minSubtotal && subtotal < coupon.minSubtotal) {
+        couponError = `El cupón pide un mínimo de $${Number(coupon.minSubtotal).toFixed(2)}`
+      } else {
+        let base = subtotal
+        if (coupon.products?.length || coupon.categories?.length) {
+          const prodSet = new Set((coupon.products || []).map(String))
+          const catSet = new Set((coupon.categories || []).map(String))
+          base = cleanItems.reduce((acc, x) => {
+            const dbP = x.product ? priceMap[String(x.product)] : null
+            const cats = (dbP?.categories || []).map(String)
+            const aplica = (x.product && prodSet.has(String(x.product))) || cats.some((c) => catSet.has(c))
+            return aplica ? acc + x.unitPrice * x.qty : acc
+          }, 0)
+        }
+        discount = base > 0 ? Math.max(0, Math.min(coupon.computeDiscount(base), subtotal)) : 0
+        if (!discount) couponError = 'El cupón no aplica a estos productos'
+      }
+      if (couponError) couponCode = ''
+    }
+
+    // Envío del cotizador (se muestra y se suma; el precio lo dio la paquetería)
+    const shippingCost = Math.max(0, Math.min(Number(body?.shipping?.price) || 0, 100000))
+    const shippingLabel = String(body?.shipping?.label || '').slice(0, 120)
+    const total = Math.max(0, subtotal - discount) + shippingCost
 
     const order = await Order.create({
       items: cleanItems,
       subtotal,
       discount,
       total,
-      couponCode: String(body?.couponCode || '').toUpperCase().slice(0, 30),
+      couponCode,
+      shippingCost,
+      shippingLabel,
       customerName: String(body?.customerName || '').slice(0, 80),
       customerPhone: String(body?.customerPhone || '').slice(0, 30),
       customerEmail: String(body?.customerEmail || '').slice(0, 120),
@@ -194,17 +229,8 @@ export async function POST(request) {
       ipHash: hashIp(ip),
     })
 
-    // Incrementar usageCount del cupón si se usó uno
-    if (order.couponCode) {
-      try {
-        await Coupon.findOneAndUpdate(
-          { code: order.couponCode, active: true },
-          { $inc: { usageCount: 1 } }
-        )
-      } catch (e) {
-        console.warn('coupon usageCount update failed', e?.message)
-      }
-    }
+    // El uso del cupón NO se cuenta aquí (un clic en WhatsApp no es una
+    // venta): se cuenta una sola vez cuando el pedido se confirma.
 
     // Incrementar coOrders entre cada par de productos (para "también compraron").
     // Sólo cuando hay 2+ productos distintos en el carrito.
@@ -239,6 +265,15 @@ export async function POST(request) {
       cookieToken: order.cookieToken,
       // Cambios que hizo el servidor al carrito (cantidades, stock, variante faltante).
       ajustes,
+      // Lo que quedó guardado: el mensaje de WhatsApp se arma con esto,
+      // así lo que ve la tienda y lo que se guardó son lo mismo.
+      pedido: {
+        items: cleanItems.map((x) => ({
+          name: x.name, sku: x.sku, variantLabel: x.variantLabel, variantValue: x.variantValue,
+          qty: x.qty, unitPrice: x.unitPrice, wholesaleApplied: x.wholesaleApplied,
+        })),
+        subtotal, discount, couponCode, couponError, shippingCost, shippingLabel, total,
+      },
     })
   } catch (err) {
     console.error('POST /api/orders', err)
@@ -248,8 +283,9 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    // Lista de TODOS los pedidos: solo admin/editor.
+    const bloqueo = await soloStaff()
+    if (bloqueo) return bloqueo
 
     await dbConnect()
     const url = new URL(request.url)

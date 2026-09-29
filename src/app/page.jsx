@@ -24,6 +24,7 @@ import ProductCarousel from '@/components/home/ProductCarousel'
 // el siguiente visitante debe verlo ya. Si se necesita aliviar carga, cambiar
 // a `export const revalidate = 10` (10 segundos) — pero confirma probarlo
 // primero porque los cambios desde admin no se reflejan hasta el TTL.
+export const metadata = { alternates: { canonical: '/' } }
 export const dynamic = 'force-dynamic'
 
 const serialize = (x) => JSON.parse(JSON.stringify(x))

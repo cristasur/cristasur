@@ -82,6 +82,15 @@ export async function GET(request) {
       if (dirty) await user.save()
     }
 
+    // Cuentas con segundo factor (TOTP) o del equipo (admin/editor) NO
+    // pueden entrar con Google: Google no pide su código y se saltarían
+    // el candado. Tienen que usar correo + contraseña + código.
+    if (user.totpEnabled || ['admin', 'editor'].includes(user.role)) {
+      const res = NextResponse.redirect(`${siteUrl}/cuenta/login?error=google_2fa`)
+      res.cookies.delete('oauth_state')
+      return res
+    }
+
     // 4. Emitir JWT igual que el login normal
     const token = await signToken({
       sub: user._id.toString(),

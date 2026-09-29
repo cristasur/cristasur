@@ -2,6 +2,7 @@
 // GET  /api/categories       - lista pública (solo activas por defecto)
 // POST /api/categories       - crea (protegido por middleware)
 // ============================================================
+import { soloStaff } from '@/lib/permisos'
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
@@ -24,6 +25,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const body = await request.json().catch(() => ({}))
     const { errors, value } = validateCategoryPayload(body)

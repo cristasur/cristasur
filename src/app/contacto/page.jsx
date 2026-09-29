@@ -9,6 +9,7 @@ import { estiloEncuadre } from '@/lib/encuadre'
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
+  alternates: { canonical: '/contacto' },
   title: 'Contacto · CRISTASUR',
   description:
     'Visítanos en Mérida y Bacalar. Pídenos por WhatsApp, llámanos, o contáctanos en redes. Horarios y direcciones.',

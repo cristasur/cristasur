@@ -26,6 +26,9 @@ const PUBLIC_API_WRITE_PATHS = new Set([
   '/api/presence/ping', // heartbeat de "personas en línea" (público)
   '/api/shipping/quote', // cotizar envío desde el carrito (público, solo lectura)
   '/api/contacto', // formulario de la página de contacto (público, con límite por IP)
+  '/api/analytics/track', // visitas anónimas (métricas)
+  '/api/notify/whatsapp-click', // aviso de clic en WhatsApp desde la ficha
+  '/api/newsletter/subscribe', // suscripción al boletín (con límite por IP)
   // /api/seed requiere una clave aparte (ver route.js) y está bloqueado en prod
 ])
 
@@ -48,10 +51,42 @@ const PUBLIC_WRITE_PATTERNS = [
   },
 ]
 
+// Escrituras que puede hacer CUALQUIER cuenta con sesión (clientes
+// incluidos). Todo lo demás que escribe en /api exige admin o editor.
+const CUSTOMER_WRITE_PATHS = new Set([
+  '/api/cart',                    // su carrito
+  '/api/users/me',                // su perfil
+  '/api/auth/2fa/setup',
+  '/api/auth/2fa/enable',
+  '/api/auth/2fa/disable',
+  '/api/auth/subscribe-offers',
+  '/api/auth/resend-verification',
+])
+
+const esStaff = (p) => p && (p.role === 'admin' || p.role === 'editor')
+
+// Lecturas con datos privados (clientes, pedidos, cupones, catálogo
+// completo): solo admin/editor. El resto de GET es público.
+const STAFF_READ_PATTERNS = [
+  (p) => p === '/api/users' || /^\/api\/users\/(?!me$)[^/]+$/.test(p),
+  (p) => p === '/api/orders' || p.startsWith('/api/orders/'),
+  (p) => p === '/api/coupons' || (p.startsWith('/api/coupons/') && p !== '/api/coupons/apply'),
+  (p) => p.startsWith('/api/admin/'),
+  (p) => p === '/api/products/export' || p === '/api/products/analyze' || p === '/api/products/sku-suggest',
+  (p) => p === '/api/shipping/diagnostico',
+  (p) => p.startsWith('/api/contacto/'),
+  (p) => p === '/api/paginas-imagenes',
+  (p) => p.startsWith('/api/debug/'),
+]
+// Lecturas solo para admin (lista de cuentas)
+const ADMIN_READ_PATTERNS = [
+  (p) => p === '/api/users' || /^\/api\/users\/(?!me$)[^/]+$/.test(p),
+]
+
 // Rutas que SÓLO el admin puede usar (editor no puede)
 const ADMIN_ONLY_PATTERNS = [
-  // /api/users/* : gestión de cuentas
-  { test: (pathname) => pathname.startsWith('/api/users') },
+  // /api/users/* : gestión de cuentas (menos /api/users/me, que es el propio perfil)
+  { test: (pathname) => pathname.startsWith('/api/users') && pathname !== '/api/users/me' },
   // Borrado duro de productos (?hard=1)
   {
     method: 'DELETE',
@@ -162,6 +197,11 @@ export async function middleware(request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
+    // Un cliente solo puede escribir en lo suyo (carrito, perfil, 2FA…).
+    if (!esStaff(payload) && !CUSTOMER_WRITE_PATHS.has(pathname)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     // Restricciones de rol
     const isAdminOnly = ADMIN_ONLY_PATTERNS.some((p) => {
       if (p.method && p.method !== method) return false
@@ -172,6 +212,20 @@ export async function middleware(request) {
         { error: 'Acción sólo permitida para administradores' },
         { status: 403 }
       )
+    }
+  }
+
+  // ---- Protección de API: lecturas privadas ----
+  if (pathname.startsWith('/api/') && (method === 'GET' || method === 'HEAD')) {
+    const privada = STAFF_READ_PATTERNS.some((t) => t(pathname))
+    if (privada) {
+      const token = request.cookies.get(AUTH_COOKIE_NAME)?.value
+      const payload = await verifyToken(token)
+      if (!payload) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+      if (!esStaff(payload)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+      if (ADMIN_READ_PATTERNS.some((t) => t(pathname)) && payload.role !== 'admin') {
+        return NextResponse.json({ error: 'Acción sólo permitida para administradores' }, { status: 403 })
+      }
     }
   }
 

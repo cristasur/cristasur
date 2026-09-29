@@ -10,6 +10,7 @@ import CatalogoBarra, { CatalogoPaginas } from '@/components/CatalogoBarra'
 import { consultarCatalogo } from '@/lib/catalogo'
 
 export const dynamic = 'force-dynamic'
+export const metadata = { alternates: { canonical: '/productos' } }
 
 export default async function CatalogoPage({ searchParams = {} }) {
   await dbConnect()

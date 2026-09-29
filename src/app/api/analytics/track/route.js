@@ -5,13 +5,18 @@ import { NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import dbConnect from '@/lib/mongodb'
 import PageView from '@/models/PageView'
+import { rateLimit, clientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
   try {
+    // Es público: se limita por IP para que nadie infle las métricas.
+    if (!rateLimit(`track:${clientIp(request)}`, 120, 60 * 1000).ok) {
+      return NextResponse.json({ ok: false }, { status: 429 })
+    }
     const { url } = await request.json().catch(() => ({}))
-    if (!url || typeof url !== 'string') {
+    if (!url || typeof url !== 'string' || url.length > 500) {
       return NextResponse.json({ ok: false }, { status: 400 })
     }
 

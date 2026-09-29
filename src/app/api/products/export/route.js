@@ -6,6 +6,7 @@
 // Devuelve un CSV (UTF-8 con BOM) con las columnas estándar
 // para descargar/respaldar todos los productos.
 // ============================================================
+import { soloStaff } from '@/lib/permisos'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
@@ -16,6 +17,8 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     await dbConnect()
     const url = new URL(request.url)

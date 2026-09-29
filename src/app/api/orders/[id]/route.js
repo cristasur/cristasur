@@ -15,6 +15,7 @@ const ALLOWED_STATUS = new Set(['intent', 'pending', 'confirmed', 'shipped', 'de
 export async function PATCH(request, { params }) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!['admin', 'editor'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   if (!mongoose.Types.ObjectId.isValid(params.id)) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
@@ -34,11 +35,14 @@ export async function PATCH(request, { params }) {
   const order = await Order.findByIdAndUpdate(params.id, { $set: update }, { new: true }).lean()
   if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
 
-  // Incrementar usageCount del cupón cuando el pedido se confirma o entrega
-  if (update.status === 'confirmed' || update.status === 'delivered') {
-    if (order.couponCode) {
-      await Coupon.updateOne({ code: order.couponCode }, { $inc: { usageCount: 1 } })
-    }
+  // El uso del cupón se cuenta UNA sola vez: la primera vez que el
+  // pedido pasa a confirmado/enviado/entregado (couponCounted lo marca).
+  if (['confirmed', 'shipped', 'delivered'].includes(update.status) && order.couponCode) {
+    const marcado = await Order.findOneAndUpdate(
+      { _id: order._id, couponCounted: { $ne: true } },
+      { $set: { couponCounted: true } }
+    )
+    if (marcado) await Coupon.updateOne({ code: order.couponCode }, { $inc: { usageCount: 1 } })
   }
 
   return NextResponse.json({ order: JSON.parse(JSON.stringify(order)) })
@@ -61,6 +65,7 @@ export async function DELETE(_, { params }) {
 export async function GET(_, { params }) {
   const user = await getCurrentUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!['admin', 'editor'].includes(user.role)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   if (!mongoose.Types.ObjectId.isValid(params.id)) {
     return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   }

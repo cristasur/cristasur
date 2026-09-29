@@ -53,7 +53,8 @@ export async function generateMetadata({ params }) {
     category.seoDescription ||
     category.description ||
     `Encuentra ${category.name.toLowerCase()} en CRISTASUR. Precios económicos, mayoreo y entrega en Mérida y Bacalar.`
-  return { title, description }
+  // Canonical sin filtros ni página: /categoria/<slug>
+  return { title, description, alternates: { canonical: `/categoria/${category.slug}` } }
 }
 
 export default async function CategoryLanding({ params, searchParams }) {

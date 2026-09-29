@@ -20,6 +20,9 @@ const COLLECTIONS = [
   'banners',
   'newsletters',
   'posts',
+  'homesections',   // bloques de la portada (/admin/portada)
+  'pageimages',     // fotos de Conócenos y Contacto
+  'contactmessages',// mensajes del formulario de contacto
   'presences', // opcional; muy volátil, útil para debug si algo raro pasa
 ]
 

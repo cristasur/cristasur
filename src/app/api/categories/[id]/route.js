@@ -4,6 +4,7 @@
 // DELETE /api/categories/:id  - eliminar (protegido)
 // También acepta slug en :id para facilitar lookups públicos.
 // ============================================================
+import { soloStaff } from '@/lib/permisos'
 import { NextResponse } from 'next/server'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
@@ -49,6 +50,8 @@ export async function GET(_request, { params }) {
 }
 
 export async function PUT(request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const body = await request.json().catch(() => ({}))
     const { errors, value } = validateCategoryPayload(body)
@@ -83,6 +86,8 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(_request, { params }) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     await dbConnect()
     const category = await findCategory(params.id)

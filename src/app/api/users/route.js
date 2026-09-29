@@ -2,6 +2,7 @@
 // GET  /api/users   lista usuarios (admin only - middleware)
 // POST /api/users   crea usuario { email, password, name, role }
 // ============================================================
+import { soloStaff, soloAdmin } from '@/lib/permisos'
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/models/User'
@@ -11,6 +12,8 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET() {
+  const bloqueo = await soloAdmin()
+  if (bloqueo) return bloqueo
   try {
     await dbConnect()
     const users = await User.find({})
@@ -25,6 +28,8 @@ export async function GET() {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloAdmin()
+  if (bloqueo) return bloqueo
   try {
     const body = await request.json().catch(() => ({}))
     const email = String(body?.email || '').trim().toLowerCase()

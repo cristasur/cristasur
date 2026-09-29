@@ -14,7 +14,14 @@ function LoginForm() {
   const [backupCode, setBackupCode] = useState('')
   const [useBackup, setUseBackup] = useState(false)
   const [needsTotp, setNeedsTotp] = useState(false)
-  const [err, setErr] = useState('')
+  // Errores que vienen del acceso con Google (?error=…)
+  const ERRORES_URL = {
+    google_2fa: 'Esta cuenta tiene verificación en dos pasos: entra con tu correo, contraseña y código.',
+    google_token: 'No se pudo entrar con Google. Intenta de nuevo.',
+    google_profile: 'Google no compartió tu correo. Intenta de nuevo.',
+    google_error: 'No se pudo entrar con Google. Intenta de nuevo.',
+  }
+  const [err, setErr] = useState(ERRORES_URL[search.get('error')] || '')
   const [busy, setBusy] = useState(false)
 
   async function onSubmit(e) {

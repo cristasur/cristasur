@@ -3,6 +3,7 @@
 //   ?active=1 filtra sólo activos
 // POST /api/coupons   (admin) crea cupón
 // ============================================================
+import { soloStaff, soloAdmin } from '@/lib/permisos'
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Coupon from '@/models/Coupon'
@@ -12,6 +13,8 @@ import { getCurrentUser } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     await dbConnect()
     const url = new URL(request.url)
@@ -27,6 +30,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  const bloqueo = await soloStaff()
+  if (bloqueo) return bloqueo
   try {
     const body = await request.json().catch(() => ({}))
     const { errors, value } = validateCouponPayload(body)

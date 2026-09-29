@@ -308,36 +308,15 @@ export default function CartProvider({ children }) {
   const checkoutViaWhatsApp = useCallback(
     async (couponInfo, shipping) => {
       if (!items.length) return
-      const lines = items.map((x) => {
-        const variant = x.variantValue ? ` (${x.variantLabel || 'Variante'}: ${x.variantValue})` : ''
-        const eff = effectiveUnitPrice(x)
-        const lineTotal = eff * x.qty
-        const wholesale = isWholesaleActive(x) ? ' ⭐ Mayoreo' : ''
-        const skuStr = String(x.sku || '').trim()
-        const skuPart = skuStr ? `\n  SKU: ${skuStr}` : ''
-        return `▸ *${x.name}*${variant}${skuPart}\n  Cant: ${x.qty} × $${eff.toFixed(2)}${wholesale}\n  Subtotal: $${lineTotal.toFixed(2)}`
-      })
-      let summary = ''
-      if (savings > 0) summary += `💚 Ahorro mayoreo: -$${savings.toFixed(2)}\n`
-      if (couponInfo?.code) {
-        summary += `🏷️ Cupón ${couponInfo.code}: -$${Number(couponInfo.discount || 0).toFixed(2)}\n`
-      }
-      const productsTotal = couponInfo?.total ?? subtotal
-      const shipCost = Number(shipping?.price) || 0
-      const finalTotal = productsTotal + shipCost
 
-      if (shipping) {
-        summary += `📦 Envío (${shipping.carrier} ${shipping.serviceName || shipping.service}`
-        summary += shipping.postalCode ? `, CP ${shipping.postalCode}` : ''
-        summary += `): $${shipCost.toFixed(2)}\n`
+      // La pestaña de WhatsApp se abre YA (en el clic) y luego se le pone la
+      // dirección: si se abriera después de esperar al servidor, el navegador
+      // la bloquearía como ventana emergente.
+      let ventana = null
+      try { ventana = window.open('', '_blank') } catch {}
+      if (ventana) {
+        try { ventana.opener = null; ventana.document.title = 'Abriendo WhatsApp…' } catch {}
       }
-      summary += `💰 *TOTAL: $${finalTotal.toFixed(2)}*\n`
-
-      const cierre = shipping
-        ? '¿Me confirman disponibilidad para cerrar el pedido? 🙏'
-        : '¿Me pueden confirmar disponibilidad y datos de envío? 🙏'
-      const msg = `¡Hola CRISTASUR! 👋 Quisiera hacer el siguiente pedido:\n\n🛒 *DETALLE DEL PEDIDO*\n──────────────────────\n${lines.join('\n')}\n──────────────────────\n${summary}${cierre}`
-      const url = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`
 
       // Cookie token persistente (no-auth) para enlazar este pedido al cliente.
       let token = ''
@@ -349,14 +328,22 @@ export default function CartProvider({ children }) {
         }
       } catch {}
 
-      // Registra el intent del lado del servidor (no bloquea el salto a wa.me).
+      const envioEtiqueta = shipping
+        ? `${shipping.carrier} ${shipping.serviceName || shipping.service}${shipping.postalCode ? `, CP ${shipping.postalCode}` : ''}`
+        : ''
+
+      // 1) Se guarda el pedido y el SERVIDOR recalcula cantidades, precios,
+      //    cupón y total. El mensaje se arma con lo que regresó, así lo que
+      //    llega por WhatsApp es exactamente lo que quedó guardado.
+      let pedido = null
+      let ajustes = []
       try {
-        const total = (couponInfo?.total ?? subtotal) + (Number(shipping?.price) || 0)
-        const discount = Number(couponInfo?.discount) || 0
-        // No await — fire & forget. WhatsApp se abre de inmediato.
-        fetch('/api/orders', {
+        const ctrl = new AbortController()
+        const t = setTimeout(() => ctrl.abort(), 6000)
+        const r = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: ctrl.signal,
           body: JSON.stringify({
             items: items.map((x) => ({
               productId: x.productId,
@@ -367,14 +354,56 @@ export default function CartProvider({ children }) {
               variantValue: x.variantValue,
               qty: x.qty,
               unitPrice: effectiveUnitPrice(x),
-              wholesaleApplied: isWholesaleActive(x),
             })),
-            discount,
             couponCode: couponInfo?.code || '',
+            shipping: shipping ? { price: Number(shipping.price) || 0, label: envioEtiqueta } : null,
             cookieToken: token,
           }),
-        }).catch(() => {})
+        })
+        clearTimeout(t)
+        const d = await r.json().catch(() => ({}))
+        if (r.ok && d?.pedido) { pedido = d.pedido; ajustes = d.ajustes || [] }
+        else if (Array.isArray(d?.ajustes)) ajustes = d.ajustes
       } catch {}
+
+      // 2) Mensaje de WhatsApp
+      let lines, summary = '', finalTotal
+      if (pedido) {
+        lines = pedido.items.map((x) => {
+          const variant = x.variantValue ? ` (${x.variantLabel || 'Variante'}: ${x.variantValue})` : ''
+          const skuPart = x.sku ? `\n  SKU: ${x.sku}` : ''
+          const wholesale = x.wholesaleApplied ? ' ⭐ Mayoreo' : ''
+          return `▸ *${x.name}*${variant}${skuPart}\n  Cant: ${x.qty} × $${Number(x.unitPrice).toFixed(2)}${wholesale}\n  Subtotal: $${(x.unitPrice * x.qty).toFixed(2)}`
+        })
+        if (!ajustes.length && savings > 0) summary += `💚 Ahorro mayoreo: -$${savings.toFixed(2)}\n`
+        if (pedido.couponCode && pedido.discount > 0) summary += `🏷️ Cupón ${pedido.couponCode}: -$${Number(pedido.discount).toFixed(2)}\n`
+        if (pedido.shippingCost > 0) summary += `📦 Envío (${pedido.shippingLabel}): $${Number(pedido.shippingCost).toFixed(2)}\n`
+        finalTotal = Number(pedido.total) || 0
+        if (ajustes.length) summary += `⚠️ Ajustes de la tienda: ${ajustes.join('; ')}\n`
+        if (pedido.couponError && couponInfo?.code) summary += `⚠️ Cupón ${couponInfo.code}: ${pedido.couponError}\n`
+      } else {
+        // Sin respuesta del servidor: se manda lo del carrito (como antes).
+        lines = items.map((x) => {
+          const variant = x.variantValue ? ` (${x.variantLabel || 'Variante'}: ${x.variantValue})` : ''
+          const eff = effectiveUnitPrice(x)
+          const wholesale = isWholesaleActive(x) ? ' ⭐ Mayoreo' : ''
+          const skuStr = String(x.sku || '').trim()
+          const skuPart = skuStr ? `\n  SKU: ${skuStr}` : ''
+          return `▸ *${x.name}*${variant}${skuPart}\n  Cant: ${x.qty} × $${eff.toFixed(2)}${wholesale}\n  Subtotal: $${(eff * x.qty).toFixed(2)}`
+        })
+        if (savings > 0) summary += `💚 Ahorro mayoreo: -$${savings.toFixed(2)}\n`
+        if (couponInfo?.code) summary += `🏷️ Cupón ${couponInfo.code}: -$${Number(couponInfo.discount || 0).toFixed(2)}\n`
+        const shipCost = Number(shipping?.price) || 0
+        if (shipping) summary += `📦 Envío (${envioEtiqueta}): $${shipCost.toFixed(2)}\n`
+        finalTotal = (couponInfo?.total ?? subtotal) + shipCost
+      }
+      summary += `💰 *TOTAL: $${finalTotal.toFixed(2)}*\n`
+
+      const cierre = shipping
+        ? '¿Me confirman disponibilidad para cerrar el pedido? 🙏'
+        : '¿Me pueden confirmar disponibilidad y datos de envío? 🙏'
+      const msg = `¡Hola CRISTASUR! 👋 Quisiera hacer el siguiente pedido:\n\n🛒 *DETALLE DEL PEDIDO*\n──────────────────────\n${lines.join('\n')}\n──────────────────────\n${summary}${cierre}`
+      const url = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`
 
       // Guarda copia local para "repetir pedido"
       try {
@@ -405,7 +434,8 @@ export default function CartProvider({ children }) {
         setLastOrder(snapshot)
       } catch {}
 
-      window.open(url, '_blank', 'noopener,noreferrer')
+      if (ventana && !ventana.closed) ventana.location.href = url
+      else window.location.href = url
     },
     [items, subtotal, savings]
   )

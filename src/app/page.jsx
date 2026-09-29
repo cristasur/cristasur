@@ -15,7 +15,6 @@ import HomeSection from '@/models/HomeSection'
 import { parseInstagram, fechaInstagram, datosInstagram } from '@/lib/instagram'
 import Hero from '@/components/Hero'
 import Icon from '@/components/Icon'
-import RepeatOrder from '@/components/RepeatOrder'
 import CategoryGrid from '@/components/CategoryGrid'
 import HomeSections from '@/components/home/HomeSections'
 import ProductCarousel from '@/components/home/ProductCarousel'
@@ -217,11 +216,6 @@ export default async function HomePage() {
     <div>
       {/* Carrusel de banners. Todo se administra en /admin/banners. */}
       <Hero banners={banners} />
-
-      {/* Banner: repetir último pedido (solo si el cliente tiene historial local) */}
-      <div className="pt-6">
-        <RepeatOrder />
-      </div>
 
       {/* Categorías */}
       <section className="max-w-7xl mx-auto px-4 py-8 md:py-16">

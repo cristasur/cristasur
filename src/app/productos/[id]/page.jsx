@@ -86,6 +86,24 @@ async function loadProduct(id) {
         .lean()
     : []
 
+  // Segunda línea (ej. "Platos trinche"): otra fila de variantes.
+  const lineSiblings2 = product.line2
+    ? await Product.find({
+        line2: product.line2,
+        _id: { $ne: product._id },
+        active: true,
+        deleted: { $ne: true },
+        $and: [
+          { $or: [{ status: { $exists: false } }, { status: 'published' }] },
+          { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
+        ],
+      })
+        .select('_id name image lineLabel2 sortOrder')
+        .sort({ sortOrder: 1, name: 1 })
+        .limit(60)
+        .lean()
+    : []
+
   // "También compraron" — primero buscamos por coOrders (carritos reales).
   // Si aún no hay datos suficientes, fallback a más vistos de la misma categoría.
   // Populate brand en producto principal
@@ -116,6 +134,7 @@ async function loadProduct(id) {
   return {
     product: JSON.parse(JSON.stringify(product)),
     lineSiblings: JSON.parse(JSON.stringify(lineSiblings)),
+    lineSiblings2: JSON.parse(JSON.stringify(lineSiblings2)),
     alsoBought: JSON.parse(JSON.stringify(alsoBought)),
   }
 }
@@ -156,7 +175,7 @@ export async function generateMetadata({ params }) {
 export default async function ProductDetail({ params, searchParams }) {
   const [data, session] = await Promise.all([loadProduct(params.id), getCurrentUser()])
   if (!data) notFound()
-  const { product, lineSiblings, alsoBought } = data
+  const { product, lineSiblings, lineSiblings2, alsoBought } = data
   // Consultar DB directo para el VIP: el JWT puede estar desactualizado si el admin
   // revocó el acceso mayoreo sin que el usuario haya vuelto a iniciar sesión.
   let isVip = false
@@ -286,6 +305,7 @@ export default async function ProductDetail({ params, searchParams }) {
             isVip={isVip}
             initialColor={(searchParams?.color || '').trim()}
             siblings={lineSiblings}
+            siblings2={lineSiblings2}
             precio={
               <div>
               <div className="mt-3 md:mt-4 flex items-baseline gap-3">

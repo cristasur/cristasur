@@ -92,6 +92,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     line: initial?.line || '',
     lineLabel: initial?.lineLabel || '',
     lineColor: initial?.lineColor || '',
+    line2: initial?.line2 || '',
+    lineLabel2: initial?.lineLabel2 || '',
     specs: Array.isArray(initial?.specs) ? initial.specs : [],
     highlights: Array.isArray(initial?.highlights) ? initial.highlights : [],
     usage: initial?.usage || '',
@@ -1177,6 +1179,24 @@ export default function ProductForm({ categories, brands = [], materials = [], i
               Solo si cada color es un producto aparte. Sale en "Variante de color".
             </span>
           </label>
+        </div>
+
+        {/* Segunda línea: el producto también forma parte de otro grupo */}
+        <div className="grid md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Segunda línea (opcional)</span>
+            <input list="lineas-existentes" maxLength={80} value={form.line2}
+              onChange={(e) => update('line2', e.target.value)} placeholder="Ej: Platos trinche" className={input} />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Etiqueta en la segunda línea</span>
+            <input maxLength={30} value={form.lineLabel2}
+              onChange={(e) => update('lineLabel2', e.target.value)} placeholder="Ej: Vinafera 27 cm" className={input} />
+          </label>
+          <p className="text-[11px] text-slate-400 self-end pb-2">
+            Para productos que están en dos grupos: el plato trinche Vinafera está en "Vinafera" y también en
+            "Platos trinche". En la ficha sale otra fila con los de esa segunda línea.
+          </p>
         </div>
       </fieldset>
 

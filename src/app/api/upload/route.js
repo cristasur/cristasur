@@ -79,7 +79,9 @@ export async function POST(request) {
 
     // Carpeta y calidad se determinan antes de procesar
     const folder  = (formData.get('folder') || 'productos').replace(/[^a-z0-9-_]/gi, '')
-    const quality = folder === 'banners' ? WEBP_QUALITY_BANNER : WEBP_QUALITY_DEFAULT
+    const quality = ['banners', 'paginas'].includes(folder) ? WEBP_QUALITY_BANNER : WEBP_QUALITY_DEFAULT
+    // Banners y fotos de páginas van de orilla a orilla: más resolución.
+    const maxLado = ['banners', 'paginas'].includes(folder) ? 2560 : MAX_DIMENSION
 
     let processed   = bytes
     let ext         = realType === 'image/gif' ? '.gif' : '.jpg'
@@ -91,7 +93,7 @@ export async function POST(request) {
         const sharp = (await import('sharp')).default
         processed   = await sharp(bytes)
           .rotate()
-          .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
+          .resize({ width: maxLado, height: maxLado, fit: 'inside', withoutEnlargement: true })
           .webp({ quality })
           .toBuffer()
         ext         = '.webp'

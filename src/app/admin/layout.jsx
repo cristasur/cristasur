@@ -23,6 +23,7 @@ const links = [
   { href: '/admin/cupones',             label: 'Cupones',       icon: 'ticket' },
   { href: '/admin/portada',             label: 'Portada',       icon: 'sparkle' },
   { href: '/admin/banners',            label: 'Banners',       icon: 'sparkle' },
+  { href: '/admin/imagenes',           label: 'Fotos de páginas', icon: 'upload' },
   { href: '/admin/marcas',              label: 'Marcas',        icon: 'tag' },
   { href: '/admin/materiales',          label: 'Materiales',    icon: 'tag' },
   { href: '/admin/resenas',             label: 'Reseñas',       icon: 'star' },

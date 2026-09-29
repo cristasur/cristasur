@@ -3,6 +3,10 @@ import Icon from '@/components/Icon'
 import LocationHero from '@/components/LocationHero'
 import { LOCATIONS } from '@/lib/locations'
 import ContactForm from '@/components/ContactForm'
+import { imagenesPaginas } from '@/lib/imagenesPaginas'
+import { estiloEncuadre } from '@/lib/encuadre'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Contacto · CRISTASUR',
@@ -72,14 +76,16 @@ const svg = (d, cls = 'w-5 h-5') => (
   <svg viewBox="0 0 24 24" className={cls} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 )
 
-export default function ContactoPage() {
+export default async function ContactoPage() {
   const matriz = LOCATIONS.find((l) => l.primary) || LOCATIONS[0]
+  // Fotos editables en Admin → Fotos de páginas
+  const img = await imagenesPaginas()
   return (
     <div>
       {/* ── Encabezado con foto ─────────────────────────────── */}
       <section className="relative overflow-hidden bg-slate-50 border-b border-slate-100">
         <div className="absolute inset-y-0 right-0 w-full md:w-[60%]">
-          <img src="/locations/tanil.jpg" alt="" className="w-full h-full object-cover" />
+          <img src={img['contacto.hero'].url} alt="" className="w-full h-full object-cover" style={estiloEncuadre(img['contacto.hero'].pos)} />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-50 via-slate-50/70 to-transparent md:via-slate-50/10" />
           <p className="hidden md:block absolute right-10 bottom-8 -rotate-6 text-white text-3xl lg:text-4xl font-serif italic leading-tight drop-shadow-lg text-right">
             Tu espacio,<br />nuestro compromiso
@@ -131,7 +137,9 @@ export default function ContactoPage() {
         {/* Tienda, mapa y confianza */}
         <div className="space-y-4">
           <a href={matriz.mapsUrl} target="_blank" rel="noopener noreferrer" className="group relative block h-64 rounded-2xl overflow-hidden bg-slate-200">
-            <img src={matriz.image} alt={matriz.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+            <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]">
+              <img src={img['contacto.tienda'].url} alt={matriz.name} className="w-full h-full object-cover" style={estiloEncuadre(img['contacto.tienda'].pos)} />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent" />
             <div className="absolute left-4 right-4 bottom-4 flex items-start gap-3 text-white">
               <span className="mt-0.5"><Icon name="pin" className="w-5 h-5" /></span>

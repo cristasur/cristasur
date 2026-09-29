@@ -5,7 +5,7 @@
 // Deja SOLO las líneas oficiales de la tienda. Todo lo demás se
 // queda sin línea (se borran las que el script automático inventó).
 //
-//   Vinafera · Barcelona · Manhattan · Chicago · Termo Gorila · Titán
+//   Vinafera · Barcelona · Manhattan · Chicago · Termos NYC (incluye Gorila y Titán)
 //
 // Cada producto de esas líneas recibe su etiqueta (lo que sale en
 // "Variantes"): tipo + medida, p. ej. "Trinche 23 cm", "Cacerola 23 cm",
@@ -30,9 +30,9 @@ const LINEAS = [
   { nombre: 'Barcelona', re: /barcelona/i, quitar: /barcelona|opal/gi },
   { nombre: 'Manhattan', re: /manhattan/i, quitar: /manhattan/gi },
   { nombre: 'Chicago', re: /chicago/i, quitar: /chicago|matte/gi },
-  // Solo termos (no alcancías, cajas ni juguetes que también dicen Gorila/Titán)
-  { nombre: 'Termo Gorila', re: /\btermo\b.*\bgorila\b|\bgorila\b.*\btermo\b/i, quitar: /gorila|termo/gi },
-  { nombre: 'Titán', re: /\btermo\b.*\btit[aá]n\b|\btit[aá]n\b.*\btermo\b/i, quitar: /tit[aá]n|termo/gi },
+  // Termos NYC publicados (1 L, 2 L, 3.8 L, 7.6 L, Titán 11.3 L, Gorila 38 L):
+  // una sola línea, cada uno es un tamaño. Solo termos: no alcancías ni cajas.
+  { nombre: 'Termos NYC', re: /\btermo\b.*\bnyc\b/i, quitar: /termo|colores|gorila|tit[aá]n/gi, soloPublicados: true },
 ]
 
 const ARGS = process.argv.slice(2)
@@ -79,14 +79,15 @@ async function main() {
   }
 
   const productos = await col.find({ deleted: { $ne: true } })
-    .project({ name: 1, line: 1, lineLabel: 1, lineColor: 1 }).toArray()
+    .project({ name: 1, line: 1, lineLabel: 1, lineColor: 1, status: 1, active: 1 }).toArray()
 
   const cambios = []
   const porLinea = new Map(LINEAS.map((l) => [l.nombre, []]))
   const quitadas = new Map()
 
   for (const p of productos) {
-    const linea = LINEAS.find((l) => l.re.test(p.name))
+    const publicado = p.active !== false && (!p.status || p.status === 'published')
+    const linea = LINEAS.find((l) => l.re.test(p.name) && (!l.soloPublicados || publicado))
     let set
     if (linea) {
       set = { line: linea.nombre, lineLabel: etiqueta(p.name, linea), lineColor: p.lineColor || '' }

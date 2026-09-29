@@ -10,7 +10,11 @@ async function loadData() {
   await dbConnect()
   const cats = await Category.find().sort({ order: 1, name: 1 }).lean()
   const counts = await Product.aggregate([
-    { $group: { _id: '$category', count: { $sum: 1 } } },
+    // Los productos guardan un arreglo `categories` (antes se contaba un
+    // campo `category` que no existe y todo salía en 0).
+    { $match: { deleted: { $ne: true } } },
+    { $unwind: '$categories' },
+    { $group: { _id: '$categories', count: { $sum: 1 } } },
   ])
   const countMap = Object.fromEntries(counts.map((c) => [String(c._id), c.count]))
   const withCounts = cats.map((c) => ({

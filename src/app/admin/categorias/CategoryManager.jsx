@@ -126,10 +126,11 @@ export default function CategoryManager({ initialCategories }) {
     editingId && cats.some((c) => String(c.parent) === String(editingId))
 
   // Orden de la tabla: cada principal seguida de sus subcategorías.
+  const porOrden = (a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
   const ordered = []
-  for (const root of cats.filter((c) => !c.parent)) {
+  for (const root of cats.filter((c) => !c.parent).sort(porOrden)) {
     ordered.push(root)
-    for (const kid of cats.filter((c) => String(c.parent) === String(root._id))) {
+    for (const kid of cats.filter((c) => String(c.parent) === String(root._id)).sort(porOrden)) {
       ordered.push(kid)
     }
   }
@@ -138,114 +139,147 @@ export default function CategoryManager({ initialCategories }) {
     if (c.parent && !ordered.includes(c)) ordered.push(c)
   }
 
+  // ── Reordenar arrastrando ──────────────────────────────────
+  // Se arrastra una fila y se suelta sobre otra del mismo nivel:
+  // principales entre principales, subcategorías dentro de su padre.
+  // Al soltar se guarda solo el nuevo orden.
+  const [arrastrando, setArrastrando] = useState(null)
+  const [sobre, setSobre] = useState(null)
+  const [guardandoOrden, setGuardandoOrden] = useState(false)
+  const mismoNivel = (a, b) => a && b && String(a.parent || '') === String(b.parent || '')
+
+  async function soltar(destino) {
+    const origen = cats.find((c) => c._id === arrastrando)
+    setArrastrando(null); setSobre(null)
+    if (!origen || !destino || origen._id === destino._id || !mismoNivel(origen, destino)) return
+    const hermanas = ordered.filter((c) => mismoNivel(c, origen))
+    const sin = hermanas.filter((c) => c._id !== origen._id)
+    const iDestino = sin.findIndex((c) => c._id === destino._id)
+    const iOrigen = hermanas.findIndex((c) => c._id === origen._id)
+    const iDestinoOriginal = hermanas.findIndex((c) => c._id === destino._id)
+    // Bajando: queda después del destino; subiendo: antes.
+    sin.splice(iOrigen < iDestinoOriginal ? iDestino + 1 : iDestino, 0, origen)
+    const nuevoOrden = Object.fromEntries(sin.map((c, i) => [c._id, i]))
+    const antes = cats
+    setCats((cs) => cs.map((c) => (c._id in nuevoOrden ? { ...c, order: nuevoOrden[c._id] } : c)))
+    setGuardandoOrden(true)
+    try {
+      const r = await fetch('/api/categories/reorder', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: sin.map((c) => c._id) }),
+      })
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'No se pudo guardar el orden')
+    } catch (err) {
+      setCats(antes)
+      alert(err.message)
+    } finally {
+      setGuardandoOrden(false)
+    }
+  }
+
   const input =
     'mt-1 w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none'
 
   return (
-    <div className="grid lg:grid-cols-[1fr_420px] gap-6 items-start">
-      {/* Tabla */}
-      <div className="bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
-        <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 text-xs text-amber-800 flex items-center justify-between gap-3">
+    <div className="grid xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
+      {/* Lista */}
+      <div className="min-w-0 bg-white rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+        <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 text-xs text-amber-800 flex flex-wrap items-center justify-between gap-2">
           <span>
             <strong>{featuredCount}</strong> de 4 categorías destacadas en el inicio.
             {featuredCount === 0 && ' (Mientras no marques ninguna, se mostrarán las primeras 4.)'}
             {featuredCount > 4 && ' Solo aparecerán las primeras 4 por orden.'}
           </span>
+          <span className="text-amber-700/80">
+            {guardandoOrden ? 'Guardando orden…' : 'Arrastra ⠿ para cambiar el orden'}
+          </span>
         </div>
-        <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-left">
-            <tr>
-              <th className="p-3">Categoría</th>
-              <th className="p-3">Slug</th>
-              <th className="p-3">Productos</th>
-              <th className="p-3">Orden</th>
-              <th className="p-3">Estado</th>
-              <th className="p-3">En inicio</th>
-              <th className="p-3 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {ordered.map((c) => (
-              <tr key={c._id} className={`hover:bg-slate-50 ${c.parent ? 'bg-slate-50/40' : ''}`}>
-                <td className="p-3">
-                  <div className={`flex items-center gap-3 ${c.parent ? 'pl-6' : ''}`}>
-                    {c.parent && (
-                      <span className="text-slate-300 -ml-4 select-none" aria-hidden="true">└</span>
+
+        <div className="grid grid-cols-[24px_minmax(0,1fr)_64px_auto_auto] items-center gap-x-3 px-3 py-2 bg-slate-50 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+          <span />
+          <span>Categoría</span>
+          <span className="text-center">Productos</span>
+          <span>Estado</span>
+          <span className="text-right">Acciones</span>
+        </div>
+
+        <ul className="divide-y divide-slate-100">
+          {ordered.map((c) => {
+            const origen = cats.find((x) => x._id === arrastrando)
+            const valido = sobre === c._id && origen && origen._id !== c._id && mismoNivel(origen, c)
+            return (
+              <li
+                key={c._id}
+                draggable
+                onDragStart={(e) => { setArrastrando(c._id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c._id) }}
+                onDragEnd={() => { setArrastrando(null); setSobre(null) }}
+                onDragOver={(e) => { if (mismoNivel(origen, c)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (sobre !== c._id) setSobre(c._id) } }}
+                onDrop={(e) => { e.preventDefault(); soltar(c) }}
+                className={`grid grid-cols-[24px_minmax(0,1fr)_64px_auto_auto] items-center gap-x-3 px-3 py-2.5 transition-colors
+                  ${arrastrando === c._id ? 'opacity-40' : ''}
+                  ${valido ? 'bg-brand-50 ring-2 ring-inset ring-brand-400' : c.parent ? 'bg-slate-50/40 hover:bg-slate-50' : 'hover:bg-slate-50'}`}
+              >
+                <span className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none text-lg leading-none text-center" title="Arrastra para mover">⠿</span>
+
+                <div className={`flex items-center gap-3 min-w-0 ${c.parent ? 'pl-5' : ''}`}>
+                  {c.parent && <span className="text-slate-300 -ml-4 select-none" aria-hidden="true">└</span>}
+                  <div className={`${c.parent ? 'w-9 h-9' : 'w-11 h-11'} rounded-lg bg-brand-50 overflow-hidden grid place-items-center text-brand-700 font-black shrink-0`}>
+                    {c.image ? (
+                      <img src={c.image} alt="" draggable={false} className="w-full h-full object-cover" />
+                    ) : c.icon ? (
+                      <span>{c.icon}</span>
+                    ) : (
+                      <span>{c.name.charAt(0).toUpperCase()}</span>
                     )}
-                    <div className="w-12 h-12 rounded-lg bg-brand-50 overflow-hidden grid place-items-center text-brand-700 font-black shrink-0">
-                      {c.image ? (
-                        <img src={c.image} alt="" className="w-full h-full object-cover" />
-                      ) : c.icon ? (
-                        <span>{c.icon}</span>
-                      ) : (
-                        <span>{c.name.charAt(0).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className={c.parent ? 'text-slate-700' : 'font-semibold text-slate-900'}>
-                        {c.name}
-                      </div>
-                      {c.parent ? (
-                        <div className="text-[11px] text-slate-400">
-                          Subcategoría de {nameById[String(c.parent)] || '—'}
-                        </div>
-                      ) : (
-                        c.description && <div className="text-xs text-slate-500 line-clamp-1">{c.description}</div>
-                      )}
-                    </div>
                   </div>
-                </td>
-                <td className="p-3 font-mono text-xs text-slate-500">{c.slug}</td>
-                <td className="p-3">{c.productCount}</td>
-                <td className="p-3">{c.order}</td>
-                <td className="p-3">
+                  <div className="min-w-0">
+                    <div className={`truncate ${c.parent ? 'text-slate-700' : 'font-semibold text-slate-900'}`}>{c.name}</div>
+                    <div className="text-[11px] text-slate-400 truncate font-mono">/{c.slug}</div>
+                  </div>
+                </div>
+
+                <span className="text-center text-sm tabular-nums text-slate-700">{c.productCount}</span>
+
+                <div className="flex flex-col items-start gap-1">
                   {c.active ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      Activa
+                    <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Activa
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full text-xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                      Inactiva
+                    <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Oculta
                     </span>
                   )}
-                </td>
-                <td className="p-3">
-                  {c.featured ? (
-                    <span className="inline-flex items-center gap-1 text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full text-xs">
-                      <Icon name="star" className="w-3 h-3" />
-                      Destacada
+                  {c.featured && (
+                    <span className="inline-flex items-center gap-1 text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full text-[11px]">
+                      <Icon name="star" className="w-3 h-3" /> En inicio
                     </span>
-                  ) : (
-                    <span className="text-slate-400 text-xs">—</span>
                   )}
-                </td>
-                <td className="p-3 text-right whitespace-nowrap">
-                  <button onClick={() => onEdit(c)} className="px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800">
-                    Editar
+                </div>
+
+                <div className="flex items-center justify-end gap-1">
+                  <button onClick={() => onEdit(c)} title="Editar" aria-label={`Editar ${c.name}`}
+                    className="w-8 h-8 grid place-items-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
+                    <Icon name="edit" className="w-4 h-4" />
                   </button>
-                  <button onClick={() => onDelete(c._id)} className="ml-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700">
-                    Eliminar
+                  <button onClick={() => onDelete(c._id)} title="Eliminar" aria-label={`Eliminar ${c.name}`}
+                    className="w-8 h-8 grid place-items-center rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600">
+                    <Icon name="trash" className="w-4 h-4" />
                   </button>
-                </td>
-              </tr>
-            ))}
-            {cats.length === 0 && (
-              <tr>
-                <td colSpan="7" className="p-10 text-center text-slate-500">
-                  Sin categorías todavía. Crea la primera con el formulario a la derecha.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        </div>
+                </div>
+              </li>
+            )
+          })}
+          {cats.length === 0 && (
+            <li className="p-10 text-center text-slate-500">
+              Sin categorías todavía. Crea la primera con el formulario.
+            </li>
+          )}
+        </ul>
       </div>
 
       {/* Form */}
-      <form onSubmit={onSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100 p-6 lg:sticky lg:top-8">
+      <form onSubmit={onSubmit} className="bg-white rounded-2xl shadow-card border border-slate-100 p-6 xl:sticky xl:top-8">
         <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
           <Icon name={editingId ? 'edit' : 'plus'} className="w-4 h-4 text-brand-700" />
           {editingId ? 'Editar categoría' : 'Nueva categoría'}

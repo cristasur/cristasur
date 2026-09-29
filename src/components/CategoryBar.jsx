@@ -31,29 +31,63 @@ export default function CategoryBar({ categories }) {
   const closeTimer = useRef(null)
 
   // ── Barra para recorrer (solo celular) ──────────────────────
-  // En celular las categorías no caben y hay que deslizarlas; esta
-  // barrita delgada abajo avisa que hay más y se puede arrastrar.
+  // En celular las categorías no caben y hay que deslizarlas. La
+  // barrita de abajo es un "scroll" propio: su tamaño y posición se
+  // calculan igual que un scrollbar real (visible / total) y se
+  // actualizan directo en cada cuadro, sin animación, así va pegada
+  // al dedo. Siempre ocupa su espacio para que nada brinque.
   const navRef = useRef(null)
   const pistaRef = useRef(null)
-  const [recorrido, setRecorrido] = useState({ left: 0, width: 100, hayMas: false })
+  const pulgarRef = useRef(null)
+  const sombraRef = useRef(null)
+  const arrastre = useRef(false)
+  const [desborda, setDesborda] = useState(false)
+
   useEffect(() => {
     const el = navRef.current
     if (!el) return
-    const medir = () => {
-      const max = el.scrollWidth - el.clientWidth
-      const width = el.scrollWidth ? Math.min(100, (el.clientWidth / el.scrollWidth) * 100) : 100
-      setRecorrido({ width, left: max > 0 ? (el.scrollLeft / max) * (100 - width) : 0, hayMas: max > 4 && el.scrollLeft < max - 4 })
+    let cuadro = 0
+    const pintar = () => {
+      cuadro = 0
+      const total = el.scrollWidth, visible = el.clientWidth
+      const max = total - visible
+      const hay = max > 2
+      setDesborda((d) => (d === hay ? d : hay))
+      const pulgar = pulgarRef.current, pista = pistaRef.current
+      if (pulgar && pista && total > 0) {
+        const anchoPista = pista.clientWidth
+        const ancho = Math.max(24, (visible / total) * anchoPista)
+        const avance = max > 0 ? Math.min(1, Math.max(0, el.scrollLeft / max)) : 0
+        pulgar.style.width = `${ancho}px`
+        pulgar.style.transform = `translateX(${avance * (anchoPista - ancho)}px)`
+      }
+      if (sombraRef.current) sombraRef.current.style.opacity = hay && el.scrollLeft < max - 2 ? '1' : '0'
     }
-    medir()
-    el.addEventListener('scroll', medir, { passive: true })
-    window.addEventListener('resize', medir)
-    return () => { el.removeEventListener('scroll', medir); window.removeEventListener('resize', medir) }
-  }, [])
+    const pedir = () => { if (!cuadro) cuadro = requestAnimationFrame(pintar) }
+    pintar()
+    el.addEventListener('scroll', pedir, { passive: true })
+    // Cambia de tamaño al cargar fuentes, girar el teléfono, etc.
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(pedir) : null
+    ro?.observe(el)
+    Array.from(el.children).forEach((c) => ro?.observe(c))
+    window.addEventListener('resize', pedir)
+    document.fonts?.ready?.then(pedir)
+    return () => {
+      cancelAnimationFrame(cuadro)
+      el.removeEventListener('scroll', pedir)
+      window.removeEventListener('resize', pedir)
+      ro?.disconnect()
+    }
+  }, [categories])
+
+  // Tocar o arrastrar sobre la barrita: el centro del pulgar sigue al dedo.
   function moverDesdeBarra(e) {
-    const el = navRef.current, pista = pistaRef.current
-    if (!el || !pista) return
+    const el = navRef.current, pista = pistaRef.current, pulgar = pulgarRef.current
+    if (!el || !pista || !pulgar) return
     const r = pista.getBoundingClientRect()
-    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
+    const ancho = pulgar.offsetWidth
+    const libre = Math.max(1, r.width - ancho)
+    const x = Math.min(1, Math.max(0, (e.clientX - r.left - ancho / 2) / libre))
     el.scrollLeft = x * (el.scrollWidth - el.clientWidth)
   }
   const fetched = useRef(new Set())
@@ -116,7 +150,7 @@ export default function CategoryBar({ categories }) {
         <div className="max-w-7xl mx-auto px-4">
           <nav
             ref={navRef}
-            className="flex items-center gap-1 md:gap-0.5 h-12 overflow-x-auto md:overflow-visible scroll-chip"
+            className="flex items-center gap-1 md:gap-0.5 h-12 -mx-4 px-2 md:mx-0 md:px-0 overflow-x-auto overscroll-x-contain md:overflow-visible scroll-chip"
             aria-label="Categorías"
             id="barra-categorias"
           >
@@ -182,33 +216,28 @@ export default function CategoryBar({ categories }) {
             })}
           </nav>
 
-          {/* Solo celular: barrita para recorrer + sombra que avisa que hay más */}
-          {recorrido.width < 100 && (
-            <div className="md:hidden relative pb-2 -mt-1">
-              <div
-                ref={pistaRef}
-                className="relative h-[3px] mx-12 rounded-full bg-slate-200 touch-none"
-                onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); moverDesdeBarra(e) }}
-                onPointerMove={(e) => { if (e.buttons || e.pressure) moverDesdeBarra(e) }}
-                role="scrollbar"
-                aria-controls="barra-categorias"
-                aria-orientation="horizontal"
-                aria-valuenow={Math.round(recorrido.left)}
-                aria-label="Recorrer categorías"
-              >
-                {/* Área táctil más grande que la línea visible */}
-                <span className="absolute -inset-y-3 inset-x-0" aria-hidden="true" />
-                <span
-                  className="absolute inset-y-0 rounded-full bg-slate-500 transition-[left] duration-100"
-                  style={{ left: `${recorrido.left}%`, width: `${recorrido.width}%` }}
-                />
-              </div>
+          {/* Solo celular: barrita para recorrer (siempre ocupa su lugar) */}
+          <div className="md:hidden h-3 flex items-start">
+            <div
+              ref={pistaRef}
+              className={`relative w-full h-[3px] mx-10 rounded-full bg-slate-200 touch-none transition-opacity ${desborda ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+              onPointerDown={(e) => { arrastre.current = true; e.currentTarget.setPointerCapture?.(e.pointerId); moverDesdeBarra(e) }}
+              onPointerMove={(e) => { if (arrastre.current) moverDesdeBarra(e) }}
+              onPointerUp={() => { arrastre.current = false }}
+              onPointerCancel={() => { arrastre.current = false }}
+              role="scrollbar"
+              aria-controls="barra-categorias"
+              aria-orientation="horizontal"
+              aria-label="Recorrer categorías"
+            >
+              {/* Área táctil más grande que la línea visible */}
+              <span className="absolute -inset-y-3 inset-x-0" aria-hidden="true" />
+              <span ref={pulgarRef} className="absolute left-0 inset-y-0 w-6 rounded-full bg-slate-500 will-change-transform" />
             </div>
-          )}
+          </div>
         </div>
-        {recorrido.hayMas && (
-          <div className="md:hidden pointer-events-none absolute right-0 top-0 h-12 w-10 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
-        )}
+        {/* Sombra a la derecha: avisa que hay más categorías */}
+        <div ref={sombraRef} className="md:hidden pointer-events-none absolute right-0 top-0 h-12 w-10 bg-gradient-to-l from-white to-transparent opacity-0 transition-opacity" aria-hidden="true" />
 
         {/* ── Panel ancho (desktop) ── */}
         {openId && (() => {

@@ -102,6 +102,19 @@ export default function CartDrawer() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, setOpen])
 
+  // Mientras el carrito está abierto, la página de atrás no se mueve
+  useEffect(() => {
+    if (!open) return
+    const html = document.documentElement
+    const antes = { body: document.body.style.overflow, html: html.style.overflow }
+    document.body.style.overflow = 'hidden'
+    html.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = antes.body
+      html.style.overflow = antes.html
+    }
+  }, [open])
+
   // Reevaluar cupón cuando cambie el subtotal
   useEffect(() => {
     if (coupon?.code) {
@@ -159,7 +172,7 @@ export default function CartDrawer() {
       />
       {/* Panel */}
       <aside
-        className={`fixed right-0 top-0 bottom-0 w-full sm:w-[420px] max-w-full bg-white z-50 shadow-2xl transform transition-transform flex flex-col ${
+        className={`fixed right-0 top-0 h-[100dvh] w-full sm:w-[420px] max-w-full bg-white z-50 shadow-2xl transform transition-transform flex flex-col ${
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
         aria-hidden={!open}
@@ -177,7 +190,8 @@ export default function CartDrawer() {
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+        <div className="p-4 space-y-3">
           {items.length === 0 && (
             <div className="text-center py-12 text-slate-500">
               <Icon name="cart" className="w-12 h-12 mx-auto text-slate-300" />
@@ -273,7 +287,7 @@ export default function CartDrawer() {
         </div>
 
         {items.length > 0 && (
-          <footer className="border-t border-slate-100 p-4 space-y-3">
+          <div className="border-t border-slate-100 p-4 space-y-3">
             {/* Cupón */}
             <div>
               <div className="flex gap-2">
@@ -342,7 +356,21 @@ export default function CartDrawer() {
               </div>
             )}
 
-            <div className="flex justify-between text-lg font-black text-slate-900 pt-2 border-t border-slate-100">
+            <ShareCartButton items={items} />
+            <button
+              onClick={clear}
+              className="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold"
+            >
+              Vaciar carrito
+            </button>
+          </div>
+        )}
+        </div>
+
+        {/* Siempre visible abajo: total y botón de pedir */}
+        {items.length > 0 && (
+          <footer className="shrink-0 border-t border-slate-200 bg-white p-4 space-y-2 shadow-[0_-6px_16px_-10px_rgba(0,0,0,0.25)]">
+            <div className="flex justify-between text-lg font-black text-slate-900">
               <span>Total</span>
               <span>{formatMXN(total)}</span>
             </div>
@@ -354,13 +382,6 @@ export default function CartDrawer() {
             >
               <Icon name="whatsapp" className="w-5 h-5" />
               {checkingOut ? 'Validando pedido…' : 'Pedir por WhatsApp'}
-            </button>
-            <ShareCartButton items={items} />
-            <button
-              onClick={clear}
-              className="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-semibold"
-            >
-              Vaciar carrito
             </button>
           </footer>
         )}

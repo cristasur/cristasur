@@ -223,14 +223,14 @@ export default async function HomePage() {
       </div>
 
       {/* Categorías */}
-      <section className="max-w-7xl mx-auto px-4 py-16">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900">Comprar por categoría</h2>
+      <section className="max-w-7xl mx-auto px-4 py-8 md:py-16">
+        <div className="flex items-center justify-between gap-3 mb-5 md:mb-8">
+          <div className="min-w-0">
+            <h2 className="text-[26px] leading-tight md:text-4xl font-black text-slate-900">Comprar por categoría</h2>
           </div>
-          <Link href="/productos" className="text-sm font-bold text-slate-900 hover:text-brand-700 inline-flex items-center gap-1.5 shrink-0">
+          <Link href="/productos" className="text-[15px] md:text-sm font-bold text-slate-900 hover:text-brand-700 inline-flex items-center gap-1 shrink-0">
             Ver todos
-            <Icon name="arrow" className="w-4 h-4" />
+            <Icon name="chevron" className="w-4 h-4" />
           </Link>
         </div>
         {/* Solo categorías principales. Al hacer clic lleva a la categoría;

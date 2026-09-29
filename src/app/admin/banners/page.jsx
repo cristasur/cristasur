@@ -119,7 +119,8 @@ export default function AdminBannersPage() {
       const res = await fetch('/api/banners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, image: imageUrl, imageMobile: imageMobileUrl }),
+        // El nuevo se pone al final; luego se acomoda con ↑ ↓
+        body: JSON.stringify({ ...form, order: banners.length, image: imageUrl, imageMobile: imageMobileUrl }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al guardar')
@@ -141,6 +142,29 @@ export default function AdminBannersPage() {
       body: JSON.stringify(cambios),
     })
     load()
+  }
+
+  // Subir o bajar un banner: se renumera toda la lista 0, 1, 2…
+  // (así también se arreglan números repetidos de antes).
+  const [moviendo, setMoviendo] = useState(false)
+  async function mover(i, dir) {
+    const j = i + dir
+    if (j < 0 || j >= banners.length) return
+    const lista = [...banners]
+    ;[lista[i], lista[j]] = [lista[j], lista[i]]
+    const nueva = lista.map((b, k) => ({ ...b, order: k }))
+    setBanners(nueva)
+    setMoviendo(true)
+    try {
+      await Promise.all(nueva
+        .filter((b) => banners.find((x) => x._id === b._id)?.order !== b.order)
+        .map((b) => fetch(`/api/banners/${b._id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order: b.order }),
+        })))
+    } finally {
+      setMoviendo(false)
+      load()
+    }
   }
 
   async function handleDelete(id) {
@@ -260,16 +284,6 @@ export default function AdminBannersPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">Orden</label>
-              <input
-                type="number"
-                value={form.order}
-                min={0}
-                onChange={e => setForm(f => ({ ...f, order: Number(e.target.value) }))}
-                className="w-24 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-brand-400"
-              />
-            </div>
             <button
               type="submit"
               disabled={saving || !imageUrl}
@@ -297,7 +311,7 @@ export default function AdminBannersPage() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
           <h2 className="font-bold text-slate-900">Banners actuales</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Se muestran en el orden del número (de menor a mayor).</p>
+          <p className="text-xs text-slate-400 mt-0.5">Salen en la portada en este orden. Muévelos con las flechas ↑ ↓.</p>
         </div>
 
         {loading ? (
@@ -306,8 +320,19 @@ export default function AdminBannersPage() {
           <div className="p-10 text-center text-slate-400">No hay banners aún. Añade el primero arriba.</div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {banners.map((b) => (
+            {banners.map((b, i) => (
               <div key={b._id} className="flex flex-wrap items-center gap-4 p-4">
+                {/* Posición + flechas */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="w-6 text-center text-lg font-black text-slate-300">{i + 1}</span>
+                  <div className="flex flex-col gap-1">
+                    <button onClick={() => mover(i, -1)} disabled={i === 0 || moviendo} aria-label="Subir" title="Subir"
+                      className="w-8 h-7 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30">↑</button>
+                    <button onClick={() => mover(i, 1)} disabled={i === banners.length - 1 || moviendo} aria-label="Bajar" title="Bajar"
+                      className="w-8 h-7 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30">↓</button>
+                  </div>
+                </div>
+
                 {/* Miniaturas: compu y celular */}
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="w-32 h-[51px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200" title="Compu">
@@ -327,16 +352,6 @@ export default function AdminBannersPage() {
                   {b.href && <div className="text-xs text-brand-600 truncate">{b.href}</div>}
                 </div>
 
-                {/* Orden */}
-                <div className="shrink-0">
-                  <input
-                    type="number"
-                    defaultValue={b.order}
-                    min={0}
-                    className="w-16 px-2 py-1 rounded border border-slate-200 text-sm text-center"
-                    onBlur={e => actualizar(b._id, { order: Number(e.target.value) })}
-                  />
-                </div>
 
                 {/* Acciones */}
                 <div className="flex flex-wrap items-center gap-2 shrink-0">

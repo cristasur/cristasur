@@ -29,7 +29,7 @@ function formatPrice(n) {
   }).format(n || 0)
 }
 
-export default function ProductDetailClient({ product, productUrl, isVip = false, initialColor = '', siblings = [], siblings2 = [], precio = null }) {
+export default function ProductDetailClient({ product, productUrl, isVip = false, initialColor = '', siblings = [], precio = null }) {
   const variants = Array.isArray(product.variants) ? product.variants : []
 
   // Pre-selección de variante (modelo simétrico).
@@ -254,7 +254,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
     <div className="mt-4 md:mt-6 space-y-4 md:space-y-5 w-full min-w-0">
       {/* Variantes (tamaños de la línea) + Variante de color, estilo MAHA:
           van arriba del precio, como en la ficha de MAHA. */}
-      <ProductVariants product={product} siblings={siblings} siblings2={siblings2} selected={selected} onSelect={selectVariant} />
+      <ProductVariants product={product} siblings={siblings} selected={selected} onSelect={selectVariant} />
 
       {/* Precio y existencia (vienen armados desde la página) */}
       {precio}

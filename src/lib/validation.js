@@ -163,8 +163,6 @@ export function validateProductPayload(body) {
   const line = cleanSoft(body?.line, { max: 80 })
   const lineLabel = cleanSoft(body?.lineLabel, { max: 30 })
   const lineColor = cleanSoft(body?.lineColor, { max: 30 })
-  const line2 = cleanSoft(body?.line2, { max: 80 })
-  const lineLabel2 = cleanSoft(body?.lineLabel2, { max: 30 })
   const specs = sanitizeSpecs(body?.specs)
   const highlights = sanitizeHighlights(body?.highlights)
   const usage = cleanSoft(body?.usage, { max: 1200 })
@@ -368,8 +366,6 @@ export function validateProductPayload(body) {
       line,
       lineLabel,
       lineColor,
-      line2,
-      lineLabel2,
       specs,
       highlights,
       usage,
@@ -534,7 +530,7 @@ export function diffFields(before, after, fields) {
     publishAt: 'Publicar el', qtyStep: 'Paso de cantidad',
     materials: 'Materiales', tags: 'Etiquetas',
     specs: 'Ficha técnica', highlights: 'Atributos destacados', usage: 'Cómo utilizar',
-    line: 'Línea', lineLabel: 'Etiqueta de línea', lineColor: 'Color en la línea', line2: 'Segunda línea', lineLabel2: 'Etiqueta en segunda línea',
+    line: 'Línea', lineLabel: 'Etiqueta de línea', lineColor: 'Color en la línea',
   }
   const result = []
   for (const f of fields) {

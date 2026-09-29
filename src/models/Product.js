@@ -183,12 +183,6 @@ const ProductSchema = new mongoose.Schema(
     // junto a sus hermanos de la misma línea y la misma etiqueta.
     // Si el producto trae los colores como variantes internas, va vacío.
     lineColor: { type: String, trim: true, maxlength: 30, default: '' },
-    // Segunda línea (opcional): para productos que pertenecen a dos
-    // grupos a la vez. Ej. el "Plato trinche Vinafera" está en la línea
-    // Vinafera (con su sopero y su pastel) y también en "Platos trinche"
-    // (con los trinches de otras colecciones). Sale como otra fila.
-    line2:      { type: String, trim: true, maxlength: 80, default: '', index: true },
-    lineLabel2: { type: String, trim: true, maxlength: 30, default: '' },
 
     // ---- Ficha técnica libre ----
     // Filas de especificación agrupadas. El admin escribe grupo, etiqueta y

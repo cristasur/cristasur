@@ -67,7 +67,7 @@ function Fila({ titulo, valor, children }) {
   )
 }
 
-export default function ProductVariants({ product, siblings = [], siblings2 = [], selected, onSelect }) {
+export default function ProductVariants({ product, siblings = [], selected, onSelect }) {
   const variantes = Array.isArray(product.variants) ? product.variants : []
   const internasColor = variantes.filter((v) => esEtiquetaColor(v.label))
   const internasOtras = variantes.filter((v) => !esEtiquetaColor(v.label))
@@ -151,15 +151,7 @@ export default function ProductVariants({ product, siblings = [], siblings2 = []
     otrasPorLabel.get(l).push(v)
   }
 
-  // ── Segunda línea (ej. "Platos trinche") ────────────────────
-  const fila2 = product.line2
-    ? [{ ...product, esActual: true }, ...siblings2.filter((s) => String(s._id) !== String(product._id))]
-        .filter((p) => p.lineLabel2 || p.esActual)
-        .sort((a, b) => (a.esActual ? -1 : b.esActual ? 1 : 0) ||
-          String(a.lineLabel2 || '').localeCompare(String(b.lineLabel2 || ''), 'es', { numeric: true }))
-    : []
-
-  const hay = filaTamanos.length >= 2 || colores.length >= 2 || otrasPorLabel.size > 0 || fila2.length >= 2
+  const hay = filaTamanos.length >= 2 || colores.length >= 2 || otrasPorLabel.size > 0
   if (!hay) return null
 
   return (
@@ -169,15 +161,6 @@ export default function ProductVariants({ product, siblings = [], siblings2 = []
           {filaTamanos.map((t) => (
             <Cuadro key={t.e} texto={t.e} imagen={t.imagen} activo={t.actual} href={t.actual ? null : t.href}
               onClick={t.actual ? () => {} : undefined} titulo={t.p?.name} />
-          ))}
-        </Fila>
-      )}
-
-      {fila2.length >= 2 && (
-        <Fila titulo={product.line2} valor={product.lineLabel2}>
-          {fila2.map((p) => (
-            <Cuadro key={String(p._id)} texto={p.lineLabel2 || p.name} imagen={p.image} activo={p.esActual}
-              href={p.esActual ? null : `/productos/${p._id}`} onClick={p.esActual ? () => {} : undefined} titulo={p.name} />
           ))}
         </Fila>
       )}

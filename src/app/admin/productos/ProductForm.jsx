@@ -6,6 +6,7 @@
 //   - Upload múltiple a la galería (varias imágenes adicionales)
 //   - Reordenar y eliminar imágenes de la galería
 // ============================================================
+import AutocompletarLinea from './AutocompletarLinea'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -1126,25 +1127,21 @@ export default function ProductForm({ categories, brands = [], materials = [], i
         </p>
 
         <div className="grid md:grid-cols-3 gap-4">
-          <label className="block">
+          <div className="block">
             <span className="text-sm font-medium text-slate-700">Nombre de la línea</span>
-            <input
-              list="lineas-existentes"
-              maxLength={80}
+            {/* Sugerencias en tiempo real con las líneas que ya existen:
+                escribir "Caribe" y "caribe " crearía dos líneas distintas. */}
+            <AutocompletarLinea
               value={form.line}
-              onChange={(e) => update('line', e.target.value)}
-              placeholder="Ej: Caribe NYC, Liora Ripple"
+              onChange={(v) => update('line', v)}
+              opciones={lines}
+              placeholder="Escribe: M → Manhattan…"
               className={input}
             />
-            {/* Autocompletado con las líneas que ya existen: escribir
-                "Caribe" y "caribe " crearía dos líneas distintas. */}
-            <datalist id="lineas-existentes">
-              {(lines || []).map((l) => <option key={l} value={l} />)}
-            </datalist>
             <span className="block text-[11px] text-slate-400 mt-1">
-              Debe escribirse IGUAL en todos los productos de la línea.
+              Elige una de la lista para que quede igual que en sus hermanos.
             </span>
-          </label>
+          </div>
 
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Etiqueta de este producto</span>

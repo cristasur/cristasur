@@ -15,6 +15,8 @@ import { soloStaff } from '@/lib/permisos'
 //   - "tags.add"        → añade tags (params.tags: [string])
 //   - "tags.remove"     → quita tags
 //   - "category.set"    → reemplaza categorías (params.categories: [id])
+//   - "category.add"    → agrega categorías sin quitar las que tenga
+//   - "category.remove" → quita esas categorías (puede quedar sin ninguna)
 //   - "wholesale.set"   → setea wholesalePrice + wholesaleMinQty
 //   - "wholesale.clear" → quita el mayoreo
 // Retorna { ok, matched, modified } y registra una entrada en editHistory.
@@ -36,7 +38,7 @@ const VALID_OPS = new Set([
   // 'status.set' eliminado: era peligroso porque permitía publicar borradores
   // en masa. Para publicar un borrador, hay que ir uno por uno desde el form.
   'tags.add', 'tags.remove',
-  'category.set',
+  'category.set', 'category.add', 'category.remove',
   'wholesale.set', 'wholesale.clear',
 ])
 
@@ -103,6 +105,16 @@ function buildUpdate(op, params) {
       const cats = Array.isArray(params?.categories) ? params.categories.filter(isObjectId) : []
       if (!cats.length) return null
       return { update: { $set: { categories: cats } }, summary: `categorias = ${cats.length}` }
+    }
+    case 'category.add': {
+      const cats = Array.isArray(params?.categories) ? params.categories.filter(isObjectId) : []
+      if (!cats.length) return null
+      return { update: { $addToSet: { categories: { $each: cats.map((c) => new mongoose.Types.ObjectId(c)) } } }, summary: `+categorias ${cats.length}` }
+    }
+    case 'category.remove': {
+      const cats = Array.isArray(params?.categories) ? params.categories.filter(isObjectId) : []
+      if (!cats.length) return null
+      return { update: { $pull: { categories: { $in: cats.map((c) => new mongoose.Types.ObjectId(c)) } } }, summary: `-categorias ${cats.length}` }
     }
     case 'wholesale.set': {
       const wp = Number(params?.wholesalePrice)

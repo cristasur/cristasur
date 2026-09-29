@@ -14,7 +14,7 @@ import {
   defaultEffectiveVariant, findVariantByColor,
 } from '@/lib/pricing'
 import Icon from './Icon'
-import VariantPicker from './VariantPicker'
+import ProductVariants from './ProductVariants'
 import AddToCartButton from './AddToCartButton'
 import ShareButtons from './ShareButtons'
 import { trackView } from './RecentlyViewed'
@@ -29,7 +29,7 @@ function formatPrice(n) {
   }).format(n || 0)
 }
 
-export default function ProductDetailClient({ product, productUrl, isVip = false, initialColor = '' }) {
+export default function ProductDetailClient({ product, productUrl, isVip = false, initialColor = '', siblings = [], precio = null }) {
   const variants = Array.isArray(product.variants) ? product.variants : []
 
   // Pre-selección de variante (modelo simétrico).
@@ -252,6 +252,13 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
 
   return (
     <div className="mt-4 md:mt-6 space-y-4 md:space-y-5 w-full min-w-0">
+      {/* Variantes (tamaños de la línea) + Variante de color, estilo MAHA:
+          van arriba del precio, como en la ficha de MAHA. */}
+      <ProductVariants product={product} siblings={siblings} selected={selected} onSelect={selectVariant} />
+
+      {/* Precio y existencia (vienen armados desde la página) */}
+      {precio}
+
       {/* Badge VIP */}
       {isVip && wholesalePrice !== null && (
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 text-amber-800 text-sm font-semibold px-3 py-1.5 rounded-full w-fit max-w-full flex-wrap">
@@ -358,15 +365,7 @@ export default function ProductDetailClient({ product, productUrl, isVip = false
         </div>
       </div>
 
-      {variants.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-100 p-4">
-          <VariantPicker
-            variants={variants}
-            selected={selected}
-            onChange={selectVariant}
-          />
-        </div>
-      )}
+
 
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-5 w-full">
         <div className="flex items-center justify-between gap-4 flex-wrap">

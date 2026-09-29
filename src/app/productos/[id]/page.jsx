@@ -17,7 +17,6 @@ import {
 import ProductFaq from '@/components/ProductFaq'
 import { stockState } from '@/lib/pricing'
 import SkuCopy from '@/components/SkuCopy'
-import LineVariants from '@/components/LineVariants'
 import ReviewList from '@/components/ReviewList'
 import RecentlyViewed from '@/components/RecentlyViewed'
 import FavoriteButton from '@/components/FavoriteButton'
@@ -81,14 +80,11 @@ async function loadProduct(id) {
           { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
         ],
       })
-        .select('_id name image lineLabel sortOrder')
+        .select('_id name image lineLabel lineColor color sortOrder variants.label variants.value variants.image variants.images variants.available variants.stock variants._id')
         .sort({ sortOrder: 1, name: 1 })
-        .limit(16)
+        .limit(60)
         .lean()
     : []
-
-  // Los relacionados salen de etiquetas compartidas (y marca como fallback).
-  const manualRelated = []
 
   // "También compraron" — primero buscamos por coOrders (carritos reales).
   // Si aún no hay datos suficientes, fallback a más vistos de la misma categoría.
@@ -117,64 +113,9 @@ async function loadProduct(id) {
     alsoBought = alsoBought.slice(0, 4)
   }
 
-  // "Productos relacionados" — hasta 4, al azar, con esta prioridad:
-  //   1) Productos que compartan al menos UNA etiqueta (tag) con el actual.
-  //   2) Si NO hay coincidencias por etiqueta, se cae a productos que
-  //      compartan la MISMA MARCA (brand).
-  //   3) Si tampoco hay por marca, la sección no se muestra.
-  // El total final siempre es 4.
-  const RELATED_LIMIT = 4
-
-  function pickRandom(arr, n) {
-    if (arr.length <= n) return arr
-    return arr
-      .map((p) => ({ p, r: Math.random() }))
-      .sort((a, b) => a.r - b.r)
-      .slice(0, n)
-      .map(({ p }) => p)
-  }
-
-  // 1) Coincidencias por etiqueta (tag)
-  const tagMatches = product.tags?.length > 0
-    ? await Product.find({
-        _id: { $ne: product._id },
-        tags: { $in: product.tags },
-        active: true,
-        deleted: { $ne: true },
-      })
-        .select('_id name image price slug')
-        .limit(50)
-        .lean()
-    : []
-
-  let sameFamily = []
-  if (tagMatches.length > 0) {
-    // Mezcla: primero los manualmente vinculados, luego aleatorios de tag.
-    const manualIds = new Set(manualRelated.map((p) => String(p._id)))
-    const pool = [
-      ...manualRelated,
-      ...tagMatches.filter((p) => !manualIds.has(String(p._id))),
-    ]
-    sameFamily = pickRandom(pool, RELATED_LIMIT)
-  } else if (product.brand) {
-    // 2) Fallback: misma marca, al azar.
-    const brandMatches = await Product.find({
-      _id: { $ne: product._id },
-      brand: product.brand?._id || product.brand,
-      active: true,
-      deleted: { $ne: true },
-    })
-      .select('_id name image price slug')
-      .limit(50)
-      .lean()
-    sameFamily = pickRandom(brandMatches, RELATED_LIMIT)
-  }
-
   return {
     product: JSON.parse(JSON.stringify(product)),
-    sameFamily: JSON.parse(JSON.stringify(sameFamily)),
     lineSiblings: JSON.parse(JSON.stringify(lineSiblings)),
-    related: [],
     alsoBought: JSON.parse(JSON.stringify(alsoBought)),
   }
 }
@@ -215,7 +156,7 @@ export async function generateMetadata({ params }) {
 export default async function ProductDetail({ params, searchParams }) {
   const [data, session] = await Promise.all([loadProduct(params.id), getCurrentUser()])
   if (!data) notFound()
-  const { product, sameFamily, lineSiblings, related, alsoBought } = data
+  const { product, lineSiblings, alsoBought } = data
   // Consultar DB directo para el VIP: el JWT puede estar desactualizado si el admin
   // revocó el acceso mayoreo sin que el usuario haya vuelto a iniciar sesión.
   let isVip = false
@@ -332,39 +273,44 @@ export default async function ProductDetail({ params, searchParams }) {
             <FavoriteButton productId={product._id} />
           </div>
 
-          <div className="mt-3 md:mt-4 flex items-baseline gap-3">
-            <span className="text-3xl md:text-4xl font-black text-slate-900">
-              {formatPrice(product.price)}
-            </span>
-            {hasDiscount && (
-              <span className="text-lg text-slate-400 line-through">
-                {formatPrice(product.comparePrice)}
-              </span>
-            )}
-          </div>
-
-          {inStock ? (
-            <div className="mt-3 inline-flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full w-fit">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Disponible{!stockUnlimited && ` (${totalStock} piezas)`}
-            </div>
-          ) : (
-            <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full w-fit">
-              Sin stock
-            </div>
-          )}
-
           {product.sku && (
             <div className="mt-2">
               <SkuCopy sku={product.sku} />
             </div>
           )}
 
-          {/* Hermanos de la misma línea: 28 cm, 26 cm, tazón, taza… */}
-          <LineVariants
-            line={product.line}
-            current={product}
+          {/* Variantes + cantidad + añadir al carrito + WhatsApp + compartir */}
+          <ProductDetailClient
+            product={product}
+            productUrl={productUrl}
+            isVip={isVip}
+            initialColor={(searchParams?.color || '').trim()}
             siblings={lineSiblings}
+            precio={
+              <div>
+              <div className="mt-3 md:mt-4 flex items-baseline gap-3">
+                <span className="text-3xl md:text-4xl font-black text-slate-900">
+                  {formatPrice(product.price)}
+                </span>
+                {hasDiscount && (
+                  <span className="text-lg text-slate-400 line-through">
+                    {formatPrice(product.comparePrice)}
+                  </span>
+                )}
+              </div>
+
+              {inStock ? (
+                <div className="mt-3 inline-flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full w-fit">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Disponible{!stockUnlimited && ` (${totalStock} piezas)`}
+                </div>
+              ) : (
+                <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-600 bg-slate-100 px-3 py-1 rounded-full w-fit">
+                  Sin stock
+                </div>
+              )}
+              </div>
+            }
           />
 
           {product.description && (
@@ -375,8 +321,6 @@ export default async function ProductDetail({ params, searchParams }) {
             </div>
           )}
 
-          {/* Variantes + cantidad + añadir al carrito + WhatsApp + compartir */}
-          <ProductDetailClient product={product} productUrl={productUrl} isVip={isVip} initialColor={(searchParams?.color || '').trim()} />
         </div>
       </div>
 
@@ -408,19 +352,6 @@ export default async function ProductDetail({ params, searchParams }) {
           <ProductGrid products={alsoBought} />
         </section>
       )}
-
-      {/* Productos relacionados — máximo 4, por etiqueta (random) o marca como fallback. */}
-      {(() => {
-        const seenIds = new Set(alsoBought.map((p) => String(p._id)))
-        const pool = sameFamily.filter((p) => !seenIds.has(String(p._id))).slice(0, 4)
-        if (!pool.length) return null
-        return (
-          <section className="mt-16">
-            <h2 className="text-2xl font-black text-slate-900 mb-6">Productos relacionados</h2>
-            <ProductGrid products={pool} />
-          </section>
-        )
-      })()}
 
       {/* Vistos recientemente (se oculta si no hay historial) */}
       <RecentlyViewed excludeId={product._id} />

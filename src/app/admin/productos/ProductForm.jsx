@@ -91,6 +91,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
     resistencia: initial?.resistencia || '',
     line: initial?.line || '',
     lineLabel: initial?.lineLabel || '',
+    lineColor: initial?.lineColor || '',
     specs: Array.isArray(initial?.specs) ? initial.specs : [],
     highlights: Array.isArray(initial?.highlights) ? initial.highlights : [],
     usage: initial?.usage || '',
@@ -1116,14 +1117,15 @@ export default function ProductForm({ categories, brands = [], materials = [], i
 
       {/* Línea / colección */}
       <fieldset className="border border-slate-200 rounded-xl p-4">
-        <legend className="px-2 text-sm font-bold text-slate-700">Línea o colección</legend>
+        <legend className="px-2 text-sm font-bold text-slate-700">Línea o colección (Variantes y Variante de color)</legend>
         <p className="text-xs text-slate-500 mb-3">
-          Agrupa productos <strong>hermanos</strong>: el plato de 28 cm, el de 26, el
-          tazón y la taza de la misma colección. En la ficha aparecen como miniaturas
-          para saltar entre ellos. No son variantes: cada uno tiene su precio y su SKU.
+          Agrupa productos <strong>hermanos</strong> que tienen su propio precio y SKU. En la ficha salen dos filas,
+          como en MAHA: <strong>Variantes</strong> (la etiqueta: 27 cm, 19 cm, 48 QTS…) y <strong>Variante de color</strong>
+          (los hermanos con la misma etiqueta y distinto color). Si los colores cuestan lo mismo y son el mismo
+          producto, mejor ponlos como variantes de color de este producto (sección Variantes) y deja el color de la línea vacío.
         </p>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Nombre de la línea</span>
             <input
@@ -1154,7 +1156,25 @@ export default function ProductForm({ categories, brands = [], materials = [], i
               className={input}
             />
             <span className="block text-[11px] text-slate-400 mt-1">
-              Lo que distingue a este de sus hermanos. Se ve bajo la miniatura.
+              Tamaño, capacidad o tipo. Sale en la fila "Variantes".
+            </span>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Color de este producto</span>
+            <input
+              list="colores-linea"
+              maxLength={30}
+              value={form.lineColor}
+              onChange={(e) => update('lineColor', e.target.value)}
+              placeholder="Ej: Blanco, Rosa, Azul"
+              className={input}
+            />
+            <datalist id="colores-linea">
+              {['Blanco', 'Negro', 'Gris', 'Rojo', 'Rosa', 'Amarillo', 'Naranja', 'Verde', 'Turquesa', 'Azul', 'Morado', 'Café', 'Beige', 'Hueso', 'Transparente', 'Dorado', 'Plata', 'Talavera', 'Varios'].map((c) => <option key={c} value={c} />)}
+            </datalist>
+            <span className="block text-[11px] text-slate-400 mt-1">
+              Solo si cada color es un producto aparte. Sale en "Variante de color".
             </span>
           </label>
         </div>

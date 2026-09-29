@@ -9,16 +9,12 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
-import Product from '@/models/Product'
-import Brand from '@/models/Brand'
-import Material from '@/models/Material'
 import ProductGrid from '@/components/ProductGrid'
 import ProductFilters from '@/components/ProductFilters'
+import CatalogoBarra, { CatalogoPaginas } from '@/components/CatalogoBarra'
 import SubcategoryStrip from '@/components/SubcategoryStrip'
 import CategoryHero from '@/components/CategoryHero'
-import {
-  parseSpecParams, specFilterClauses, buildFacets, countSelectedSpecs,
-} from '@/lib/facets'
+import { consultarCatalogo } from '@/lib/catalogo'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,19 +23,7 @@ async function loadData(slug, sp) {
   const category = await Category.findOne({ slug, active: true }).lean()
   if (!category) return null
 
-  const q = (sp?.q || '').trim()
-  const minPrice = Number(sp?.minPrice)
-  const maxPrice = Number(sp?.maxPrice)
-  const inStock = sp?.inStock === '1'
-  const onSale = sp?.onSale === '1'
-  const featured = sp?.featured === '1'
-  const sort = (sp?.sort || 'newest').trim()
-  const brandSlug = (sp?.brand || '').trim()
-  const colorTerm = (sp?.color || '').trim()
-  const materialSlug = (sp?.material || '').trim()
-
-  // Si es una categoría principal, mostramos también lo de sus subcategorías.
-  // Así "Cocina" incluye lo que esté en "Platos", "Cubiertos", etc.
+  // Si es una categoría principal, también cuenta lo de sus subcategorías.
   const children = await Category.find({ parent: category._id, active: true })
     // `image` e `icon` los usa la tira de círculos de SubcategoryStrip.
     .select('_id name slug image icon')
@@ -47,123 +31,16 @@ async function loadData(slug, sp) {
     .lean()
   const categoryIds = [category._id, ...children.map((c) => c._id)]
 
-  const now = new Date()
-  const filter = {
-    categories: { $in: categoryIds },
-    active: true,
-    deleted: { $ne: true },
-    $and: [
-      { $or: [{ status: { $exists: false } }, { status: 'published' }] },
-      { $or: [{ publishAt: null }, { publishAt: { $lte: now } }] },
-    ],
-  }
-  if (featured) filter.featured = true
-  // "Solo con stock": stock null = sin control de inventario = disponible.
-  // Con variantes, el padre no lleva stock; basta con que UNA variante se pueda vender.
-  if (inStock) {
-    filter.$and.push({
-      $or: [
-        { 'variants.0': { $exists: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] },
-        { variants: { $elemMatch: { available: { $ne: false }, $or: [{ stock: null }, { stock: { $gt: 0 } }] } } },
-      ],
-    })
-  }
-  if (onSale) filter.$expr = { $gt: ['$comparePrice', '$price'] }
-
-  if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
-    filter.price = {}
-    if (Number.isFinite(minPrice)) filter.price.$gte = minPrice
-    if (Number.isFinite(maxPrice)) filter.price.$lte = maxPrice
-  }
-
-  let brandDoc = null
-  if (brandSlug) {
-    brandDoc = await Brand.findOne({ slug: brandSlug, active: true }).lean()
-    if (brandDoc) filter.brand = brandDoc._id
-    else filter.brand = null
-  }
-
-  let materialDoc = null
-  if (materialSlug) {
-    materialDoc = await Material.findOne({ slug: materialSlug, active: true }).lean()
-    if (materialDoc) filter.materials = materialDoc._id
-    else filter.materials = null
-  }
-
-  if (colorTerm) {
-    const safe = colorTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const reg = { $regex: safe, $options: 'i' }
-    // Con el modelo simétrico el padre no tiene color: vive en las variantes.
-    filter.$and.push({ $or: [{ color: reg }, { 'variants.value': reg }] })
-  }
-
-  if (q) {
-    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const matchingBrands = await Brand.find({
-      name: { $regex: safe, $options: 'i' },
-      active: true,
-    })
-      .select('_id')
-      .lean()
-    const orClauses = [
-      { name: { $regex: safe, $options: 'i' } },
-      { description: { $regex: safe, $options: 'i' } },
-      { color: { $regex: safe, $options: 'i' } },
-      { 'variants.value': { $regex: safe, $options: 'i' } },
-    ]
-    if (matchingBrands.length) {
-      orClauses.push({ brand: { $in: matchingBrands.map((b) => b._id) } })
-    }
-    // Dentro de $and para no chocar con otros $or.
-    filter.$and.push({ $or: orClauses })
-  }
-
-  // ── Facetas (atributos de la ficha técnica) ──────────────
-  // `baseForFacets` es el filtro SIN las facetas: los conteos se
-  // calculan sobre él para que no caigan a 1 al marcar una casilla.
-  const selectedSpecs = parseSpecParams(sp)
-  const baseForFacets = { ...filter }
-  const specClauses = specFilterClauses(selectedSpecs)
-  if (specClauses.length) {
-    filter.$and = [...(filter.$and || []), ...specClauses]
-  }
-
-  let sortSpec = { sortOrder: 1, featured: -1, salesCount: -1, createdAt: -1 }
-  if (sort === 'priceAsc') sortSpec = { price: 1 }
-  else if (sort === 'priceDesc') sortSpec = { price: -1 }
-  else if (sort === 'popular')
-    sortSpec = { salesCount: -1, whatsappClicks: -1, viewsCount: -1 }
-
-  const [products, brands, materials, total, facets] = await Promise.all([
-    Product.find(filter)
-      .populate('categories', 'name slug')
-      .populate('brand', 'name slug')
-      .populate('materials', 'name slug')
-      .sort(sortSpec)
-      .limit(60)
-      .lean(),
-    Brand.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
-    Material.find({ active: true }).sort({ order: 1, name: 1 }).lean(),
-    Product.countDocuments(filter),
-    buildFacets(Product, baseForFacets),
+  const [catalogo, parentCat] = await Promise.all([
+    consultarCatalogo(sp, { alcance: categoryIds, hijas: children }),
+    category.parent ? Category.findById(category.parent).select('name slug').lean() : null,
   ])
-
-  const parentCat = category.parent
-    ? await Category.findById(category.parent).select('name slug').lean()
-    : null
 
   return {
     category: JSON.parse(JSON.stringify(category)),
     children: JSON.parse(JSON.stringify(children)),
     parentCat: parentCat ? JSON.parse(JSON.stringify(parentCat)) : null,
-    products: JSON.parse(JSON.stringify(products)),
-    brands: JSON.parse(JSON.stringify(brands)),
-    materials: JSON.parse(JSON.stringify(materials)),
-    brandDoc: brandDoc ? JSON.parse(JSON.stringify(brandDoc)) : null,
-    materialDoc: materialDoc ? JSON.parse(JSON.stringify(materialDoc)) : null,
-    facets: JSON.parse(JSON.stringify(facets)),
-    selectedSpecs,
-    total,
+    ...catalogo,
   }
 }
 
@@ -182,21 +59,8 @@ export async function generateMetadata({ params }) {
 export default async function CategoryLanding({ params, searchParams }) {
   const data = await loadData(params.slug, searchParams || {})
   if (!data) notFound()
-  const { category, children, parentCat, products, brands, materials, brandDoc, materialDoc, facets, selectedSpecs, total } = data
-
-  // Estado actual de los filtros, para que el sidebar arranque alineado al URL.
-  const initialFilters = {
-    q: searchParams?.q || '',
-    minPrice: searchParams?.minPrice || '',
-    maxPrice: searchParams?.maxPrice || '',
-    inStock: searchParams?.inStock === '1',
-    onSale: searchParams?.onSale === '1',
-    featured: searchParams?.featured === '1',
-    sort: searchParams?.sort || 'newest',
-    brand: searchParams?.brand || '',
-    color: searchParams?.color || '',
-    material: searchParams?.material || '',
-  }
+  const { category, children, parentCat, productos, total, pagina, paginas, facetas, filtros, marcados } = data
+  const basePath = `/categoria/${category.slug}`
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
@@ -218,48 +82,28 @@ export default async function CategoryLanding({ params, searchParams }) {
       {/* Banner de la categoría */}
       <CategoryHero category={category} parentCat={parentCat} total={total} />
 
-      {/* Filtro activo de marca o material, si viene por URL */}
-      {(brandDoc || materialDoc) && (
-        <p className="text-sm text-slate-500">
-          Filtrando por{' '}
-          <strong className="text-slate-800">
-            {[brandDoc?.name, materialDoc?.name].filter(Boolean).join(' · ')}
-          </strong>
-        </p>
-      )}
-
       {/* Subcategorías en círculos, como MAHA */}
       <SubcategoryStrip subcategories={children} />
 
-      <div className="grid lg:grid-cols-[260px_1fr] gap-6">
+      <div className="grid lg:grid-cols-[270px_1fr] gap-6 lg:gap-8">
         <aside className="lg:sticky lg:top-24 h-fit">
-          <Suspense
-            fallback={
-              <div className="bg-white rounded-2xl shadow-card border border-slate-100 p-4 h-96 animate-pulse" />
-            }
-          >
-            <ProductFilters
-              facets={facets}
-              selectedSpecs={selectedSpecs}
-              categories={[]}
-              brands={brands}
-              materials={materials}
-              initialFilters={initialFilters}
-              hideCategory
-              basePath={`/categoria/${category.slug}`}
-            />
+          <Suspense fallback={<div className="h-96 rounded-2xl bg-slate-100 animate-pulse" />}>
+            <ProductFilters facetas={facetas} total={total} marcados={marcados} basePath={basePath} hideCategory />
           </Suspense>
         </aside>
 
-        <div>
-          {products.length > 0 ? (
-            <ProductGrid products={products} colorFilter={initialFilters.color.trim()} />
+        <div className="min-w-0">
+          <Suspense fallback={null}>
+            <CatalogoBarra total={total} facetas={facetas} basePath={basePath} />
+          </Suspense>
+          {productos.length > 0 ? (
+            <ProductGrid products={productos} colorFilter={filtros.colores[0] || ''} />
           ) : (
             <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center text-slate-500">
-              No encontramos productos con esos filtros. Probá aflojar criterios o
-              contactanos por WhatsApp para cotizar.
+              No encontramos productos con esos filtros. Quita alguno o escríbenos por WhatsApp para cotizar.
             </div>
           )}
+          <CatalogoPaginas pagina={pagina} paginas={paginas} basePath={basePath} searchParams={searchParams || {}} />
         </div>
       </div>
 

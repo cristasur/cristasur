@@ -1,0 +1,297 @@
+{
+ "colores": [
+  {
+   "nombre": "Blanco",
+   "css": "#ffffff",
+   "sinonimos": [
+    "blanco",
+    "blanca",
+    "blancos",
+    "blancas",
+    "white"
+   ]
+  },
+  {
+   "nombre": "Hueso",
+   "css": "#f3ecdc",
+   "sinonimos": [
+    "hueso",
+    "marfil",
+    "crema",
+    "ivory",
+    "perla"
+   ]
+  },
+  {
+   "nombre": "Beige",
+   "css": "#dccca4",
+   "sinonimos": [
+    "beige",
+    "arena",
+    "natural",
+    "crudo",
+    "kaki",
+    "khaki"
+   ]
+  },
+  {
+   "nombre": "Café",
+   "css": "#7a4a24",
+   "sinonimos": [
+    "cafe",
+    "café",
+    "chocolate",
+    "marron",
+    "marrón",
+    "tierra",
+    "caoba",
+    "nogal",
+    "madera",
+    "terracota",
+    "cobre"
+   ]
+  },
+  {
+   "nombre": "Gris",
+   "css": "#9ca3af",
+   "sinonimos": [
+    "gris",
+    "grises",
+    "gris claro",
+    "gris oscuro",
+    "humo",
+    "grafito",
+    "oxford",
+    "acero"
+   ]
+  },
+  {
+   "nombre": "Negro",
+   "css": "#111111",
+   "sinonimos": [
+    "negro",
+    "negra",
+    "negros",
+    "negras",
+    "black"
+   ]
+  },
+  {
+   "nombre": "Rojo",
+   "css": "#d62828",
+   "sinonimos": [
+    "rojo",
+    "roja",
+    "rojos",
+    "rojas",
+    "vino",
+    "tinto",
+    "guinda",
+    "cereza",
+    "red"
+   ]
+  },
+  {
+   "nombre": "Rosa",
+   "css": "#f4a3c8",
+   "sinonimos": [
+    "rosa",
+    "rosado",
+    "rosada",
+    "rosa pastel",
+    "palo de rosa",
+    "pink"
+   ]
+  },
+  {
+   "nombre": "Fucsia",
+   "css": "#d6247a",
+   "sinonimos": [
+    "fucsia",
+    "fiusha",
+    "magenta",
+    "rosa mexicano"
+   ]
+  },
+  {
+   "nombre": "Naranja",
+   "css": "#f28c28",
+   "sinonimos": [
+    "naranja",
+    "anaranjado",
+    "anaranjada",
+    "mandarina",
+    "coral",
+    "salmon",
+    "salmón"
+   ]
+  },
+  {
+   "nombre": "Amarillo",
+   "css": "#f5cc3c",
+   "sinonimos": [
+    "amarillo",
+    "amarilla",
+    "mostaza",
+    "limon",
+    "limón",
+    "canario",
+    "yellow"
+   ]
+  },
+  {
+   "nombre": "Verde",
+   "css": "#2e8b57",
+   "sinonimos": [
+    "verde",
+    "verdes",
+    "verde claro",
+    "verde oscuro",
+    "verde limon",
+    "verde limón",
+    "olivo",
+    "militar",
+    "menta",
+    "pistache",
+    "jade",
+    "esmeralda",
+    "green"
+   ]
+  },
+  {
+   "nombre": "Turquesa",
+   "css": "#3cc6c4",
+   "sinonimos": [
+    "turquesa",
+    "aqua",
+    "agua",
+    "aguamarina",
+    "celeste",
+    "azul cielo",
+    "teal"
+   ]
+  },
+  {
+   "nombre": "Azul",
+   "css": "#1f4fb4",
+   "sinonimos": [
+    "azul",
+    "azules",
+    "azul rey",
+    "azul marino",
+    "marino",
+    "azul claro",
+    "azul oscuro",
+    "navy",
+    "cobalto",
+    "blue"
+   ]
+  },
+  {
+   "nombre": "Morado",
+   "css": "#7b3fb2",
+   "sinonimos": [
+    "morado",
+    "morada",
+    "lila",
+    "lavanda",
+    "violeta",
+    "purpura",
+    "púrpura",
+    "uva",
+    "berenjena"
+   ]
+  },
+  {
+   "nombre": "Dorado",
+   "css": "linear-gradient(135deg,#8a6a1f,#f4d67a 45%,#b8892b 70%,#f6e3a1)",
+   "sinonimos": [
+    "dorado",
+    "dorada",
+    "oro",
+    "gold",
+    "champagne",
+    "champaña"
+   ]
+  },
+  {
+   "nombre": "Plata",
+   "css": "linear-gradient(135deg,#8d949e,#f1f3f5 45%,#aab1ba 70%,#e5e7eb)",
+   "sinonimos": [
+    "plata",
+    "plateado",
+    "plateada",
+    "cromo",
+    "cromado",
+    "silver",
+    "inoxidable"
+   ]
+  },
+  {
+   "nombre": "Transparente",
+   "css": "repeating-linear-gradient(45deg,#e2e8f0 0 4px,#fff 4px 8px)",
+   "sinonimos": [
+    "transparente",
+    "transparentes",
+    "clear",
+    "cristal transparente",
+    "traslucido",
+    "traslúcido",
+    "translucido"
+   ]
+  },
+  {
+   "nombre": "Talavera",
+   "css": "radial-gradient(circle at 30% 30%,#1d4ed8 0 18%,transparent 19%),radial-gradient(circle at 75% 70%,#1d4ed8 0 14%,transparent 15%),#f8fafc",
+   "sinonimos": [
+    "talavera"
+   ]
+  },
+  {
+   "nombre": "Varios",
+   "css": "conic-gradient(#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7,#ef4444)",
+   "sinonimos": [
+    "varios",
+    "multicolor",
+    "surtido",
+    "surtidos",
+    "colores surtidos",
+    "colores",
+    "estampado",
+    "mixto"
+   ]
+  }
+ ],
+ "noEnNombre": [
+  "vino",
+  "tinto",
+  "agua",
+  "uva",
+  "natural",
+  "madera",
+  "acero",
+  "inoxidable",
+  "tierra",
+  "oro",
+  "perla",
+  "arena",
+  "limon",
+  "menta",
+  "cereza",
+  "chocolate",
+  "mandarina",
+  "canario",
+  "colores",
+  "estampado",
+  "mixto",
+  "cobre",
+  "crema",
+  "oxford",
+  "militar",
+  "cristal transparente",
+  "cromo",
+  "surtido",
+  "surtidos",
+  "jade"
+ ]
+}

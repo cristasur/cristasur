@@ -33,3 +33,7 @@ public/uploads/*
 !public/uploads/.gitkeep
 
 .vercel
+
+# Reportes y respaldos de scripts (datos de la tienda)
+scripts/reportes/
+scripts/respaldos/

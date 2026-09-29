@@ -178,6 +178,11 @@ const ProductSchema = new mongoose.Schema(
     // `lineLabel` es lo que los distingue (ej: "28 cm", "350 ml").
     line:      { type: String, trim: true, maxlength: 80, default: '', index: true },
     lineLabel: { type: String, trim: true, maxlength: 30, default: '' },
+    // Color de ESTE producto cuando cada color es un producto aparte
+    // (otro SKU/precio). En la ficha sale en la fila "Variante de color"
+    // junto a sus hermanos de la misma línea y la misma etiqueta.
+    // Si el producto trae los colores como variantes internas, va vacío.
+    lineColor: { type: String, trim: true, maxlength: 30, default: '' },
 
     // ---- Ficha técnica libre ----
     // Filas de especificación agrupadas. El admin escribe grupo, etiqueta y

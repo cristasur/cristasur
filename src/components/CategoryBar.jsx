@@ -150,7 +150,7 @@ export default function CategoryBar({ categories }) {
         <div className="max-w-7xl mx-auto px-4">
           <nav
             ref={navRef}
-            className="flex items-center gap-1 md:gap-0.5 h-12 -mx-4 px-2 md:mx-0 md:px-0 overflow-x-auto overscroll-x-contain md:overflow-visible scroll-chip"
+            className="flex items-center gap-1 h-12 -mx-4 px-2 overflow-x-auto overscroll-x-contain scroll-chip md:h-auto md:min-h-[3rem] md:mx-0 md:px-0 md:py-1.5 md:flex-wrap md:gap-x-1 md:gap-y-0 md:overflow-visible"
             aria-label="Categorías"
             id="barra-categorias"
           >

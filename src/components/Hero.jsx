@@ -117,7 +117,7 @@ export default function Hero({ banners = [] }) {
                 // Compu: 2000×800 siempre.
                 // Celular: alto de pantalla menos menú (64 px) y barra de
                 // categorías (48 px), dejando asomar un poco lo de abajo.
-                className="min-w-full overflow-hidden h-[calc(100svh-9rem)] min-h-[420px] max-h-[860px] md:h-auto md:min-h-0 md:max-h-none md:aspect-[2000/800]"
+                className="min-w-full overflow-hidden h-[calc(100vh-9rem)] supports-[height:100svh]:h-[calc(100svh-9rem)] md:supports-[height:100svh]:h-auto min-h-[420px] max-h-[860px] md:h-auto md:min-h-0 md:max-h-none md:aspect-[2000/800]"
                 aria-hidden={i !== current}
               >
                 {slide.href ? (

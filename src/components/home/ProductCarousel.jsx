@@ -63,17 +63,19 @@ export default function ProductCarousel({ products = [], label = 'Productos', co
     <div className="relative" role="region" aria-roledescription="carrusel" aria-label={label}>
       <div
         ref={trackRef}
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth
-          pt-2 pb-40 -mb-36 -mx-4 px-4 scroll-px-4 pointer-events-none
-          [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        // Nada de pointer-events-none aquí: en celular impedía deslizar
+        // el carrusel con el dedo.
+        className="flex gap-3 sm:gap-4 overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-smooth
+          pt-2 pb-2 -mx-4 px-4 scroll-px-4
+          [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-webkit-overflow-scrolling:touch]"
       >
         {products.map((p) => (
           <div
             key={p._id}
-            className="snap-start shrink-0 pointer-events-auto
-              w-[calc((100%-1rem)/2.15)] sm:w-[calc((100%-2rem)/3)] md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)]"
+            className="snap-start shrink-0
+              w-[calc((100%-0.75rem)/2.15)] sm:w-[calc((100%-2rem)/3)] md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)]"
           >
-            <ProductCard product={p} colorFilter={colorFilter} />
+            <ProductCard product={p} colorFilter={colorFilter} tiersArriba />
           </div>
         ))}
       </div>

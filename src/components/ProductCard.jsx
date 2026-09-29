@@ -38,7 +38,7 @@ const ROW_META  = 18  // estrellas + SKU
 const ROW_LABEL = 15  // etiqueta "MAYOREO"
 const ROW_TIERS = 34  // botón de descuento por cantidad
 
-export default function ProductCard({ product, colorFilter }) {
+export default function ProductCard({ product, colorFilter, tiersArriba = false }) {
   const step = saleStep(product)
   const tiers = useMemo(() => priceTiers(product), [product])
   const tierDiscount = useMemo(() => maxTierDiscount(product), [product])
@@ -173,7 +173,7 @@ export default function ProductCard({ product, colorFilter }) {
         {/* Miniaturas superpuestas: no ocupan alto, así todas las
             tarjetas empiezan la info a la misma altura. */}
         {images.length > 1 && (
-          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-white via-white/85 to-transparent opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-white via-white/85 to-transparent opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto transition-opacity [@media(hover:none)]:hidden">
             <div className="flex items-center justify-center gap-1.5">
               {images.slice(0, 5).map((src, i) => (
                 <button
@@ -194,7 +194,7 @@ export default function ProductCard({ product, colorFilter }) {
 
         {/* Puntitos: señal permanente de que hay más fotos */}
         {images.length > 1 && (
-          <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1 group-hover:opacity-0 transition-opacity pointer-events-none">
+          <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1 group-hover:opacity-0 [@media(hover:none)]:!opacity-100 transition-opacity pointer-events-none">
             {images.slice(0, 5).map((_, i) => (
               <span
                 key={i}
@@ -307,7 +307,9 @@ export default function ProductCard({ product, colorFilter }) {
               </button>
 
               {showTiers && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-20 rounded-lg border border-slate-200 bg-white shadow-card-hover overflow-hidden">
+                // En carruseles se abre hacia arriba: hacia abajo lo cortaría
+                // el contenedor que se desliza de lado.
+                <div className={`absolute left-0 right-0 z-20 rounded-lg border ${tiersArriba ? 'bottom-full mb-1' : 'top-full mt-1'} border-slate-200 bg-white shadow-card-hover overflow-hidden`}>
                   {tiers.map((t) => {
                     const isActive = t.minQty === tier.minQty
                     return (

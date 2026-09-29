@@ -10,7 +10,7 @@
 // botones "Ver reseñas" (data.reviewsUrl) y "Dejar una reseña"
 // (data.writeUrl), cada uno solo si está configurado.
 // ============================================================
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Icon from '@/components/Icon'
 import { estiloEncuadre } from '@/lib/encuadre'
 
@@ -84,6 +84,7 @@ function ReviewCard({ item, highlighted, onClick }) {
 
 export default function Resenas({ items = [], data = {} }) {
   const [idx, setIdx] = useState(0)
+  const toque = useRef(null)
   const n = items.length
   if (!n) return null
 
@@ -98,7 +99,15 @@ export default function Resenas({ items = [], data = {} }) {
 
   return (
     <div>
-      <div className="relative" role="region" aria-roledescription="carrusel" aria-label="Reseñas de clientes">
+      <div className="relative" role="region" aria-roledescription="carrusel" aria-label="Reseñas de clientes"
+        // En celular se pasa de reseña deslizando con el dedo.
+        onTouchStart={(e) => { toque.current = e.touches[0].clientX }}
+        onTouchEnd={(e) => {
+          if (toque.current == null || n < 2) return
+          const d = e.changedTouches[0].clientX - toque.current
+          if (Math.abs(d) > 40) go(d < 0 ? 1 : -1)
+          toque.current = null
+        }}>
         {/* Tres tarjetas en compu (anterior, actual, siguiente); una en celular */}
         <div className={`grid gap-4 md:gap-6 items-stretch ${n >= 3 ? 'md:grid-cols-3' : n === 2 ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'max-w-xl mx-auto'}`}>
           {n >= 3 && (

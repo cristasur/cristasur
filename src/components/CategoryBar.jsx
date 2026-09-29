@@ -29,6 +29,33 @@ export default function CategoryBar({ categories }) {
   const [preview, setPreview] = useState({})   // { [slug]: producto[] }
 
   const closeTimer = useRef(null)
+
+  // ── Barra para recorrer (solo celular) ──────────────────────
+  // En celular las categorías no caben y hay que deslizarlas; esta
+  // barrita delgada abajo avisa que hay más y se puede arrastrar.
+  const navRef = useRef(null)
+  const pistaRef = useRef(null)
+  const [recorrido, setRecorrido] = useState({ left: 0, width: 100, hayMas: false })
+  useEffect(() => {
+    const el = navRef.current
+    if (!el) return
+    const medir = () => {
+      const max = el.scrollWidth - el.clientWidth
+      const width = el.scrollWidth ? Math.min(100, (el.clientWidth / el.scrollWidth) * 100) : 100
+      setRecorrido({ width, left: max > 0 ? (el.scrollLeft / max) * (100 - width) : 0, hayMas: max > 4 && el.scrollLeft < max - 4 })
+    }
+    medir()
+    el.addEventListener('scroll', medir, { passive: true })
+    window.addEventListener('resize', medir)
+    return () => { el.removeEventListener('scroll', medir); window.removeEventListener('resize', medir) }
+  }, [])
+  function moverDesdeBarra(e) {
+    const el = navRef.current, pista = pistaRef.current
+    if (!el || !pista) return
+    const r = pista.getBoundingClientRect()
+    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
+    el.scrollLeft = x * (el.scrollWidth - el.clientWidth)
+  }
   const fetched = useRef(new Set())
 
   const tree = useMemo(() => buildCategoryTree(categories), [categories])
@@ -88,8 +115,10 @@ export default function CategoryBar({ categories }) {
       >
         <div className="max-w-7xl mx-auto px-4">
           <nav
+            ref={navRef}
             className="flex items-center gap-1 md:gap-0.5 h-12 overflow-x-auto md:overflow-visible scroll-chip"
             aria-label="Categorías"
+            id="barra-categorias"
           >
             <Link
               href="/productos"
@@ -152,7 +181,34 @@ export default function CategoryBar({ categories }) {
               )
             })}
           </nav>
+
+          {/* Solo celular: barrita para recorrer + sombra que avisa que hay más */}
+          {recorrido.width < 100 && (
+            <div className="md:hidden relative pb-2 -mt-1">
+              <div
+                ref={pistaRef}
+                className="relative h-[3px] mx-12 rounded-full bg-slate-200 touch-none"
+                onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); moverDesdeBarra(e) }}
+                onPointerMove={(e) => { if (e.buttons || e.pressure) moverDesdeBarra(e) }}
+                role="scrollbar"
+                aria-controls="barra-categorias"
+                aria-orientation="horizontal"
+                aria-valuenow={Math.round(recorrido.left)}
+                aria-label="Recorrer categorías"
+              >
+                {/* Área táctil más grande que la línea visible */}
+                <span className="absolute -inset-y-3 inset-x-0" aria-hidden="true" />
+                <span
+                  className="absolute inset-y-0 rounded-full bg-slate-500 transition-[left] duration-100"
+                  style={{ left: `${recorrido.left}%`, width: `${recorrido.width}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
+        {recorrido.hayMas && (
+          <div className="md:hidden pointer-events-none absolute right-0 top-0 h-12 w-10 bg-gradient-to-l from-white to-transparent" aria-hidden="true" />
+        )}
 
         {/* ── Panel ancho (desktop) ── */}
         {openId && (() => {

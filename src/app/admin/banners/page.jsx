@@ -203,8 +203,8 @@ export default function AdminBannersPage() {
 
           <div className="grid md:grid-cols-[2.5fr_1fr] gap-4 items-start">
             <CajaImagen
-              titulo="Imagen para compu" medida="2000 × 800 px"
-              ayuda="Horizontal. Lo importante al centro."
+              titulo="Imagen para compu" medida="2400 × 800 px"
+              ayuda="Horizontal. Va de orilla a orilla: lo importante (texto, producto) al centro; en pantallas anchas se recorta un poco arriba y abajo. Ajústalo con “Ajustar encuadre”."
               url={imageUrl} onUrl={setImageUrl} obligatoria onError={setError}
             />
             <CajaImagen

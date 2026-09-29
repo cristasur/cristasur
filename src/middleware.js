@@ -25,6 +25,7 @@ const PUBLIC_API_WRITE_PATHS = new Set([
   '/api/coupons/apply', // preview de cupón (no mutación de BD)
   '/api/presence/ping', // heartbeat de "personas en línea" (público)
   '/api/shipping/quote', // cotizar envío desde el carrito (público, solo lectura)
+  '/api/contacto', // formulario de la página de contacto (público, con límite por IP)
   // /api/seed requiere una clave aparte (ver route.js) y está bloqueado en prod
 ])
 

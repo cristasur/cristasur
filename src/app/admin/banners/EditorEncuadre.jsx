@@ -10,7 +10,7 @@
 // Lo que se ve aquí es exactamente lo que sale en la portada: los
 // dos usan lib/encuadre.js.
 // ============================================================
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ENCUADRE_CENTRO, estiloEncuadre, normalizarEncuadre } from '@/lib/encuadre'
 
 const ATAJOS = [
@@ -30,6 +30,23 @@ export default function EditorEncuadre({ banner, onGuardar, onCerrar }) {
   })
   const [guardando, setGuardando] = useState(false)
   const arrastre = useRef(null)
+
+  // En compu el banner va de orilla a orilla con alto fijo, así que su
+  // proporción depende del ancho de la pantalla. La vista previa usa la
+  // de TU pantalla (la misma fórmula que Hero.jsx), para que lo que
+  // encuadres aquí sea exactamente lo que ves en la portada.
+  const proporcionPc = () => {
+    if (typeof window === 'undefined') return 2.5
+    const w = window.innerWidth
+    return w / ((Math.min(w, 1280) - 32) * 0.4)
+  }
+  const [ratioPc, setRatioPc] = useState(2.5)
+  useEffect(() => {
+    const medir = () => setRatioPc(proporcionPc())
+    medir()
+    window.addEventListener('resize', medir)
+    return () => window.removeEventListener('resize', medir)
+  }, [])
   const caja = useRef(null)
 
   const actual = pos[vista]
@@ -79,7 +96,7 @@ export default function EditorEncuadre({ banner, onGuardar, onCerrar }) {
           <div className="inline-flex rounded-lg bg-slate-100 p-1 text-sm font-semibold">
             <button onClick={() => setVista('pc')}
               className={`px-4 py-1.5 rounded-md ${vista === 'pc' ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>
-              Compu (2000×800)
+              Compu (tu pantalla)
             </button>
             <button onClick={() => tieneCel && setVista('cel')} disabled={!tieneCel}
               title={tieneCel ? '' : 'Este banner no tiene imagen de celular'}
@@ -92,7 +109,8 @@ export default function EditorEncuadre({ banner, onGuardar, onCerrar }) {
           <div className={vista === 'cel' ? 'max-w-[260px] mx-auto' : ''}>
             <div
               ref={caja}
-              className={`relative overflow-hidden rounded-2xl bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none ${vista === 'cel' ? 'aspect-[9/16]' : 'aspect-[2000/800]'}`}
+              className={`relative overflow-hidden rounded-2xl bg-slate-100 cursor-grab active:cursor-grabbing select-none touch-none ${vista === 'cel' ? 'aspect-[9/16]' : ''}`}
+              style={vista === 'cel' ? undefined : { aspectRatio: ratioPc }}
               onPointerDown={alPresionar}
               onPointerMove={alMover}
               onPointerUp={alSoltar}

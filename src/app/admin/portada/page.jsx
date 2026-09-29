@@ -699,7 +699,11 @@ function EditorSeccion({ inicial, categorias, onCerrar, onGuardado }) {
 
           {/* Porque: foto del equipo */}
           {tipo === 'porque' && (
-            <CampoImagen label="Foto del equipo" medida="1200 × 900 px" url={s.image} onUrl={set('image')} onError={setError} />
+            <>
+              <CampoImagen label="Foto (tienda o equipo)" medida="1000 × 1100 px, vertical" url={s.image} onUrl={set('image')} onError={setError} />
+              <Campo label="Texto bajo el título" value={s.data.texto} onChange={setData('texto')} area
+                placeholder="Todo lo que necesitas para tu hogar, negocio o restaurante, con la mejor calidad, surtido y atención." />
+            </>
           )}
 
           {/* Promos: texto junto al banner de marca */}

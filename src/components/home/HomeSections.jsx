@@ -104,7 +104,7 @@ function renderSection(s) {
       if (!reasons.length) return null
       return (
         <SectionShell>
-          <PorQue title={s.title} subtitle={s.subtitle} image={s.image} items={reasons} />
+          <PorQue title={s.title} subtitle={s.subtitle} image={s.image} items={reasons} texto={s.data?.texto || ''} />
         </SectionShell>
       )
     }

@@ -1,4 +1,5 @@
 'use client'
+import { esPrincipal, esHijaDe } from '@/lib/categoryParents'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -123,10 +124,8 @@ export default function MobileMenu({ categories = [] }) {
                   Todos los productos
                 </Link>
                 {/* Principales primero, y debajo sus subcategorías sangradas. */}
-                {categories.filter((c) => !c.parent).map((c) => {
-                  const subs = categories.filter(
-                    (s) => String(s.parent) === String(c._id)
-                  )
+                {categories.filter((c) => esPrincipal(c)).map((c) => {
+                  const subs = categories.filter((s) => esHijaDe(s, c._id))
                   return (
                     <div key={c._id}>
                       <Link

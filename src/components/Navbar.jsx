@@ -18,7 +18,7 @@ async function fetchCategories() {
     const cats = await Category.find({ active: true })
       .sort({ order: 1, name: 1 })
       // `parent` es necesario para armar los desplegables de subcategorías.
-      .select('name slug parent')
+      .select('name slug parent parents')
       .lean()
     return JSON.parse(JSON.stringify(cats))
   } catch {

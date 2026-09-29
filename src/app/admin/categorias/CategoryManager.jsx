@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Icon from '@/components/Icon'
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from '@/lib/categoryColors'
+import { padresDe, esPrincipal, esHijaDe } from '@/lib/categoryParents'
 
 const emptyForm = {
   name: '',
@@ -15,7 +16,7 @@ const emptyForm = {
   order: 0,
   active: true,
   featured: false,
-  parent: '',
+  parents: [],
   bannerColor: '',
 }
 
@@ -106,7 +107,7 @@ export default function CategoryManager({ initialCategories }) {
       order: cat.order || 0,
       active: cat.active,
       featured: Boolean(cat.featured),
-      parent: cat.parent ? String(cat.parent) : '',
+      parents: padresDe(cat),
       bannerColor: cat.bannerColor || '',
     })
     setError('')
@@ -118,25 +119,30 @@ export default function CategoryManager({ initialCategories }) {
   // Solo pueden ser padre las categorías principales (sin padre propio),
   // y nunca la categoría que se está editando.
   const parentOptions = cats.filter(
-    (c) => !c.parent && c._id !== editingId
+    (c) => esPrincipal(c) && c._id !== editingId
   )
   const nameById = Object.fromEntries(cats.map((c) => [String(c._id), c.name]))
   // La que se edita no puede volverse subcategoría si ya tiene hijas.
   const editingHasChildren =
-    editingId && cats.some((c) => String(c.parent) === String(editingId))
+    editingId && cats.some((c) => esHijaDe(c, editingId))
 
   // Orden de la tabla: cada principal seguida de sus subcategorías.
   const porOrden = (a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name)
+  // Una subcategoría con varios padres aparece debajo de cada uno.
+  // Cada fila lleva `ctx`: el padre bajo el que se está mostrando.
   const ordered = []
-  for (const root of cats.filter((c) => !c.parent).sort(porOrden)) {
-    ordered.push(root)
-    for (const kid of cats.filter((c) => String(c.parent) === String(root._id)).sort(porOrden)) {
-      ordered.push(kid)
+  const vistas = new Set()
+  for (const root of cats.filter((c) => esPrincipal(c)).sort(porOrden)) {
+    ordered.push({ ...root, ctx: '', fila: root._id })
+    vistas.add(root._id)
+    for (const kid of cats.filter((c) => esHijaDe(c, root._id)).sort(porOrden)) {
+      ordered.push({ ...kid, ctx: String(root._id), fila: `${kid._id}@${root._id}` })
+      vistas.add(kid._id)
     }
   }
   // Huérfanas (por si el padre fue eliminado) van al final.
   for (const c of cats) {
-    if (c.parent && !ordered.includes(c)) ordered.push(c)
+    if (!vistas.has(c._id)) ordered.push({ ...c, ctx: 'huerfana', fila: c._id })
   }
 
   // ── Reordenar arrastrando ──────────────────────────────────
@@ -146,17 +152,17 @@ export default function CategoryManager({ initialCategories }) {
   const [arrastrando, setArrastrando] = useState(null)
   const [sobre, setSobre] = useState(null)
   const [guardandoOrden, setGuardandoOrden] = useState(false)
-  const mismoNivel = (a, b) => a && b && String(a.parent || '') === String(b.parent || '')
+  const mismoNivel = (a, b) => a && b && a.ctx === b.ctx
 
   async function soltar(destino) {
-    const origen = cats.find((c) => c._id === arrastrando)
+    const origen = ordered.find((c) => c.fila === arrastrando)
     setArrastrando(null); setSobre(null)
-    if (!origen || !destino || origen._id === destino._id || !mismoNivel(origen, destino)) return
+    if (!origen || !destino || origen.fila === destino.fila || !mismoNivel(origen, destino)) return
     const hermanas = ordered.filter((c) => mismoNivel(c, origen))
-    const sin = hermanas.filter((c) => c._id !== origen._id)
-    const iDestino = sin.findIndex((c) => c._id === destino._id)
-    const iOrigen = hermanas.findIndex((c) => c._id === origen._id)
-    const iDestinoOriginal = hermanas.findIndex((c) => c._id === destino._id)
+    const sin = hermanas.filter((c) => c.fila !== origen.fila)
+    const iDestino = sin.findIndex((c) => c.fila === destino.fila)
+    const iOrigen = hermanas.findIndex((c) => c.fila === origen.fila)
+    const iDestinoOriginal = hermanas.findIndex((c) => c.fila === destino.fila)
     // Bajando: queda después del destino; subiendo: antes.
     sin.splice(iOrigen < iDestinoOriginal ? iDestino + 1 : iDestino, 0, origen)
     const nuevoOrden = Object.fromEntries(sin.map((c, i) => [c._id, i]))
@@ -205,25 +211,27 @@ export default function CategoryManager({ initialCategories }) {
 
         <ul className="divide-y divide-slate-100">
           {ordered.map((c) => {
-            const origen = cats.find((x) => x._id === arrastrando)
-            const valido = sobre === c._id && origen && origen._id !== c._id && mismoNivel(origen, c)
+            const origen = ordered.find((x) => x.fila === arrastrando)
+            const valido = sobre === c.fila && origen && origen.fila !== c.fila && mismoNivel(origen, c)
+            const sub = Boolean(c.ctx)
+            const otrosPadres = sub ? padresDe(c).filter((pid) => pid !== c.ctx).map((pid) => nameById[pid]).filter(Boolean) : []
             return (
               <li
-                key={c._id}
+                key={c.fila}
                 draggable
-                onDragStart={(e) => { setArrastrando(c._id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c._id) }}
+                onDragStart={(e) => { setArrastrando(c.fila); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.fila) }}
                 onDragEnd={() => { setArrastrando(null); setSobre(null) }}
-                onDragOver={(e) => { if (mismoNivel(origen, c)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (sobre !== c._id) setSobre(c._id) } }}
+                onDragOver={(e) => { if (mismoNivel(origen, c)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (sobre !== c.fila) setSobre(c.fila) } }}
                 onDrop={(e) => { e.preventDefault(); soltar(c) }}
                 className={`grid grid-cols-[24px_minmax(0,1fr)_64px_auto_auto] items-center gap-x-3 px-3 py-2.5 transition-colors
-                  ${arrastrando === c._id ? 'opacity-40' : ''}
-                  ${valido ? 'bg-brand-50 ring-2 ring-inset ring-brand-400' : c.parent ? 'bg-slate-50/40 hover:bg-slate-50' : 'hover:bg-slate-50'}`}
+                  ${arrastrando === c.fila ? 'opacity-40' : ''}
+                  ${valido ? 'bg-brand-50 ring-2 ring-inset ring-brand-400' : sub ? 'bg-slate-50/40 hover:bg-slate-50' : 'hover:bg-slate-50'}`}
               >
                 <span className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 select-none text-lg leading-none text-center" title="Arrastra para mover">⠿</span>
 
-                <div className={`flex items-center gap-3 min-w-0 ${c.parent ? 'pl-5' : ''}`}>
-                  {c.parent && <span className="text-slate-300 -ml-4 select-none" aria-hidden="true">└</span>}
-                  <div className={`${c.parent ? 'w-9 h-9' : 'w-11 h-11'} rounded-lg bg-brand-50 overflow-hidden grid place-items-center text-brand-700 font-black shrink-0`}>
+                <div className={`flex items-center gap-3 min-w-0 ${sub ? 'pl-5' : ''}`}>
+                  {sub && <span className="text-slate-300 -ml-4 select-none" aria-hidden="true">└</span>}
+                  <div className={`${sub ? 'w-9 h-9' : 'w-11 h-11'} rounded-lg bg-brand-50 overflow-hidden grid place-items-center text-brand-700 font-black shrink-0`}>
                     {c.image ? (
                       <img src={c.image} alt="" draggable={false} className="w-full h-full object-cover" />
                     ) : c.icon ? (
@@ -233,8 +241,11 @@ export default function CategoryManager({ initialCategories }) {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className={`truncate ${c.parent ? 'text-slate-700' : 'font-semibold text-slate-900'}`}>{c.name}</div>
-                    <div className="text-[11px] text-slate-400 truncate font-mono">/{c.slug}</div>
+                    <div className={`truncate ${sub ? 'text-slate-700' : 'font-semibold text-slate-900'}`}>{c.name}</div>
+                    <div className="text-[11px] text-slate-400 truncate">
+                      <span className="font-mono">/{c.slug}</span>
+                      {otrosPadres.length > 0 && <span className="ml-1 text-brand-600">· también en {otrosPadres.join(', ')}</span>}
+                    </div>
                   </div>
                 </div>
 
@@ -329,28 +340,32 @@ export default function CategoryManager({ initialCategories }) {
           </span>
         </div>
 
-        {/* Categoría padre — define la jerarquía del menú */}
-        <label className="block mb-4">
+        {/* Categorías padre — una subcategoría puede estar en varias */}
+        <div className="block mb-4">
           <span className="text-sm font-medium text-slate-700">Categoría padre</span>
-          <select
-            value={form.parent}
-            disabled={editingHasChildren}
-            onChange={(e) => setForm({ ...form, parent: e.target.value })}
-            className={`${input} disabled:bg-slate-100 disabled:text-slate-400`}
-          >
-            <option value="">— Ninguna (categoría principal) —</option>
-            {parentOptions.map((p) => (
-              <option key={p._id} value={p._id}>{p.name}</option>
-            ))}
-          </select>
+          <span className="block text-[11px] text-slate-400">Marca una o varias. Sin marcar = categoría principal (sale en la barra).</span>
+          <div className={`mt-2 grid grid-cols-2 gap-1.5 ${editingHasChildren ? 'opacity-50 pointer-events-none' : ''}`}>
+            {parentOptions.map((p) => {
+              const on = form.parents.includes(String(p._id))
+              return (
+                <label key={p._id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm cursor-pointer ${on ? 'border-brand-500 bg-brand-50 text-brand-800' : 'border-slate-200 hover:border-slate-300 text-slate-700'}`}>
+                  <input type="checkbox" checked={on} className="accent-brand-600"
+                    onChange={() => setForm((f) => ({ ...f, parents: on ? f.parents.filter((x) => x !== String(p._id)) : [...f.parents, String(p._id)] }))} />
+                  <span className="truncate">{p.name}</span>
+                </label>
+              )
+            })}
+          </div>
           <span className="block text-[11px] text-slate-400 mt-1">
             {editingHasChildren
               ? 'Esta categoría ya tiene subcategorías, por eso no puede volverse subcategoría de otra.'
-              : form.parent
-                ? 'Aparecerá en el desplegable de la categoría que elegiste, no en la barra principal.'
-                : 'Aparecerá directamente en la barra de navegación de la tienda.'}
+              : form.parents.length > 1
+                ? `Aparecerá en el desplegable de ${form.parents.length} categorías.`
+                : form.parents.length
+                  ? 'Aparecerá en el desplegable de la categoría que elegiste, no en la barra principal.'
+                  : 'Aparecerá directamente en la barra de navegación de la tienda.'}
           </span>
-        </label>
+        </div>
 
         {/* Imagen */}
         <div className="mb-3">

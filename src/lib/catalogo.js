@@ -24,6 +24,7 @@
 // propio, igual que en las tiendas grandes: así al marcar "Blanco"
 // siguen apareciendo los demás colores con su número.
 // ============================================================
+import { padresDe, esHijaDe, esPrincipal } from './categoryParents'
 import Category from '@/models/Category'
 import Product from '@/models/Product'
 import Brand from '@/models/Brand'
@@ -113,7 +114,7 @@ export async function consultarCatalogo(sp, { alcance = null, hijas = null } = {
 
   // ── Catálogos para traducir slugs ⇄ ids ⇄ nombres ──────────
   const [todasCats, todasMarcas, todosMateriales] = await Promise.all([
-    Category.find({ active: true }).select('_id name slug parent order').sort({ order: 1, name: 1 }).lean(),
+    Category.find({ active: true }).select('_id name slug parent parents order').sort({ order: 1, name: 1 }).lean(),
     Brand.find({ active: true }).select('_id name slug').sort({ order: 1, name: 1 }).lean(),
     Material.find({ active: true }).select('_id name slug').sort({ order: 1, name: 1 }).lean(),
   ])
@@ -121,7 +122,7 @@ export async function consultarCatalogo(sp, { alcance = null, hijas = null } = {
     const elegidas = todasCats.filter((c) => slugs.includes(c.slug))
     const ids = new Set(elegidas.map((c) => String(c._id)))
     // Una categoría principal incluye a sus subcategorías.
-    for (const c of todasCats) if (c.parent && ids.has(String(c.parent))) ids.add(String(c._id))
+    for (const c of todasCats) if (padresDe(c).some((pid) => ids.has(pid))) ids.add(String(c._id))
     return todasCats.filter((c) => ids.has(String(c._id))).map((c) => c._id)
   }
 
@@ -262,14 +263,14 @@ export async function consultarCatalogo(sp, { alcance = null, hijas = null } = {
       .map((c) => ({ value: c.slug, label: c.name, count: nCat.get(String(c._id)) || 0 }))
       .filter((c) => c.count > 0 || f.categorias.includes(c.value))
   } else {
-    const hijasDe = (id) => todasCats.filter((c) => String(c.parent) === String(id))
+    const hijasDe = (id) => todasCats.filter((c) => esHijaDe(c, id))
     const cuenta = (c) => {
       // La principal suma lo suyo y lo de sus hijas (sin repetir no es exacto,
       // pero sí orientativo: un producto casi nunca está en dos hijas).
       return (nCat.get(String(c._id)) || 0) + hijasDe(c._id).reduce((s, h) => s + (nCat.get(String(h._id)) || 0), 0)
     }
     categorias = []
-    for (const p of todasCats.filter((c) => !c.parent)) {
+    for (const p of todasCats.filter((c) => esPrincipal(c))) {
       const n = cuenta(p)
       if (!n && !f.categorias.includes(p.slug)) continue
       categorias.push({ value: p.slug, label: p.name, count: n, nivel: 0 })

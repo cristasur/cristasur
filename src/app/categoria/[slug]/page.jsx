@@ -9,6 +9,7 @@ import { permanentRedirect } from 'next/navigation'
 import { Suspense } from 'react'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
+import { filtroHijasDe } from '@/lib/categoryParents'
 import ProductGrid from '@/components/ProductGrid'
 import ProductFilters from '@/components/ProductFilters'
 import CatalogoBarra, { CatalogoPaginas } from '@/components/CatalogoBarra'
@@ -24,7 +25,7 @@ async function loadData(slug, sp) {
   if (!category) return null
 
   // Si es una categoría principal, también cuenta lo de sus subcategorías.
-  const children = await Category.find({ parent: category._id, active: true })
+  const children = await Category.find({ ...filtroHijasDe([category._id]), active: true })
     // `image` e `icon` los usa la tira de círculos de SubcategoryStrip.
     .select('_id name slug image icon')
     .sort({ order: 1, name: 1 })

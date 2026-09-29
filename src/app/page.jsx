@@ -9,6 +9,7 @@
 import Link from 'next/link'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
+import { filtroHijasDe, padresDe, esPrincipal } from '@/lib/categoryParents'
 import Product from '@/models/Product'
 import Banner from '@/models/Banner'
 import HomeSection from '@/models/HomeSection'
@@ -75,11 +76,12 @@ async function loadSectionsData(sections, publicMatch) {
   //    "Desechables" también debe mostrar lo de sus subcategorías.
   const childrenOf = new Map()
   if (catIds.size) {
-    const children = await Category.find({ parent: { $in: [...catIds] } }).select('_id parent').lean()
+    const children = await Category.find(filtroHijasDe([...catIds])).select('_id parent parents').lean()
     for (const c of children) {
-      const key = String(c.parent)
-      if (!childrenOf.has(key)) childrenOf.set(key, [])
-      childrenOf.get(key).push(c._id)
+      for (const key of padresDe(c)) {
+        if (!childrenOf.has(key)) childrenOf.set(key, [])
+        childrenOf.get(key).push(c._id)
+      }
     }
   }
   const withChildren = (id) => [id, ...(childrenOf.get(String(id)) || [])]
@@ -230,7 +232,7 @@ export default async function HomePage() {
         </div>
         {/* Solo categorías principales. Al hacer clic lleva a la categoría;
             las subcategorías se ven al entrar o desde la barra de navegación. */}
-        <CategoryGrid categories={categories.filter((c) => !c.parent)} />
+        <CategoryGrid categories={categories.filter((c) => esPrincipal(c))} />
       </section>
 
       {sections.length > 0 ? (

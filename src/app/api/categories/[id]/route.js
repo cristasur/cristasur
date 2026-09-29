@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server'
 import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
+import { esPrincipal, filtroHijasDe } from '@/lib/categoryParents'
 import Product from '@/models/Product'
 import { validateCategoryPayload } from '@/lib/validation'
 
@@ -26,14 +27,14 @@ async function findCategory(idOrSlug) {
 // Reglas: no puede ser uno mismo, debe existir, y no puede ser ya una
 // subcategoría (solo admitimos dos niveles). Devuelve un string de error
 // o null si todo está bien.
-async function validateParent(parentId, selfId = null) {
-  if (!parentId) return null
-  if (selfId && String(parentId) === String(selfId))
+async function validateParents(parentIds = [], selfId = null) {
+  if (!parentIds.length) return null
+  if (selfId && parentIds.some((id) => String(id) === String(selfId)))
     return 'Una categoría no puede ser su propia categoría padre'
-  const parent = await Category.findById(parentId).select('parent').lean()
-  if (!parent) return 'La categoría padre no existe'
-  if (parent.parent)
-    return 'Esa categoría ya es una subcategoría. Solo se admiten dos niveles.'
+  const padres = await Category.find({ _id: { $in: parentIds } }).select('parent parents').lean()
+  if (padres.length !== parentIds.length) return 'Alguna categoría padre no existe'
+  if (padres.some((p) => !esPrincipal(p)))
+    return 'Una de esas categorías ya es subcategoría. Solo se admiten dos niveles.'
   return null
 }
 
@@ -62,12 +63,12 @@ export async function PUT(request, { params }) {
     const category = await findCategory(params.id)
     if (!category) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
 
-    const parentError = await validateParent(value.parent, category._id)
+    const parentError = await validateParents(value.parents, category._id)
     if (parentError) return NextResponse.json({ error: parentError }, { status: 400 })
 
     // Si esta categoría ya tiene subcategorías, no puede volverse subcategoría.
-    if (value.parent) {
-      const childCount = await Category.countDocuments({ parent: category._id })
+    if (value.parents.length) {
+      const childCount = await Category.countDocuments(filtroHijasDe([category._id]))
       if (childCount > 0) {
         return NextResponse.json({
           error: `No se puede: "${category.name}" tiene ${childCount} subcategoría(s). Muévelas primero.`,
@@ -96,7 +97,7 @@ export async function DELETE(_request, { params }) {
     const category = await findCategory(params.id)
     if (!category) return NextResponse.json({ error: 'No encontrada' }, { status: 404 })
 
-    const childCount = await Category.countDocuments({ parent: category._id })
+    const childCount = await Category.countDocuments(filtroHijasDe([category._id]))
     if (childCount > 0) {
       return NextResponse.json({
         error: `No se puede eliminar: tiene ${childCount} subcategoría(s). Elimínalas o muévelas primero.`,

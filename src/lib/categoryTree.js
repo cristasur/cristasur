@@ -4,16 +4,19 @@
 //
 // Lo usan CategoryBar y CategoriesDropdown para no duplicar lógica.
 // ============================================================
+// Una subcategoría con varios padres sale dentro de cada uno.
+import { padresDe } from './categoryParents'
+
 export function buildCategoryTree(categories) {
   const list = Array.isArray(categories) ? categories : []
-  const roots = list.filter((c) => !c.parent)
+  const roots = list.filter((c) => !padresDe(c).length)
 
   const byParent = new Map()
   for (const c of list) {
-    if (!c.parent) continue
-    const k = String(c.parent)
-    if (!byParent.has(k)) byParent.set(k, [])
-    byParent.get(k).push(c)
+    for (const k of padresDe(c)) {
+      if (!byParent.has(k)) byParent.set(k, [])
+      byParent.get(k).push(c)
+    }
   }
 
   return roots.map((r) => ({

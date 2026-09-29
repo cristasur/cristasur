@@ -22,6 +22,7 @@ import mongoose from 'mongoose'
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
+import { filtroHijasDe } from '@/lib/categoryParents'
 import Brand from '@/models/Brand'
 import Material from '@/models/Material'
 import { validateProductPayload } from '@/lib/validation'
@@ -105,7 +106,7 @@ export async function GET(request) {
       }
       // Incluimos las subcategorías: pedir "Cocina" trae también lo que esté
       // en "Platos", "Cubiertos", etc.
-      const kids = await Category.find({ parent: catId }).select('_id').lean()
+      const kids = await Category.find(filtroHijasDe([catId])).select('_id').lean()
       filter.categories = { $in: [catId, ...kids.map((k) => k._id)] }
     }
 

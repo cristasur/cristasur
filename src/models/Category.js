@@ -108,6 +108,13 @@ const CategorySchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    // Todos los padres (una subcategoría puede estar en varias
+    // principales). `parent` guarda el primero, por compatibilidad.
+    parents: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+      default: [],
+      index: true,
+    },
   },
   { timestamps: true }
 )

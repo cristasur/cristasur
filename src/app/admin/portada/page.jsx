@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react'
 import { parseInstagram } from '@/lib/instagram'
 import { upload as subirABlob } from '@vercel/blob/client'
 import { estiloEncuadre, normalizarEncuadre, ENCUADRE_CENTRO } from '@/lib/encuadre'
+import { esPrincipal, esHijaDe, padresDe } from '@/lib/categoryParents'
 
 const TIPOS = {
   carrusel:    'Carrusel de productos',
@@ -435,9 +436,9 @@ function EncuadreReel({ video, imagen, pos, onPos }) {
 
 // ── Selector de categoría (subcategorías con sangría) ───────
 function SelectCategoria({ categorias, value, onChange, vacio = 'Sin categoría' }) {
-  const padres = categorias.filter((c) => !c.parent)
-  const hijos = (id) => categorias.filter((c) => String(catId(c.parent)) === String(id))
-  const huerfanas = categorias.filter((c) => c.parent && !categorias.some((p) => String(p._id) === String(catId(c.parent))))
+  const padres = categorias.filter((c) => esPrincipal(c))
+  const hijos = (id) => categorias.filter((c) => esHijaDe(c, id))
+  const huerfanas = categorias.filter((c) => !esPrincipal(c) && !padresDe(c).some((pid) => categorias.some((p) => String(p._id) === pid)))
   return (
     <select value={value || ''} onChange={(e) => onChange(e.target.value || null)} className={inputCls}>
       <option value="">{vacio}</option>

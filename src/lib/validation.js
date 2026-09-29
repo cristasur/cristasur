@@ -399,14 +399,20 @@ export function validateCategoryPayload(body) {
   const order = Number.isFinite(Number(body?.order)) ? Number(body.order) : 0
   const active = body?.active === undefined ? true : Boolean(body.active)
   const featured = Boolean(body?.featured)
-  // parent: '' o null = categoría principal. Si viene, debe ser un ObjectId.
-  const rawParent = typeof body?.parent === 'string' ? body.parent.trim() : ''
-  const parent = rawParent && /^[a-f\d]{24}$/i.test(rawParent) ? rawParent : null
+  // parents: lista de categorías padre (vacía = categoría principal).
+  // También se acepta `parent` (uno solo) por compatibilidad.
+  const esId = (x) => /^[a-f\d]{24}$/i.test(String(x || '').trim())
+  const rawParents = Array.isArray(body?.parents)
+    ? body.parents.map((x) => String(x || '').trim()).filter(Boolean)
+    : typeof body?.parent === 'string' && body.parent.trim() ? [body.parent.trim()] : []
+  const parents = [...new Set(rawParents.filter(esId))].slice(0, 20)
+  const parent = parents[0] || null
+  const rawParent = rawParents.length !== parents.length && rawParents.some((x) => !esId(x))
 
   if (!name || name.length < 2)
     errors.push('El nombre de la categoría es obligatorio (mín. 2 caracteres)')
-  if (rawParent && !parent)
-    errors.push('La categoría padre no es válida')
+  if (rawParent)
+    errors.push('Alguna categoría padre no es válida')
   if (description && description.length > 300)
     errors.push('La descripción de la categoría es demasiado larga')
 
@@ -425,6 +431,7 @@ export function validateCategoryPayload(body) {
       active,
       featured,
       parent,
+      parents,
     },
   }
 }

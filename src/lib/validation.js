@@ -298,9 +298,9 @@ export function validateProductPayload(body) {
     if (!Number.isFinite(_bulkMinQty) || _bulkMinQty < 2)
       errors.push('La cantidad mínima para precio por ciento debe ser 2 o más')
   }
-  // Categoría obligatoria solo al publicar; los borradores pueden quedar sin ella.
-  if (status === 'published' && !categories.length)
-    errors.push('Debe seleccionar al menos una categoría válida')
+  // La categoría es opcional: un producto sin categoría sale en
+  // "Todos los productos" y en búsquedas, y se le asigna cuando se arme
+  // su subcategoría.
   if (stock !== null && (!Number.isFinite(stock) || stock < 0))
     errors.push('El stock debe ser un número positivo o dejarse vacío (ilimitado)')
 

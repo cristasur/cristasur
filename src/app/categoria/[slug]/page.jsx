@@ -5,7 +5,7 @@
 // y un texto largo (seoText) indexable. Si no existe, 404.
 // ============================================================
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { permanentRedirect } from 'next/navigation'
 import { Suspense } from 'react'
 import dbConnect from '@/lib/mongodb'
 import Category from '@/models/Category'
@@ -62,7 +62,8 @@ export default async function CategoryLanding({ params, searchParams }) {
   params = await params
   searchParams = await searchParams
   const data = await loadData(params.slug, searchParams || {})
-  if (!data) notFound()
+  // Categorías que ya no existen (las viejas): al catálogo completo.
+  if (!data) permanentRedirect('/productos')
   const { category, children, parentCat, productos, total, pagina, paginas, facetas, filtros, marcados } = data
   const basePath = `/categoria/${category.slug}`
 

@@ -158,7 +158,7 @@ export default function CategoryBar({ categories }) {
               href="/productos"
               className="whitespace-nowrap px-3 py-1.5 text-[13px] md:text-sm font-bold text-slate-900 hover:text-brand-700 transition-colors"
             >
-              Todos los productos
+              Todos
             </Link>
 
             {tree.map((cat) => {

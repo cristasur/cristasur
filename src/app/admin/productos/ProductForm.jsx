@@ -586,7 +586,7 @@ export default function ProductForm({ categories, brands = [], materials = [], i
 
         <div className="col-span-full">
           <span className="text-sm font-medium text-slate-700 block mb-2">
-            Categorías *
+            Categorías
           </span>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {categories.map((c) => (
@@ -607,8 +607,8 @@ export default function ProductForm({ categories, brands = [], materials = [], i
             ))}
           </div>
           {form.categories.length === 0 && (
-            <span className="text-xs text-rose-500 mt-1 block">
-              Debes seleccionar al menos una categoría
+            <span className="text-xs text-slate-400 mt-1 block">
+              Sin categoría: sale en “Todos los productos” y en la búsqueda.
             </span>
           )}
         </div>

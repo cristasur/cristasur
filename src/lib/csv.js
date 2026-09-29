@@ -175,12 +175,11 @@ export function rowToProduct(row, categoryIdByName) {
   // Descripción y categorías pueden completarse en el admin antes de publicar.
   const isDraft = status === 'draft'
   return {
-    ok: Boolean(name && price >= 0 && (isDraft || (description && categories.length))),
+    ok: Boolean(name && price >= 0 && (isDraft || description)),
     missing: [
       !name && 'name',
       !(price >= 0) && 'price',
       !isDraft && !description && 'description',
-      !isDraft && !categories.length && 'categories',
     ].filter(Boolean),
     data: {
       _id,

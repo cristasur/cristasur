@@ -25,21 +25,23 @@ const path = require('path')
 const mongoose = require('mongoose')
 
 const LINEAS = [
-  { nombre: 'Vinafera', re: /vinafera/i, quitar: /vinafera|blanch/gi },
+  // Solo la vajilla Vinafera Blanch de Cinsa (la "Vinafera Olvido" de Nadir es otra cosa)
+  { nombre: 'Vinafera', re: /vinafera\s+blanch/i, quitar: /vinafera|blanch/gi },
   { nombre: 'Barcelona', re: /barcelona/i, quitar: /barcelona|opal/gi },
   { nombre: 'Manhattan', re: /manhattan/i, quitar: /manhattan/gi },
   { nombre: 'Chicago', re: /chicago/i, quitar: /chicago|matte/gi },
-  { nombre: 'Termo Gorila', re: /gorila/i, quitar: /gorila|termo/gi },
-  { nombre: 'Titán', re: /tit[aá]n/i, quitar: /tit[aá]n|termo/gi },
+  // Solo termos (no alcancías, cajas ni juguetes que también dicen Gorila/Titán)
+  { nombre: 'Termo Gorila', re: /\btermo\b.*\bgorila\b|\bgorila\b.*\btermo\b/i, quitar: /gorila|termo/gi },
+  { nombre: 'Titán', re: /\btermo\b.*\btit[aá]n\b|\btit[aá]n\b.*\btermo\b/i, quitar: /tit[aá]n|termo/gi },
 ]
 
 const ARGS = process.argv.slice(2)
 const APLICAR = ARGS.includes('--aplicar')
 const DESHACER = ARGS.includes('--deshacer') ? ARGS[ARGS.indexOf('--deshacer') + 1] : null
 
-const MARCAS = /\b(cinsa|imcosa|nyc|crisa|santa anita)\b/gi
+const MARCAS = /\b(cinsa|imcosa|nyc|crisa|santa anita|tavola|nadir|travessa|anfora)\b/gi
 const COLORES = /\b(blanc[oa]|negr[oa]|gris|azul|roj[oa]|verde|rosa|amarill[oa]|beige|caf[eé])\b/gi
-const ACENTOS = { tazon: 'tazón', consome: 'consomé', platon: 'platón', cafe: 'café' }
+const ACENTOS = { tazon: 'tazón', consome: 'consomé', platon: 'platón', cafe: 'café', conico: 'cónico' }
 
 function etiqueta(nombre, linea) {
   let t = ` ${nombre} `.replace(linea.quitar, ' ').replace(MARCAS, ' ').replace(COLORES, ' ')
@@ -66,8 +68,11 @@ async function main() {
 
   if (DESHACER) {
     const r = JSON.parse(fs.readFileSync(DESHACER, 'utf8'))
-    for (const x of r) {
-      await col.updateOne({ _id: new mongoose.Types.ObjectId(x._id) }, { $set: { line: x.line, lineLabel: x.lineLabel, lineColor: x.lineColor } })
+    for (let i = 0; i < r.length; i += 500) {
+      await col.bulkWrite(r.slice(i, i + 500).map((x) => ({ updateOne: {
+        filter: { _id: new mongoose.Types.ObjectId(x._id) },
+        update: { $set: { line: x.line, lineLabel: x.lineLabel, lineColor: x.lineColor } },
+      } })), { ordered: false })
     }
     console.log(`Listo: ${r.length} productos regresados como estaban.`)
     return mongoose.disconnect()
@@ -113,12 +118,22 @@ async function main() {
   const ruta = path.join(__dirname, 'respaldos', `lineas-${sello()}.json`)
   fs.mkdirSync(path.dirname(ruta), { recursive: true })
   fs.writeFileSync(ruta, JSON.stringify(respaldo, null, 1))
-  for (const { p, set } of cambios) {
-    await col.updateOne({ _id: p._id }, {
-      $set: { ...set, updatedAt: new Date() },
-      $push: { editHistory: { $each: [{ at: new Date(), action: 'bulk-update', source: 'migration',
-        changes: set.line ? `Línea "${set.line}", etiqueta "${set.lineLabel}"` : 'Se quitó la línea (no es oficial)' }], $slice: -100 } },
-    })
+  // En bloques de 500 (una sola llamada por bloque): uno por uno
+  // tardaba muchísimo con miles de productos.
+  const LOTE = 500
+  for (let i = 0; i < cambios.length; i += LOTE) {
+    const ops = cambios.slice(i, i + LOTE).map(({ p, set }) => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: {
+          $set: { ...set, updatedAt: new Date() },
+          $push: { editHistory: { $each: [{ at: new Date(), action: 'bulk-update', source: 'migration',
+            changes: set.line ? `Línea "${set.line}", etiqueta "${set.lineLabel}"` : 'Se quitó la línea (no es oficial)' }], $slice: -100 } },
+        },
+      },
+    }))
+    await col.bulkWrite(ops, { ordered: false })
+    console.log(`   guardados ${Math.min(i + LOTE, cambios.length)} de ${cambios.length}…`)
   }
   console.log(`\nLISTO: ${cambios.length} productos actualizados.`)
   console.log(`Para regresar todo:  node scripts/lineas-oficiales.js --deshacer ${path.relative(process.cwd(), ruta)}`)

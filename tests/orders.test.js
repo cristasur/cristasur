@@ -40,10 +40,16 @@ it('rechaza líneas duplicadas para impedir exceder stock', async () => {
   expect((await POST(request({ items: [item, item] }))).status).toBe(400)
   expect(mock.create).not.toHaveBeenCalled()
 })
-it('rechaza una tarifa sin firma antes de guardar', async () => {
+it('no cobra una tarifa sin firma, pero no bloquea el pedido', async () => {
   mock.quote.mockRejectedValue(new Error('invalid token'))
-  expect((await POST(request({ items: [item], shipping: { price: 0 } }))).status).toBe(409)
-  expect(mock.create).not.toHaveBeenCalled()
+  const response = await POST(request({ items: [item], shipping: { token: 'falso', price: 1 } }))
+  expect(response.status).toBe(200)
+  expect((await response.json()).pedido).toMatchObject({ shippingCost: 0, shippingLabel: 'Por confirmar', total: 200 })
+})
+it('acepta cantidades como texto', async () => {
+  const response = await POST(request({ items: [{ ...item, qty: '2' }] }))
+  expect(response.status).toBe(200)
+  expect((await response.json()).pedido).toMatchObject({ total: 200 })
 })
 it('usa el envío verificado e ignora el precio del cliente', async () => {
   const response = await POST(request({ items: [item], shipping: { token: 'signed', price: 0 } }))

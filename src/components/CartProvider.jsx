@@ -336,17 +336,19 @@ export default function CartProvider({ children }) {
         }
       } catch {}
 
-      let pedido, ajustes
+      let pedido, ajustes, orderId = ''
       try {
         const data = await requestOrder({
           items: items.map((x) => ({ productId: x.productId, name: x.name, image: x.image,
-            variantLabel: x.variantLabel, variantValue: x.variantValue, qty: x.qty })),
+            variantLabel: x.variantLabel, variantValue: x.variantValue,
+            qty: Math.max(1, Math.floor(Number(x.qty)) || 1) })),
           couponCode: couponInfo?.code || '',
           shipping: shipping ? { token: shipping.token } : null,
           cookieToken: token,
         })
         pedido = data.pedido
         ajustes = data.ajustes || []
+        orderId = String(data.orderId || '')
       } catch (error) {
         ventana?.close()
         setCheckoutError(error.message)
@@ -369,6 +371,7 @@ export default function CartProvider({ children }) {
         if (!ajustes.length && savings > 0) summary += `💚 Ahorro mayoreo: -$${savings.toFixed(2)}\n`
         if (pedido.couponCode && pedido.discount > 0) summary += `🏷️ Cupón ${pedido.couponCode}: -$${Number(pedido.discount).toFixed(2)}\n`
         if (pedido.shippingCost > 0) summary += `📦 Envío (${pedido.shippingLabel}): $${Number(pedido.shippingCost).toFixed(2)}\n`
+        else if (pedido.shippingLabel) summary += `📦 Envío: ${pedido.shippingLabel}\n`
         finalTotal = Number(pedido.total) || 0
         if (ajustes.length) summary += `⚠️ Ajustes de la tienda: ${ajustes.join('; ')}\n`
         if (pedido.couponError && couponInfo?.code) summary += `⚠️ Cupón ${couponInfo.code}: ${pedido.couponError}\n`
@@ -378,8 +381,28 @@ export default function CartProvider({ children }) {
       const cierre = shipping
         ? '¿Me confirman disponibilidad para cerrar el pedido? 🙏'
         : '¿Me pueden confirmar disponibilidad y datos de envío? 🙏'
-      const msg = `¡Hola CRISTASUR! 👋 Quisiera hacer el siguiente pedido:\n\n🛒 *DETALLE DEL PEDIDO*\n──────────────────────\n${lines.join('\n')}\n──────────────────────\n${summary}${cierre}`
-      const url = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`
+      // WhatsApp no abre enlaces muy largos: con muchos productos el
+      // mensaje se compacta (una línea por producto) y, si aún no cabe,
+      // se mandan los primeros y el folio; el pedido completo ya quedó
+      // guardado en Admin → Pedidos.
+      const folio = orderId ? `\n🧾 Folio: ${orderId.slice(-8).toUpperCase()}` : ''
+      const armar = (ls) => `¡Hola CRISTASUR! 👋 Quisiera hacer el siguiente pedido:\n\n🛒 *DETALLE DEL PEDIDO*\n──────────────────────\n${ls.join('\n')}\n──────────────────────\n${summary}${cierre}${folio}`
+      const MAX_URL = 7000
+      const armarUrl = (m) => `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(m)}`
+      let msg = armar(lines)
+      if (armarUrl(msg).length > MAX_URL && pedido) {
+        const cortas = pedido.items.map((x) => {
+          const variant = x.variantValue ? ` (${x.variantValue})` : ''
+          return `▸ ${x.qty} × ${x.name}${variant} · $${(x.unitPrice * x.qty).toFixed(2)}`
+        })
+        let n = cortas.length
+        msg = armar(cortas)
+        while (armarUrl(msg).length > MAX_URL && n > 1) {
+          n = Math.max(1, Math.floor(n * 0.8))
+          msg = armar([...cortas.slice(0, n), `…y ${cortas.length - n} productos más (el pedido completo está en el folio)`])
+        }
+      }
+      const url = armarUrl(msg)
 
       // Guarda copia local para "repetir pedido"
       try {

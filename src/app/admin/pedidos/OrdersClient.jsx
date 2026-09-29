@@ -109,6 +109,9 @@ export default function OrdersClient({ initialOrders, initialStatus, isAdmin = f
                   {new Date(o.createdAt).toLocaleString('es-MX', {
                     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
                   })}
+                  <div className="font-mono text-[11px] text-slate-400 mt-0.5" title="Folio del mensaje de WhatsApp">
+                    #{String(o._id).slice(-8).toUpperCase()}
+                  </div>
                 </td>
                 <td className="p-3">
                   <div className="text-slate-700 line-clamp-2">

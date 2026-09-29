@@ -35,8 +35,9 @@ function isValidObjectId(s) {
 export async function POST(request) {
   try {
     const ip = clientIp(request)
-    // 30 intents por hora por IP, suficiente para uso normal y corta abuso.
-    const rl = rateLimit(`order:ip:${ip}`, 30, 60 * 60 * 1000)
+    // 100 intentos por hora por IP: alcanza aunque varios clientes compartan
+    // el internet de la tienda o de una oficina, y aun así corta abuso.
+    const rl = rateLimit(`order:ip:${ip}`, 100, 60 * 60 * 1000)
     if (!rl.ok) {
       return NextResponse.json(
         { error: 'Demasiados intentos. Intenta más tarde.' },
@@ -50,7 +51,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Carrito vacío' }, { status: 400 })
     }
 
-    if (items.some((it) => !isValidObjectId(it?.productId) || !Number.isSafeInteger(it?.qty) || it.qty < 1 || it.qty > 5000)) {
+    // La cantidad puede llegar como texto ("12") o con decimales desde el
+    // navegador: se normaliza en vez de rechazar el pedido completo.
+    for (const it of items) {
+      const n = Math.floor(Number(it?.qty))
+      if (it && typeof it === 'object') it.qty = Number.isFinite(n) ? Math.min(5000, Math.max(1, n)) : NaN
+    }
+    if (items.some((it) => !isValidObjectId(it?.productId) || !Number.isSafeInteger(it?.qty))) {
       return NextResponse.json({ error: 'Productos o cantidades inválidos' }, { status: 400 })
     }
     // Una sola línea por producto y variante: impide saltar el límite de stock.
@@ -93,8 +100,8 @@ export async function POST(request) {
       : []
     const priceMap = {}
     for (const p of dbProducts) priceMap[String(p._id)] = p
-    if (dbProducts.length !== productIds.length) {
-      return NextResponse.json({ error: 'Un producto ya no está disponible. Actualiza tu carrito.' }, { status: 409 })
+    if (!dbProducts.length) {
+      return NextResponse.json({ error: 'Estos productos ya no están disponibles. Actualiza tu carrito.' }, { status: 409 })
     }
 
     // ── Recálculo en el servidor ──────────────────────────────
@@ -103,6 +110,11 @@ export async function POST(request) {
     // para llevarse una pieza a precio de mayoreo. Ahora el nivel se
     // deduce de la cantidad, igual que en la ficha y en la tarjeta.
     const ajustes = []
+    // Productos que se despublicaron mientras estaban en el carrito: se
+    // quitan de ESTE pedido (con aviso) en vez de rechazarlo todo.
+    for (const it of rawItems) {
+      if (it.product && !priceMap[it.product]) ajustes.push(`${it.name || 'Un producto'}: ya no está disponible`)
+    }
 
     const cleanItems = rawItems
       .map((it) => {
@@ -117,6 +129,7 @@ export async function POST(request) {
         //    Si el producto NO tiene variantes, se ignora cualquier variante enviada.
         const dbVariants = Array.isArray(dbP.variants) ? dbP.variants : []
         let dbV = null
+        let varPorConfirmar = false
         if (dbVariants.length) {
           const norm = (x) => String(x || '').trim().toLowerCase()
           const wantValue = norm(it.variantValue)
@@ -127,9 +140,14 @@ export async function POST(request) {
               ) || null
             : null
           if (!dbV) {
+            // Antes la línea se tiraba y, si era la única, el pedido fallaba
+            // ("Carrito inválido"). Pasa cuando se agregó sin elegir color o
+            // cuando la variante cambió de nombre en el panel. Ahora la línea
+            // se queda con el precio del producto y la variante se confirma
+            // por WhatsApp.
             const etiqueta = String(dbVariants[0]?.label || 'variante').toLowerCase()
-            ajustes.push(`${dbP.name}: elige un ${etiqueta}`)
-            return null
+            ajustes.push(`${dbP.name}: ${etiqueta} por confirmar`)
+            varPorConfirmar = true
           }
         }
 
@@ -145,7 +163,7 @@ export async function POST(request) {
         //    stock de ESA variante (null = sin control, available:false = agotada).
         const disponibles = dbV
           ? (dbV.available === false ? 0 : toStock(dbV.stock))
-          : toStock(dbP.stock)
+          : varPorConfirmar ? null : toStock(dbP.stock)
         if (disponibles === 0) {
           ajustes.push(`${dbP.name}: sin existencias`)
           return null
@@ -171,8 +189,8 @@ export async function POST(request) {
           // Identidad de la línea tomada de la base, no del navegador.
           name: String(dbP.name || it.name).slice(0, 200),
           sku: dbV?.sku || dbP.sku || '',
-          variantLabel: dbV ? String(dbV.label || '') : '',
-          variantValue: dbV ? String(dbV.value || '') : '',
+          variantLabel: dbV ? String(dbV.label || '') : varPorConfirmar ? String(it.variantLabel || dbVariants[0]?.label || 'Variante').slice(0, 60) : '',
+          variantValue: dbV ? String(dbV.value || '') : varPorConfirmar ? `${String(it.variantValue || '').slice(0, 40) || 'sin elegir'} (por confirmar)` : '',
           qty,
           unitPrice: Math.max(0, unitPrice),
           wholesaleApplied: unitPrice < (Number(dbP.price) || 0),
@@ -182,7 +200,7 @@ export async function POST(request) {
       .filter((x) => x.qty > 0 && x.unitPrice >= 0)
 
     if (!cleanItems.length) {
-      return NextResponse.json({ error: 'Carrito inválido', ajustes }, { status: 400 })
+      return NextResponse.json({ error: ajustes.length ? `No se pudo armar el pedido: ${ajustes.join('; ')}` : 'Carrito inválido', ajustes }, { status: 400 })
     }
     const resolvedKeys = cleanItems.map((item) => `${item.product}|${item.variantLabel}|${item.variantValue}`)
     if (new Set(resolvedKeys).size !== resolvedKeys.length) {
@@ -219,16 +237,38 @@ export async function POST(request) {
       if (couponError) couponCode = ''
     }
 
-    // Solo se admite una tarifa firmada, vigente y para estas cantidades.
+    // Envío: solo se cobra una tarifa FIRMADA por el cotizador (nunca el
+    // precio que mande el navegador). Pero el pedido ya no se bloquea:
+    //  · Si la tienda ajustó cantidades (múltiplo de venta o existencias),
+    //    la tarifa se valida contra lo que el cliente cotizó y se marca
+    //    "por confirmar".
+    //  · Si la tarifa venció o no es válida, el pedido sale igual con el
+    //    envío "por confirmar" y costo 0; la tienda lo cotiza por WhatsApp.
     let shippingCost = 0
     let shippingLabel = ''
     if (body.shipping) {
-      try {
-        const quote = await verifyShippingQuote(body.shipping.token, cleanItems)
+      const token = typeof body.shipping.token === 'string' ? body.shipping.token : ''
+      const pedidas = rawItems.map((x) => ({ product: x.product, qty: x.qty }))
+      let quote = null
+      let ajustado = false
+      if (token) {
+        try {
+          quote = await verifyShippingQuote(token, cleanItems)
+        } catch {
+          try {
+            quote = await verifyShippingQuote(token, pedidas)
+            ajustado = true
+          } catch {
+            quote = null
+          }
+        }
+      }
+      if (quote) {
         shippingCost = quote.price
-        shippingLabel = quote.label
-      } catch {
-        return NextResponse.json({ error: 'El envío venció o el carrito cambió. Vuelve a cotizar.' }, { status: 409 })
+        shippingLabel = ajustado ? `${quote.label} (por confirmar: se ajustaron cantidades)` : quote.label
+      } else {
+        shippingLabel = 'Por confirmar'
+        ajustes.push('El costo de envío se confirma por WhatsApp')
       }
     }
     const total = Math.max(0, subtotal - discount) + shippingCost

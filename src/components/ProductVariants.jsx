@@ -97,7 +97,11 @@ export default function ProductVariants({ product, siblings = [], selected, onSe
     a.localeCompare(b, 'es', { numeric: true }))
   const filaTamanos = product.line && etiquetas.length >= 2
     ? etiquetas.map((e) => {
-        if (e === etiquetaActual) return { e, actual: true, p: product, imagen: product.image }
+        // El tamaño en el que estás: con la foto del color elegido.
+        if (e === etiquetaActual) {
+          const img = selected && esEtiquetaColor(selected.label) ? primeraImagen(selected, product.image) : product.image
+          return { e, actual: true, p: product, imagen: img }
+        }
         const cands = porEtiqueta.get(e)
         // Mismo color que el que estás viendo, si existe
         const mismoColor = colorActual && cands.find((p) => k(colorDe(p)) === k(colorActual))

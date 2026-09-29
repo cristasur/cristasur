@@ -70,7 +70,6 @@ export default function Footer() {
             <li><Link href="/productos?featured=1" className="hover:text-white">Destacados</Link></li>
             <li><Link href="/productos?onSale=1" className="hover:text-white">En oferta</Link></li>
             <li><Link href="/contacto" className="hover:text-white">Contacto</Link></li>
-            <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
           </ul>
         </div>
 

@@ -8,7 +8,6 @@ const LINKS = [
   { href: '/productos',      label: 'Catálogo'        },
   { href: '/quienes-somos', label: 'Quiénes somos'   },
   { href: '/envios',         label: 'Envíos'          },
-  { href: '/blog',           label: 'Blog'            },
   { href: '/contacto',       label: 'Contacto'        },
   { href: '/favoritos',      label: 'Favoritos'       },
 ]

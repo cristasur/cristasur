@@ -113,6 +113,13 @@ const nextConfig = {
     ],
   },
 
+  // El blog se quitó de la tienda: cualquier liga vieja lleva al inicio.
+  async redirects() {
+    return [
+      { source: '/blog', destination: '/', permanent: false },
+      { source: '/blog/:path*', destination: '/', permanent: false },
+    ]
+  },
   async headers() {
     return [
       // Seguridad global

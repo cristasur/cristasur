@@ -13,6 +13,7 @@ import Product from '@/models/Product'
 import Category from '@/models/Category'
 import { validateProductPayload, diffSummary, diffFields } from '@/lib/validation'
 import { getCurrentUser } from '@/lib/auth'
+import { publicProductFilter, PUBLIC_PRODUCT_FIELDS } from '@/lib/public-products'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,20 +24,18 @@ export async function GET(_request, { params }) {
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
     }
-    const product = await Product.findById(params.id)
+    // Staff: documento completo. Público: solo si está publicado (mismo
+    // filtro que el catálogo) y solo con los campos públicos.
+    const user = await getCurrentUser()
+    const isStaff = user && ['admin', 'editor'].includes(user.role)
+    const query = isStaff
+      ? Product.findById(params.id)
+      : Product.findOne({ ...publicProductFilter(), _id: params.id }).select(PUBLIC_PRODUCT_FIELDS)
+    const product = await query
       .populate('categories', 'name slug icon')
       .populate('brand', 'name slug')
       .lean()
     if (!product) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-
-    // Usuarios no autenticados solo pueden ver productos publicados y no borrados
-    const user = await getCurrentUser()
-    const isStaff = user && ['admin', 'editor'].includes(user.role)
-    if (!isStaff) {
-      if (product.deleted || product.status !== 'published') {
-        return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-      }
-    }
 
     return NextResponse.json({ product })
   } catch (err) {

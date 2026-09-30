@@ -35,8 +35,9 @@ export async function verifyShippingQuote(token, items) {
       !Number.isFinite(payload.price) || payload.price < 0 || typeof payload.label !== 'string') {
     throw new Error('La cotización no corresponde a este pedido')
   }
-  // Mientras Envia esté en modo prueba (ENVIA_ENV distinto de production)
-  // el pedido NO se bloquea: se acepta, pero la etiqueta avisa que la
-  // tarifa es de prueba para que la tienda la confirme por WhatsApp.
-  return { price: payload.price, label: payload.test ? `${payload.label} (tarifa de prueba, por confirmar)` : payload.label }
+  // `test`: tarifa de Envia en modo prueba. El pedido la trata como envío
+  // por confirmar (no la suma al total).
+  return payload.test
+    ? { price: payload.price, label: payload.label, test: true }
+    : { price: payload.price, label: payload.label }
 }

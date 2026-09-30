@@ -3,6 +3,14 @@ export async function updateOrderStatus({ connection, Order, Coupon, id, update,
   return connection.transaction(async (session) => {
     const order = await Order.findById(id).session(session)
     if (!order) return null
+    // Una solicitud con pendientes (variante sin elegir, envío sin tarifa)
+    // no se confirma hasta resolverlos desde el panel.
+    const pendientes = update.pendientes ?? order.pendientes ?? []
+    if (['confirmed', 'shipped', 'delivered'].includes(update.status) && pendientes.length) {
+      const error = new Error(`Antes de confirmar resuelve: ${pendientes.join('; ')}.`)
+      error.status = 409
+      throw error
+    }
     if (['confirmed', 'shipped', 'delivered'].includes(update.status) && order.couponCode && !order.couponCounted) {
       const coupon = await Coupon.findOneAndUpdate({
         code: order.couponCode, active: true,

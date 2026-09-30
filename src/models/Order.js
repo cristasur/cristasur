@@ -37,6 +37,10 @@ const OrderSchema = new mongoose.Schema(
     // Envío elegido en el cotizador del carrito (informativo; va incluido en total)
     shippingCost: { type: Number, min: 0, default: 0 },
     shippingLabel: { type: String, trim: true, default: '' },
+    // Pendientes a resolver antes de confirmar (variante sin elegir, envío
+    // sin tarifa válida). Con alguno, el pedido es solo una solicitud de
+    // cotización: no se puede confirmar hasta vaciar esta lista.
+    pendientes: { type: [String], default: [] },
     customerName: { type: String, trim: true, default: '' },
     customerPhone: { type: String, trim: true, default: '' },
     customerEmail: { type: String, trim: true, default: '' },

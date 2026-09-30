@@ -32,6 +32,22 @@ export async function PATCH(request, { params }) {
     if (body.status === 'cancelled') update.cancelledAt = new Date()
   }
   if (typeof body?.notes === 'string') update.notes = body.notes.slice(0, 500)
+  // Resolver pendientes: la tienda ya habló con el cliente, eligió la
+  // variante y fijó el envío. Si manda costo de envío, el total se recalcula.
+  if (body?.resolverPendientes === true) {
+    const actual = await Order.findById(params.id).select('subtotal discount shippingCost shippingLabel').lean()
+    if (!actual) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+    update.pendientes = []
+    if (body.shippingCost !== undefined) {
+      const envio = Number(body.shippingCost)
+      if (!Number.isFinite(envio) || envio < 0 || envio > 100000) {
+        return NextResponse.json({ error: 'Costo de envío inválido' }, { status: 400 })
+      }
+      update.shippingCost = Math.round(envio * 100) / 100
+      update.shippingLabel = String(body.shippingLabel || 'Envío confirmado por la tienda').slice(0, 120)
+      update.total = Math.max(0, (actual.subtotal || 0) - (actual.discount || 0)) + update.shippingCost
+    }
+  }
   if (typeof body?.cancelReason === 'string') update.cancelReason = body.cancelReason.slice(0, 200)
 
   try {

@@ -47,3 +47,10 @@ it('no vuelve a contar pedidos ya contabilizados', async () => {
   await updateOrderStatus(f.args)
   expect(f.Coupon.findOneAndUpdate).not.toHaveBeenCalled()
 })
+it('no confirma una solicitud con pendientes', async () => {
+  const f = fixture()
+  f.state.pendientes = ['Confirmar costo de envío']
+  await expect(updateOrderStatus(f.args)).rejects.toMatchObject({ status: 409 })
+  expect(f.state).toMatchObject({ status: 'intent', couponCounted: false, count: 0 })
+  expect(f.Coupon.findOneAndUpdate).not.toHaveBeenCalled()
+})

@@ -27,6 +27,7 @@ import Brand from '@/models/Brand'
 import Material from '@/models/Material'
 import { validateProductPayload } from '@/lib/validation'
 import { getCurrentUser } from '@/lib/auth'
+import { publicProductFilter, PUBLIC_PRODUCT_FIELDS } from '@/lib/public-products'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,21 +56,17 @@ export async function GET(request) {
     const miniFields = url.searchParams.get('fields') === 'mini'
 
     const needsAdmin = includeInactive || includeDeleted || deletedOnly
-    if (needsAdmin) {
-      const user = await getCurrentUser()
-      if (!user || !['admin', 'editor'].includes(user.role)) {
-        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-      }
+    const user = await getCurrentUser()
+    const esStaff = Boolean(user && ['admin', 'editor'].includes(user.role))
+    if (needsAdmin && !esStaff) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const filter = {}
+    // Público: mismo filtro de publicación que el catálogo (activo, no
+    // borrado, publicado y con fecha de publicación cumplida).
+    const filter = includeInactive ? {} : publicProductFilter()
     if (deletedOnly) filter.deleted = true
     else if (!includeDeleted) filter.deleted = { $ne: true }
-
-    if (!includeInactive) {
-      filter.active = true
-      filter.status = 'published'
-    }
     if (featured) filter.featured = true
     // "Solo con stock": stock null = sin control de inventario = disponible.
     // Con variantes, el padre no lleva stock; basta con que UNA variante se pueda vender.
@@ -169,6 +166,9 @@ export async function GET(request) {
     if (miniFields) {
       baseQuery.select('name slug image price comparePrice stock qtyStep')
     } else {
+      // Documento completo solo para el panel; el público recibe los
+      // campos permitidos (sin historial, correos ni notas internas).
+      if (!esStaff) baseQuery.select(PUBLIC_PRODUCT_FIELDS)
       baseQuery
         .populate('categories', 'name slug icon')
         .populate('brand', 'name slug')

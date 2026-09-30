@@ -6,6 +6,7 @@
 import dbConnect from '@/lib/mongodb'
 import Product from '@/models/Product'
 import Category from '@/models/Category'
+import { publicProductFilter } from '@/lib/public-products'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,11 +28,9 @@ export default async function sitemap() {
   try {
     await dbConnect()
     const [products, categories] = await Promise.all([
-      Product.find({
-        active: true,
-        deleted: { $ne: true },
-        $or: [{ publishAt: null }, { publishAt: { $lte: now } }],
-      })
+      // Mismo filtro de publicación que el catálogo: activo, no borrado,
+      // publicado (no borrador) y con fecha de publicación cumplida.
+      Product.find(publicProductFilter(now))
         .select('_id updatedAt')
         .sort({ updatedAt: -1 })
         .limit(5000)
@@ -55,10 +54,7 @@ export default async function sitemap() {
     }))
 
     // Tags: extraemos los tags distintos de los productos publicados
-    const distinctTags = await Product.distinct('tags', {
-      active: true,
-      deleted: { $ne: true },
-    })
+    const distinctTags = await Product.distinct('tags', publicProductFilter(now))
     const tagRoutes = (distinctTags || []).filter(Boolean).map((t) => ({
       url: `${base}/tag/${encodeURIComponent(t)}`,
       lastModified: now,

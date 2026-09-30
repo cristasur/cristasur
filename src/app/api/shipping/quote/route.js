@@ -217,7 +217,7 @@ export async function POST(request) {
       postalCode,
       estado: estado.name,
       options: await Promise.all(options.map(async (option) => ({
-        ...option, postalCode,
+        ...option, postalCode, test: !cfg.isProd,
         token: await signShippingQuote(option, postalCode,
           [...wanted].map(([productId, qty]) => ({ productId, qty })), !cfg.isProd),
       }))),

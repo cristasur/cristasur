@@ -110,6 +110,10 @@ export async function POST(request) {
     // para llevarse una pieza a precio de mayoreo. Ahora el nivel se
     // deduce de la cantidad, igual que en la ficha y en la tarjeta.
     const ajustes = []
+    // Pendientes que la tienda DEBE resolver antes de confirmar el pedido
+    // (variante sin elegir, envío sin tarifa válida). Mientras haya alguno,
+    // el pedido es una solicitud de cotización y no se puede confirmar.
+    const pendientes = []
     // Productos que se despublicaron mientras estaban en el carrito: se
     // quitan de ESTE pedido (con aviso) en vez de rechazarlo todo.
     for (const it of rawItems) {
@@ -147,6 +151,7 @@ export async function POST(request) {
             // por WhatsApp.
             const etiqueta = String(dbVariants[0]?.label || 'variante').toLowerCase()
             ajustes.push(`${dbP.name}: ${etiqueta} por confirmar`)
+            pendientes.push(`Elegir ${etiqueta} de ${dbP.name}`)
             varPorConfirmar = true
           }
         }
@@ -161,9 +166,16 @@ export async function POST(request) {
 
         // 2. Stock: nunca se acepta más de lo que hay. Con variantes manda el
         //    stock de ESA variante (null = sin control, available:false = agotada).
+        //    Variante por confirmar: nunca más de lo que tenga la variante con
+        //    más existencias; si ninguna tiene, la línea no entra.
+        const stockVariante = (v) => (v.available === false ? 0 : toStock(v.stock))
         const disponibles = dbV
-          ? (dbV.available === false ? 0 : toStock(dbV.stock))
-          : varPorConfirmar ? null : toStock(dbP.stock)
+          ? stockVariante(dbV)
+          : varPorConfirmar
+            ? (dbVariants.some((v) => v.available !== false && stockVariante(v) == null)
+                ? null
+                : Math.max(0, ...dbVariants.map(stockVariante)))
+            : toStock(dbP.stock)
         if (disponibles === 0) {
           ajustes.push(`${dbP.name}: sin existencias`)
           return null
@@ -237,38 +249,28 @@ export async function POST(request) {
       if (couponError) couponCode = ''
     }
 
-    // Envío: solo se cobra una tarifa FIRMADA por el cotizador (nunca el
-    // precio que mande el navegador). Pero el pedido ya no se bloquea:
-    //  · Si la tienda ajustó cantidades (múltiplo de venta o existencias),
-    //    la tarifa se valida contra lo que el cliente cotizó y se marca
-    //    "por confirmar".
-    //  · Si la tarifa venció o no es válida, el pedido sale igual con el
-    //    envío "por confirmar" y costo 0; la tienda lo cotiza por WhatsApp.
+    // Envío: solo se cobra una tarifa FIRMADA, vigente, de producción y
+    // hecha para las cantidades FINALES del pedido. En cualquier otro caso
+    // (venció, cambió el carrito, la tienda ajustó cantidades, tarifa de
+    // prueba) el envío NO se suma al total: queda "por confirmar" y el
+    // pedido no se puede confirmar hasta que la tienda ponga el costo.
     let shippingCost = 0
     let shippingLabel = ''
     if (body.shipping) {
       const token = typeof body.shipping.token === 'string' ? body.shipping.token : ''
-      const pedidas = rawItems.map((x) => ({ product: x.product, qty: x.qty }))
       let quote = null
-      let ajustado = false
       if (token) {
-        try {
-          quote = await verifyShippingQuote(token, cleanItems)
-        } catch {
-          try {
-            quote = await verifyShippingQuote(token, pedidas)
-            ajustado = true
-          } catch {
-            quote = null
-          }
-        }
+        try { quote = await verifyShippingQuote(token, cleanItems) } catch { quote = null }
       }
-      if (quote) {
+      if (quote && !quote.test) {
         shippingCost = quote.price
-        shippingLabel = ajustado ? `${quote.label} (por confirmar: se ajustaron cantidades)` : quote.label
+        shippingLabel = quote.label
       } else {
-        shippingLabel = 'Por confirmar'
+        shippingLabel = quote?.test
+          ? `Por confirmar (${quote.label}, tarifa de prueba $${Number(quote.price).toFixed(2)})`
+          : 'Por confirmar'
         ajustes.push('El costo de envío se confirma por WhatsApp')
+        pendientes.push('Confirmar costo de envío')
       }
     }
     const total = Math.max(0, subtotal - discount) + shippingCost
@@ -281,6 +283,7 @@ export async function POST(request) {
       couponCode,
       shippingCost,
       shippingLabel,
+      pendientes,
       customerName: String(body?.customerName || '').slice(0, 80),
       customerPhone: String(body?.customerPhone || '').slice(0, 30),
       customerEmail: String(body?.customerEmail || '').slice(0, 120),

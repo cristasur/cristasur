@@ -158,7 +158,8 @@ export default function CartDrawer() {
   const [shipping, setShipping] = useState(null)
 
   const productsTotal = coupon ? coupon.total : subtotal
-  const shippingCost = Number(shipping?.price) || 0
+  // Tarifa de prueba: se muestra pero NO se suma; la tienda la confirma.
+  const shippingCost = shipping && !shipping.test ? Number(shipping.price) || 0 : 0
   const total = productsTotal + shippingCost
 
   return (
@@ -352,7 +353,7 @@ export default function CartDrawer() {
                 <span className="capitalize truncate pr-2">
                   Envío · {shipping.carrier}
                 </span>
-                <span className="shrink-0">{formatMXN(shippingCost)}</span>
+                <span className="shrink-0">{shipping.test ? 'Por confirmar' : formatMXN(shippingCost)}</span>
               </div>
             )}
 

@@ -59,3 +59,30 @@ it('no expone pedidos a clientes aunque el middleware no se ejecute', async () =
   mock.user.mockResolvedValue({ role: 'customer' })
   expect((await GET(new Request('https://example.test/api/orders'))).status).toBe(403)
 })
+it('no acepta una variante inexistente si ninguna variante tiene existencias', async () => {
+  mock.find.mockReturnValue({ select: () => ({ lean: async () => [{
+    _id: id, name: 'Termo', price: 100, categories: [],
+    variants: [{ label: 'Color', value: 'Rojo', stock: 0 }],
+  }] }) })
+  const response = await POST(request({ items: [{ ...item, qty: 5000, variantLabel: 'Color', variantValue: 'Azul' }] }))
+  expect(response.status).toBe(400)
+  expect(mock.create).not.toHaveBeenCalled()
+})
+it('variante por confirmar: tope de existencias y pedido con pendientes', async () => {
+  mock.find.mockReturnValue({ select: () => ({ lean: async () => [{
+    _id: id, name: 'Termo', price: 100, categories: [],
+    variants: [{ label: 'Color', value: 'Rojo', stock: 3 }, { label: 'Color', value: 'Verde', stock: 7 }],
+  }] }) })
+  const response = await POST(request({ items: [{ ...item, qty: 5000, variantLabel: 'Color', variantValue: 'Azul' }] }))
+  expect(response.status).toBe(200)
+  const saved = mock.create.mock.calls[0][0]
+  expect(saved.items[0].qty).toBe(7)
+  expect(saved.pendientes.length).toBeGreaterThan(0)
+})
+it('tarifa de prueba: no se suma al total y queda pendiente', async () => {
+  mock.quote.mockResolvedValue({ price: 120, label: 'Tarifa', test: true })
+  const response = await POST(request({ items: [item], shipping: { token: 'signed' } }))
+  const saved = mock.create.mock.calls[0][0]
+  expect((await response.json()).pedido).toMatchObject({ shippingCost: 0, total: 200 })
+  expect(saved.pendientes).toContain('Confirmar costo de envío')
+})

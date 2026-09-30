@@ -43,6 +43,26 @@ export default function OrdersClient({ initialOrders, initialStatus, isAdmin = f
     setDeleting(null)
   }
 
+  // Resolver pendientes (variante elegida con el cliente, costo de envío).
+  async function resolver(o) {
+    const pideEnvio = (o.pendientes || []).some((p) => /env[ií]o/i.test(p))
+    let body = { resolverPendientes: true }
+    if (pideEnvio) {
+      const txt = prompt('Costo de envío acordado con el cliente (0 si recoge en tienda):', '')
+      if (txt === null) return
+      const envio = Number(String(txt).replace(/[^0-9.]/g, ''))
+      if (!Number.isFinite(envio) || envio < 0) { alert('Escribe un número válido'); return }
+      const etiqueta = prompt('Paquetería o nota del envío (opcional):', '') || ''
+      body = { ...body, shippingCost: envio, shippingLabel: etiqueta || (envio ? 'Envío confirmado por la tienda' : 'Recoge en tienda / sin costo') }
+    } else if (!confirm(`¿Ya resolviste con el cliente?\n\n• ${(o.pendientes || []).join('\n• ')}`)) return
+    const res = await fetch(`/api/orders/${o._id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    })
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { alert(d?.error || 'No se pudo actualizar'); return }
+    setOrders((xs) => xs.map((x) => (x._id === o._id ? { ...x, ...d.order } : x)))
+  }
+
   async function changeStatus(id, newStatus) {
     const res = await fetch(`/api/orders/${id}`, {
       method: 'PATCH',
@@ -120,6 +140,21 @@ export default function OrdersClient({ initialOrders, initialStatus, isAdmin = f
                   {o.couponCode && (
                     <div className="text-xs text-emerald-700 font-semibold mt-1">
                       Cupón: {o.couponCode}
+                    </div>
+                  )}
+                  {o.shippingLabel && (
+                    <div className="text-xs text-slate-500 mt-1">Envío: {o.shippingLabel}{o.shippingCost > 0 ? ` · ${formatMXN(o.shippingCost)}` : ''}</div>
+                  )}
+                  {(o.pendientes || []).length > 0 && (
+                    <div className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2 text-xs text-amber-900">
+                      <div className="font-bold">Solicitud de cotización — no se puede confirmar aún</div>
+                      <ul className="list-disc pl-4 mt-0.5">
+                        {o.pendientes.map((p) => <li key={p}>{p}</li>)}
+                      </ul>
+                      <button type="button" onClick={() => resolver(o)}
+                        className="mt-1.5 px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-semibold">
+                        Marcar resuelto
+                      </button>
                     </div>
                   )}
                 </td>

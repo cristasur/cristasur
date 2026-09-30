@@ -48,7 +48,7 @@ describe('tarifas firmadas', () => {
     await expect(verifyShippingQuote(token, [{ ...items[0], qty: 3 }])).rejects.toThrow()
     const testToken = await signShippingQuote(option, '97000', items, true)
     const quote = await verifyShippingQuote(testToken, items)
-    expect(quote.label).toContain('tarifa de prueba')
+    expect(quote).toMatchObject({ test: true, price: 120 })
   })
   it('rechaza tarifas vencidas', async () => {
     const token = await new SignJWT({ price: 120 }).setProtectedHeader({ alg: 'HS256' })

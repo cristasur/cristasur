@@ -170,6 +170,14 @@ export async function middleware(request) {
     }
   }
 
+  // ---- Aviso de Mercado Pago ----
+  // Viene de los servidores de Mercado Pago (sin Origin ni cookie), así
+  // que no pasa por la defensa CSRF. Es seguro: la ruta revisa la firma y
+  // solo usa el id para consultar el pago directo a Mercado Pago.
+  if ((pathname === '/api/mercadopago/webhook' || pathname === '/api/whatsapp/webhook') && method === 'POST') {
+    return NextResponse.next()
+  }
+
   // ---- Protección de API: escritura ----
   if (pathname.startsWith('/api/') && STATE_CHANGING.has(method)) {
     // Defensa CSRF: rechazamos requests state-changing cuyo Origin/Referer

@@ -15,8 +15,24 @@ export const normalizarNumero = (n) => {
   return /^521\d{10}$/.test(d) ? `52${d.slice(3)}` : d
 }
 
+/** El otro formato de un celular de México (con o sin el "1"). */
+const otroFormato = (d) => /^521\d{10}$/.test(d) ? `52${d.slice(3)}` : /^52\d{10}$/.test(d) ? `521${d.slice(2)}` : null
+
 async function graph(cuerpo) {
-  if (cuerpo.to) cuerpo = { ...cuerpo, to: normalizarNumero(cuerpo.to) }
+  if (!cuerpo.to) return llamar(cuerpo)
+  const to = normalizarNumero(cuerpo.to)
+  try {
+    return await llamar({ ...cuerpo, to })
+  } catch (e) {
+    // 131030 = "no está en la lista permitida": se prueba el otro formato.
+    const alt = otroFormato(to)
+    if (e.codigo !== 131030 || !alt) throw e
+    console.error('WhatsApp: reintento con', alt.slice(0, 5) + '…')
+    return llamar({ ...cuerpo, to: alt })
+  }
+}
+
+async function llamar(cuerpo) {
   const res = await fetch(`https://graph.facebook.com/${version()}/${process.env.WA_PHONE_ID}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.WA_TOKEN}`, 'Content-Type': 'application/json' },
@@ -25,7 +41,9 @@ async function graph(cuerpo) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     console.error('WhatsApp API', res.status, JSON.stringify(data?.error || data))
-    throw new Error(data?.error?.message || `WhatsApp respondió ${res.status}`)
+    const err = new Error(data?.error?.message || `WhatsApp respondió ${res.status}`)
+    err.codigo = data?.error?.code
+    throw err
   }
   return data
 }

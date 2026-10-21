@@ -35,6 +35,7 @@ async function atender({ telefono, nombre, mensajeId, texto }) {
   let conv = await BotConversacion.findOne({ telefono })
   if (!conv) conv = await BotConversacion.create({ telefono, nombre })
   if (conv.atendidos.includes(mensajeId)) return // aviso repetido de Meta
+  console.log('WhatsApp: mensaje recibido', JSON.stringify(texto.slice(0, 60)))
   conv.atendidos = [...conv.atendidos.slice(-50), mensajeId]
   if (nombre) conv.nombre = nombre
 
@@ -49,12 +50,18 @@ async function atender({ telefono, nombre, mensajeId, texto }) {
   conv.mensajes.push({ rol: 'cliente', texto })
 
   // Lo está atendiendo una persona: el bot no se mete.
-  if (conv.humanoHasta && conv.humanoHasta > new Date()) { await conv.save(); return }
+  if (conv.humanoHasta && conv.humanoHasta > new Date()) {
+    console.log('WhatsApp: lo atiende una persona hasta', conv.humanoHasta.toISOString(), '(manda "reiniciar")')
+    await conv.save(); return
+  }
 
   // Tope diario por número (control de gasto).
   const dia = hoyMx()
   if (conv.hoy !== dia) { conv.hoy = dia; conv.respuestasHoy = 0 }
-  if (conv.respuestasHoy >= Number(process.env.BOT_MAX_DIA || 80)) { await conv.save(); return }
+  if (conv.respuestasHoy >= Number(process.env.BOT_MAX_DIA || 80)) {
+    console.log('WhatsApp: llegó al tope diario de respuestas')
+    await conv.save(); return
+  }
 
   await conv.save()
   await marcarLeido(mensajeId)
@@ -95,6 +102,11 @@ export async function POST(request) {
   for (const entry of body.entry || []) {
     for (const ch of entry.changes || []) {
       const v = ch.value || {}
+      // Avisos de entrega de lo que mandó el bot (enviado, entregado, falló).
+      for (const s of v.statuses || []) {
+        if (s.status === 'failed') console.error('WhatsApp entrega falló', JSON.stringify(s.errors || []))
+        else console.log('WhatsApp estado', s.status)
+      }
       const nombres = Object.fromEntries((v.contacts || []).map((c) => [c.wa_id, c.profile?.name || '']))
       for (const m of v.messages || []) {
         let texto = ''

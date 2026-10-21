@@ -53,7 +53,8 @@ export async function enviarTexto(para, texto) {
   const t = String(texto || '').trim()
   if (!t) return
   for (let i = 0; i < t.length; i += 3800) {
-    await graph({ to: para, type: 'text', text: { body: t.slice(i, i + 3800), preview_url: true } })
+    const r = await graph({ to: para, type: 'text', text: { body: t.slice(i, i + 3800), preview_url: true } })
+    console.log('WhatsApp: texto aceptado por Meta', r?.messages?.[0]?.id || '')
   }
 }
 

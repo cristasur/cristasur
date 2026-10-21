@@ -6,7 +6,17 @@ import crypto from 'crypto'
 
 const version = () => process.env.WA_API_VERSION || 'v25.0'
 
+/**
+ * Los celulares de México llegan como 521XXXXXXXXXX (con el "1" viejo),
+ * pero Meta solo acepta mandar a 52XXXXXXXXXX. Se quita ese "1".
+ */
+export const normalizarNumero = (n) => {
+  const d = String(n || '').replace(/\D/g, '')
+  return /^521\d{10}$/.test(d) ? `52${d.slice(3)}` : d
+}
+
 async function graph(cuerpo) {
+  if (cuerpo.to) cuerpo = { ...cuerpo, to: normalizarNumero(cuerpo.to) }
   const res = await fetch(`https://graph.facebook.com/${version()}/${process.env.WA_PHONE_ID}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.WA_TOKEN}`, 'Content-Type': 'application/json' },
